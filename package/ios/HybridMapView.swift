@@ -23,244 +23,392 @@ final class HybridMapView: HybridMapViewSpec {
   private var _mapPadding: EdgePadding?
   private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
+  private var _onRegionChange: ((Region) -> Void)?
+  private var _onRegionChangeComplete: ((Region) -> Void)?
+  private var _onMapReady: (() -> Void)?
+  private var _onPress: ((Coordinate) -> Void)?
+  private var _onPoiPress: ((NativePoiPressEvent) -> Void)?
+  private var _onLongPress: ((Coordinate) -> Void)?
+  private var _markers: [MarkerDescriptor]?
+  private var _polylines: [PolylineDescriptor]?
+  private var _polygons: [PolygonDescriptor]?
+  private var _circles: [CircleDescriptor]?
+  private var _onMarkerPress: ((String) -> Void)?
+  private var _onMarkerDragEnd: ((String, Coordinate) -> Void)?
+  private var _onPolylinePress: ((String) -> Void)?
+  private var _onPolygonPress: ((String) -> Void)?
+  private var _onCirclePress: ((String) -> Void)?
+  private var _onClusterPress: (([String], Coordinate) -> Void)?
 
   lazy var view: UIView = {
     containerView
   }()
 
   var provider: MapProvider? {
-    get { _provider }
+    get { onMain { _provider } }
     set {
       let nextProvider = newValue ?? .apple
-      guard nextProvider != _provider || adapter == nil else {
-        return
-      }
+      onMain {
+        guard nextProvider != _provider || adapter == nil else {
+          return
+        }
 
-      _provider = nextProvider
-      installAdapter(for: nextProvider)
+        _provider = nextProvider
+        installAdapter(for: nextProvider)
+      }
     }
   }
 
   var mapType: MapType {
-    get { _mapType }
+    get { onMain { _mapType } }
     set {
-      _mapType = newValue
-      adapter?.mapType = newValue
+      onMain {
+        _mapType = newValue
+        adapter?.mapType = newValue
+      }
     }
   }
 
   var region: Region? {
-    get { _region }
+    get { onMain { _region } }
     set {
-      _region = newValue
-      adapter?.region = newValue
+      onMain {
+        _region = newValue
+        adapter?.region = newValue
+      }
     }
   }
 
   var camera: Camera? {
-    get { _camera }
+    get { onMain { _camera } }
     set {
-      _camera = newValue
-      adapter?.camera = newValue
+      onMain {
+        _camera = newValue
+        adapter?.camera = newValue
+      }
     }
   }
 
   var scrollEnabled: Bool? {
-    get { _scrollEnabled }
+    get { onMain { _scrollEnabled } }
     set {
-      _scrollEnabled = newValue
-      adapter?.scrollEnabled = newValue
+      onMain {
+        _scrollEnabled = newValue
+        adapter?.scrollEnabled = newValue
+      }
     }
   }
 
   var zoomEnabled: Bool? {
-    get { _zoomEnabled }
+    get { onMain { _zoomEnabled } }
     set {
-      _zoomEnabled = newValue
-      adapter?.zoomEnabled = newValue
+      onMain {
+        _zoomEnabled = newValue
+        adapter?.zoomEnabled = newValue
+      }
     }
   }
 
   var rotateEnabled: Bool? {
-    get { _rotateEnabled }
+    get { onMain { _rotateEnabled } }
     set {
-      _rotateEnabled = newValue
-      adapter?.rotateEnabled = newValue
+      onMain {
+        _rotateEnabled = newValue
+        adapter?.rotateEnabled = newValue
+      }
     }
   }
 
   var pitchEnabled: Bool? {
-    get { _pitchEnabled }
+    get { onMain { _pitchEnabled } }
     set {
-      _pitchEnabled = newValue
-      adapter?.pitchEnabled = newValue
+      onMain {
+        _pitchEnabled = newValue
+        adapter?.pitchEnabled = newValue
+      }
     }
   }
 
   var showsUserLocation: Bool? {
-    get { _showsUserLocation }
+    get { onMain { _showsUserLocation } }
     set {
-      _showsUserLocation = newValue
-      adapter?.showsUserLocation = newValue
+      onMain {
+        _showsUserLocation = newValue
+        adapter?.showsUserLocation = newValue
+      }
     }
   }
 
   var followsUserLocation: Bool? {
-    get { _followsUserLocation }
+    get { onMain { _followsUserLocation } }
     set {
-      _followsUserLocation = newValue
-      adapter?.followsUserLocation = newValue
+      onMain {
+        _followsUserLocation = newValue
+        adapter?.followsUserLocation = newValue
+      }
     }
   }
 
   var showsCompass: Bool? {
-    get { _showsCompass }
+    get { onMain { _showsCompass } }
     set {
-      _showsCompass = newValue
-      adapter?.showsCompass = newValue
+      onMain {
+        _showsCompass = newValue
+        adapter?.showsCompass = newValue
+      }
     }
   }
 
   var showsScale: Bool? {
-    get { _showsScale }
+    get { onMain { _showsScale } }
     set {
-      _showsScale = newValue
-      adapter?.showsScale = newValue
+      onMain {
+        _showsScale = newValue
+        adapter?.showsScale = newValue
+      }
     }
   }
 
   var customMapStyle: String? {
-    get { _customMapStyle }
+    get { onMain { _customMapStyle } }
     set {
-      _customMapStyle = newValue
-      adapter?.customMapStyle = newValue
+      onMain {
+        _customMapStyle = newValue
+        adapter?.customMapStyle = newValue
+      }
     }
   }
 
   var googleMapId: String? {
-    get { _googleMapId }
+    get { onMain { _googleMapId } }
     set {
-      guard _googleMapId != newValue else {
-        return
-      }
+      onMain {
+        guard _googleMapId != newValue else {
+          return
+        }
 
-      _googleMapId = newValue
-      if _provider == .google, adapter != nil {
-        installAdapter(for: _provider)
+        _googleMapId = newValue
+        if _provider == .google, adapter != nil {
+          installAdapter(for: _provider)
+        }
       }
     }
   }
 
   var clusteringEnabled: Bool? {
-    get { _clusteringEnabled }
+    get { onMain { _clusteringEnabled } }
     set {
-      _clusteringEnabled = newValue
-      adapter?.clusteringEnabled = newValue
+      onMain {
+        _clusteringEnabled = newValue
+        adapter?.clusteringEnabled = newValue
+      }
     }
   }
 
   var mapPadding: EdgePadding? {
-    get { _mapPadding }
+    get { onMain { _mapPadding } }
     set {
-      _mapPadding = newValue
-      adapter?.mapPadding = newValue
+      onMain {
+        _mapPadding = newValue
+        adapter?.mapPadding = newValue
+      }
     }
   }
 
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? {
-    get { _markerEnteringAnimation }
+    get { onMain { _markerEnteringAnimation } }
     set {
-      _markerEnteringAnimation = newValue
-      adapter?.markerEnteringAnimation = newValue
+      onMain {
+        _markerEnteringAnimation = newValue
+        adapter?.markerEnteringAnimation = newValue
+      }
     }
   }
 
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? {
-    get { _clusterEnteringAnimation }
+    get { onMain { _clusterEnteringAnimation } }
     set {
-      _clusterEnteringAnimation = newValue
-      adapter?.clusterEnteringAnimation = newValue
+      onMain {
+        _clusterEnteringAnimation = newValue
+        adapter?.clusterEnteringAnimation = newValue
+      }
     }
   }
 
   var onRegionChange: ((Region) -> Void)? {
-    didSet { adapter?.onRegionChange = onRegionChange }
+    get { onMain { _onRegionChange } }
+    set {
+      onMain {
+        _onRegionChange = newValue
+        adapter?.onRegionChange = newValue
+      }
+    }
   }
 
   var onRegionChangeComplete: ((Region) -> Void)? {
-    didSet { adapter?.onRegionChangeComplete = onRegionChangeComplete }
+    get { onMain { _onRegionChangeComplete } }
+    set {
+      onMain {
+        _onRegionChangeComplete = newValue
+        adapter?.onRegionChangeComplete = newValue
+      }
+    }
   }
 
   var onMapReady: (() -> Void)? {
-    didSet { adapter?.onMapReady = onMapReady }
+    get { onMain { _onMapReady } }
+    set {
+      onMain {
+        _onMapReady = newValue
+        adapter?.onMapReady = newValue
+      }
+    }
   }
 
   var onPress: ((Coordinate) -> Void)? {
-    didSet { adapter?.onPress = onPress }
+    get { onMain { _onPress } }
+    set {
+      onMain {
+        _onPress = newValue
+        adapter?.onPress = newValue
+      }
+    }
   }
 
   var onPoiPress: ((NativePoiPressEvent) -> Void)? {
-    didSet { adapter?.onPoiPress = onPoiPress }
+    get { onMain { _onPoiPress } }
+    set {
+      onMain {
+        _onPoiPress = newValue
+        adapter?.onPoiPress = newValue
+      }
+    }
   }
 
   var onLongPress: ((Coordinate) -> Void)? {
-    didSet { adapter?.onLongPress = onLongPress }
+    get { onMain { _onLongPress } }
+    set {
+      onMain {
+        _onLongPress = newValue
+        adapter?.onLongPress = newValue
+      }
+    }
   }
 
   var markers: [MarkerDescriptor]? {
-    didSet { adapter?.markers = markers }
+    get { onMain { _markers } }
+    set {
+      onMain {
+        _markers = newValue
+        adapter?.markers = newValue
+      }
+    }
   }
 
   var polylines: [PolylineDescriptor]? {
-    didSet { adapter?.polylines = polylines }
+    get { onMain { _polylines } }
+    set {
+      onMain {
+        _polylines = newValue
+        adapter?.polylines = newValue
+      }
+    }
   }
 
   var polygons: [PolygonDescriptor]? {
-    didSet { adapter?.polygons = polygons }
+    get { onMain { _polygons } }
+    set {
+      onMain {
+        _polygons = newValue
+        adapter?.polygons = newValue
+      }
+    }
   }
 
   var circles: [CircleDescriptor]? {
-    didSet { adapter?.circles = circles }
+    get { onMain { _circles } }
+    set {
+      onMain {
+        _circles = newValue
+        adapter?.circles = newValue
+      }
+    }
   }
 
   var onMarkerPress: ((String) -> Void)? {
-    didSet { adapter?.onMarkerPress = onMarkerPress }
+    get { onMain { _onMarkerPress } }
+    set {
+      onMain {
+        _onMarkerPress = newValue
+        adapter?.onMarkerPress = newValue
+      }
+    }
   }
 
   var onMarkerDragEnd: ((String, Coordinate) -> Void)? {
-    didSet { adapter?.onMarkerDragEnd = onMarkerDragEnd }
+    get { onMain { _onMarkerDragEnd } }
+    set {
+      onMain {
+        _onMarkerDragEnd = newValue
+        adapter?.onMarkerDragEnd = newValue
+      }
+    }
   }
 
   var onPolylinePress: ((String) -> Void)? {
-    didSet { adapter?.onPolylinePress = onPolylinePress }
+    get { onMain { _onPolylinePress } }
+    set {
+      onMain {
+        _onPolylinePress = newValue
+        adapter?.onPolylinePress = newValue
+      }
+    }
   }
 
   var onPolygonPress: ((String) -> Void)? {
-    didSet { adapter?.onPolygonPress = onPolygonPress }
+    get { onMain { _onPolygonPress } }
+    set {
+      onMain {
+        _onPolygonPress = newValue
+        adapter?.onPolygonPress = newValue
+      }
+    }
   }
 
   var onCirclePress: ((String) -> Void)? {
-    didSet { adapter?.onCirclePress = onCirclePress }
+    get { onMain { _onCirclePress } }
+    set {
+      onMain {
+        _onCirclePress = newValue
+        adapter?.onCirclePress = newValue
+      }
+    }
   }
 
   var onClusterPress: (([String], Coordinate) -> Void)? {
-    didSet { adapter?.onClusterPress = onClusterPress }
+    get { onMain { _onClusterPress } }
+    set {
+      onMain {
+        _onClusterPress = newValue
+        adapter?.onClusterPress = newValue
+      }
+    }
   }
 
   func fetchCamera() throws -> Promise<Camera> {
-    try currentAdapter().fetchCamera()
+    promiseOnMain { try self.currentAdapter().fetchCamera() }
   }
 
   func applyCamera(camera: Camera) throws {
-    try currentAdapter().applyCamera(camera: camera)
+    try onMain { try currentAdapter().applyCamera(camera: camera) }
   }
 
   func animateCamera(camera: Camera, duration: Double?) throws {
-    try currentAdapter().animateCamera(camera: camera, duration: duration)
+    try onMain { try currentAdapter().animateCamera(camera: camera, duration: duration) }
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
-    try currentAdapter().getVisibleRegion()
+    promiseOnMain { try self.currentAdapter().getVisibleRegion() }
   }
 
   func fitToCoordinates(
@@ -268,51 +416,55 @@ final class HybridMapView: HybridMapViewSpec {
     padding: EdgePadding?,
     animated: Bool?
   ) throws {
-    try currentAdapter().fitToCoordinates(
-      coordinates: coordinates,
-      padding: padding,
-      animated: animated
-    )
+    try onMain {
+      try currentAdapter().fitToCoordinates(
+        coordinates: coordinates,
+        padding: padding,
+        animated: animated
+      )
+    }
   }
 
   func prepareForRecycle() {
-    adapter?.prepareForRecycle()
-    adapter?.contentView.removeFromSuperview()
-    adapter = nil
-    _provider = .apple
-    _mapType = .standard
-    _region = nil
-    _camera = nil
-    _scrollEnabled = nil
-    _zoomEnabled = nil
-    _rotateEnabled = nil
-    _pitchEnabled = nil
-    _showsUserLocation = nil
-    _followsUserLocation = nil
-    _showsCompass = nil
-    _showsScale = nil
-    _customMapStyle = nil
-    _googleMapId = nil
-    _clusteringEnabled = nil
-    _mapPadding = nil
-    _markerEnteringAnimation = nil
-    _clusterEnteringAnimation = nil
-    markers = nil
-    polylines = nil
-    polygons = nil
-    circles = nil
-    onRegionChange = nil
-    onRegionChangeComplete = nil
-    onMapReady = nil
-    onPress = nil
-    onPoiPress = nil
-    onLongPress = nil
-    onMarkerPress = nil
-    onMarkerDragEnd = nil
-    onPolylinePress = nil
-    onPolygonPress = nil
-    onCirclePress = nil
-    onClusterPress = nil
+    onMain {
+      adapter?.prepareForRecycle()
+      adapter?.contentView.removeFromSuperview()
+      adapter = nil
+      _provider = .apple
+      _mapType = .standard
+      _region = nil
+      _camera = nil
+      _scrollEnabled = nil
+      _zoomEnabled = nil
+      _rotateEnabled = nil
+      _pitchEnabled = nil
+      _showsUserLocation = nil
+      _followsUserLocation = nil
+      _showsCompass = nil
+      _showsScale = nil
+      _customMapStyle = nil
+      _googleMapId = nil
+      _clusteringEnabled = nil
+      _mapPadding = nil
+      _markerEnteringAnimation = nil
+      _clusterEnteringAnimation = nil
+      _markers = nil
+      _polylines = nil
+      _polygons = nil
+      _circles = nil
+      _onRegionChange = nil
+      _onRegionChangeComplete = nil
+      _onMapReady = nil
+      _onPress = nil
+      _onPoiPress = nil
+      _onLongPress = nil
+      _onMarkerPress = nil
+      _onMarkerDragEnd = nil
+      _onPolylinePress = nil
+      _onPolygonPress = nil
+      _onCirclePress = nil
+      _onClusterPress = nil
+    }
   }
 
   private func currentAdapter() throws -> MapProviderAdapter {
@@ -325,6 +477,8 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   private func installAdapter(for provider: MapProvider) {
+    precondition(Thread.isMainThread)
+
     adapter?.prepareForRecycle()
     adapter?.contentView.removeFromSuperview()
 
@@ -396,6 +550,35 @@ final class HybridMapView: HybridMapViewSpec {
     adapter.onPolygonPress = onPolygonPress
     adapter.onCirclePress = onCirclePress
     adapter.onClusterPress = onClusterPress
+  }
+
+  private func onMain<T>(_ work: () throws -> T) rethrows -> T {
+    if Thread.isMainThread {
+      return try work()
+    }
+
+    return try DispatchQueue.main.sync(execute: work)
+  }
+
+  private func promiseOnMain<T>(_ work: @escaping () throws -> Promise<T>) -> Promise<T> {
+    let promise = Promise<T>()
+    let run = {
+      do {
+        try work()
+          .then { promise.resolve(withResult: $0) }
+          .catch { promise.reject(withError: $0) }
+      } catch {
+        promise.reject(withError: error)
+      }
+    }
+
+    if Thread.isMainThread {
+      run()
+    } else {
+      DispatchQueue.main.async(execute: run)
+    }
+
+    return promise
   }
 }
 

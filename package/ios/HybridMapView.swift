@@ -6,6 +6,7 @@ final class HybridMapView: HybridMapViewSpec {
   private let lifecycleLock = NSLock()
   private var adapter: MapProviderAdapter?
   private var lifecycleGeneration: UInt64 = 0
+  private var isRecycled = false
 
   private var _provider: MapProvider = .apple
   private var _mapType: MapType = .standard
@@ -402,11 +403,16 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   func applyCamera(camera: Camera) throws {
-    try onMain { try currentAdapter().applyCamera(camera: camera) }
+    let lifecycle = currentLifecycleSnapshot()
+    try onMain { try currentAdapter(matching: lifecycle).applyCamera(camera: camera) }
   }
 
   func animateCamera(camera: Camera, duration: Double?) throws {
-    try onMain { try currentAdapter().animateCamera(camera: camera, duration: duration) }
+    let lifecycle = currentLifecycleSnapshot()
+    try onMain {
+      try currentAdapter(matching: lifecycle)
+        .animateCamera(camera: camera, duration: duration)
+    }
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
@@ -418,8 +424,9 @@ final class HybridMapView: HybridMapViewSpec {
     padding: EdgePadding?,
     animated: Bool?
   ) throws {
+    let lifecycle = currentLifecycleSnapshot()
     try onMain {
-      try currentAdapter().fitToCoordinates(
+      try currentAdapter(matching: lifecycle).fitToCoordinates(
         coordinates: coordinates,
         padding: padding,
         animated: animated
@@ -427,8 +434,15 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
+  func afterUpdate() {
+    onMain {
+      activateLifecycle()
+    }
+  }
+
   func prepareForRecycle() {
     onMain {
+      recycleLifecycle()
       adapter?.prepareForRecycle()
       adapter?.contentView.removeFromSuperview()
       adapter = nil
@@ -466,11 +480,14 @@ final class HybridMapView: HybridMapViewSpec {
       _onPolygonPress = nil
       _onCirclePress = nil
       _onClusterPress = nil
-      nextLifecycleGeneration()
     }
   }
 
-  private func currentAdapter() throws -> MapProviderAdapter {
+  private func currentAdapter(
+    matching lifecycle: (generation: UInt64, isRecycled: Bool)? = nil
+  ) throws -> MapProviderAdapter {
+    try validateActiveLifecycle(matching: lifecycle)
+
     if let adapter {
       return adapter
     }
@@ -479,16 +496,48 @@ final class HybridMapView: HybridMapViewSpec {
     return adapter!
   }
 
-  private func currentLifecycleGeneration() -> UInt64 {
+  private func currentLifecycleSnapshot() -> (generation: UInt64, isRecycled: Bool) {
     lifecycleLock.lock()
     defer { lifecycleLock.unlock() }
-    return lifecycleGeneration
+    return (lifecycleGeneration, isRecycled)
   }
 
-  private func nextLifecycleGeneration() {
+  private func activateLifecycle() {
+    lifecycleLock.lock()
+    if isRecycled {
+      lifecycleGeneration &+= 1
+      isRecycled = false
+    }
+    lifecycleLock.unlock()
+  }
+
+  private func recycleLifecycle() {
     lifecycleLock.lock()
     lifecycleGeneration &+= 1
+    isRecycled = true
     lifecycleLock.unlock()
+  }
+
+  private func validateActiveLifecycle(
+    matching lifecycle: (generation: UInt64, isRecycled: Bool)? = nil
+  ) throws {
+    lifecycleLock.lock()
+    let currentGeneration = lifecycleGeneration
+    let currentlyRecycled = isRecycled
+    lifecycleLock.unlock()
+
+    if currentlyRecycled {
+      throw Self.mapViewNotMountedError()
+    }
+
+    if let lifecycle,
+       lifecycle.isRecycled || lifecycle.generation != currentGeneration {
+      throw Self.mapViewNotMountedError()
+    }
+  }
+
+  private static func mapViewNotMountedError() -> Error {
+    RuntimeError.error(withMessage: "MapView is not mounted")
   }
 
   private func installAdapter(for provider: MapProvider) {
@@ -579,17 +628,17 @@ final class HybridMapView: HybridMapViewSpec {
     _ work: @escaping (MapProviderAdapter) throws -> Promise<T>
   ) -> Promise<T> {
     let promise = Promise<T>()
-    let requestedGeneration = currentLifecycleGeneration()
+    let lifecycle = currentLifecycleSnapshot()
     let run = { [weak self] in
-      guard let self, self.currentLifecycleGeneration() == requestedGeneration else {
+      guard let self else {
         promise.reject(
-          withError: RuntimeError.error(withMessage: "MapView is not mounted")
+          withError: Self.mapViewNotMountedError()
         )
         return
       }
 
       do {
-        let adapter = try self.currentAdapter()
+        let adapter = try self.currentAdapter(matching: lifecycle)
         try work(adapter)
           .then { promise.resolve(withResult: $0) }
           .catch { promise.reject(withError: $0) }

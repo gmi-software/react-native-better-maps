@@ -3,7 +3,9 @@ import UIKit
 
 final class HybridMapView: HybridMapViewSpec {
   private let containerView = UIView()
+  private let lifecycleLock = NSLock()
   private var adapter: MapProviderAdapter?
+  private var lifecycleGeneration: UInt64 = 0
 
   private var _provider: MapProvider = .apple
   private var _mapType: MapType = .standard
@@ -396,7 +398,7 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   func fetchCamera() throws -> Promise<Camera> {
-    promiseOnMain { try self.currentAdapter().fetchCamera() }
+    promiseOnMain { try $0.fetchCamera() }
   }
 
   func applyCamera(camera: Camera) throws {
@@ -408,7 +410,7 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
-    promiseOnMain { try self.currentAdapter().getVisibleRegion() }
+    promiseOnMain { try $0.getVisibleRegion() }
   }
 
   func fitToCoordinates(
@@ -464,6 +466,7 @@ final class HybridMapView: HybridMapViewSpec {
       _onPolygonPress = nil
       _onCirclePress = nil
       _onClusterPress = nil
+      nextLifecycleGeneration()
     }
   }
 
@@ -474,6 +477,18 @@ final class HybridMapView: HybridMapViewSpec {
 
     installAdapter(for: _provider)
     return adapter!
+  }
+
+  private func currentLifecycleGeneration() -> UInt64 {
+    lifecycleLock.lock()
+    defer { lifecycleLock.unlock() }
+    return lifecycleGeneration
+  }
+
+  private func nextLifecycleGeneration() {
+    lifecycleLock.lock()
+    lifecycleGeneration &+= 1
+    lifecycleLock.unlock()
   }
 
   private func installAdapter(for provider: MapProvider) {
@@ -560,11 +575,22 @@ final class HybridMapView: HybridMapViewSpec {
     return try DispatchQueue.main.sync(execute: work)
   }
 
-  private func promiseOnMain<T>(_ work: @escaping () throws -> Promise<T>) -> Promise<T> {
+  private func promiseOnMain<T>(
+    _ work: @escaping (MapProviderAdapter) throws -> Promise<T>
+  ) -> Promise<T> {
     let promise = Promise<T>()
-    let run = {
+    let requestedGeneration = currentLifecycleGeneration()
+    let run = { [weak self] in
+      guard let self, self.currentLifecycleGeneration() == requestedGeneration else {
+        promise.reject(
+          withError: RuntimeError.error(withMessage: "MapView is not mounted")
+        )
+        return
+      }
+
       do {
-        try work()
+        let adapter = try self.currentAdapter()
+        try work(adapter)
           .then { promise.resolve(withResult: $0) }
           .catch { promise.reject(withError: $0) }
       } catch {

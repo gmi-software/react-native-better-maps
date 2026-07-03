@@ -598,22 +598,22 @@ final class HybridMapView: HybridMapViewSpec {
     adapter.mapPadding = _mapPadding
     adapter.markerEnteringAnimation = _markerEnteringAnimation
     adapter.clusterEnteringAnimation = _clusterEnteringAnimation
-    adapter.onRegionChange = onRegionChange
-    adapter.onRegionChangeComplete = onRegionChangeComplete
-    adapter.onMapReady = onMapReady
-    adapter.onPress = onPress
-    adapter.onPoiPress = onPoiPress
-    adapter.onLongPress = onLongPress
-    adapter.markers = markers
-    adapter.polylines = polylines
-    adapter.polygons = polygons
-    adapter.circles = circles
-    adapter.onMarkerPress = onMarkerPress
-    adapter.onMarkerDragEnd = onMarkerDragEnd
-    adapter.onPolylinePress = onPolylinePress
-    adapter.onPolygonPress = onPolygonPress
-    adapter.onCirclePress = onCirclePress
-    adapter.onClusterPress = onClusterPress
+    adapter.onRegionChange = _onRegionChange
+    adapter.onRegionChangeComplete = _onRegionChangeComplete
+    adapter.onMapReady = _onMapReady
+    adapter.onPress = _onPress
+    adapter.onPoiPress = _onPoiPress
+    adapter.onLongPress = _onLongPress
+    adapter.markers = _markers
+    adapter.polylines = _polylines
+    adapter.polygons = _polygons
+    adapter.circles = _circles
+    adapter.onMarkerPress = _onMarkerPress
+    adapter.onMarkerDragEnd = _onMarkerDragEnd
+    adapter.onPolylinePress = _onPolylinePress
+    adapter.onPolygonPress = _onPolygonPress
+    adapter.onCirclePress = _onCirclePress
+    adapter.onClusterPress = _onClusterPress
   }
 
   private func onMain<T>(_ work: () throws -> T) rethrows -> T {

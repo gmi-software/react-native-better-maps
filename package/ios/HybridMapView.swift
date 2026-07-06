@@ -4,51 +4,18 @@ import UIKit
 final class HybridMapView: HybridMapViewSpec {
   private let containerView = UIView()
   private let lifecycleLock = NSLock()
+  private let stateLock = NSLock()
   private var adapter: MapProviderAdapter?
   private var lifecycleGeneration: UInt64 = 0
   private var isRecycled = false
-
-  private var _provider: MapProvider = .apple
-  private var _mapType: MapType = .standard
-  private var _region: Region?
-  private var _camera: Camera?
-  private var _scrollEnabled: Bool?
-  private var _zoomEnabled: Bool?
-  private var _rotateEnabled: Bool?
-  private var _pitchEnabled: Bool?
-  private var _showsUserLocation: Bool?
-  private var _followsUserLocation: Bool?
-  private var _showsCompass: Bool?
-  private var _showsScale: Bool?
-  private var _customMapStyle: String?
-  private var _googleMapId: String?
-  private var _clusteringEnabled: Bool?
-  private var _mapPadding: EdgePadding?
-  private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
-  private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
-  private var _onRegionChange: ((Region) -> Void)?
-  private var _onRegionChangeComplete: ((Region) -> Void)?
-  private var _onMapReady: (() -> Void)?
-  private var _onPress: ((Coordinate) -> Void)?
-  private var _onPoiPress: ((NativePoiPressEvent) -> Void)?
-  private var _onLongPress: ((Coordinate) -> Void)?
-  private var _markers: [MarkerDescriptor]?
-  private var _polylines: [PolylineDescriptor]?
-  private var _polygons: [PolygonDescriptor]?
-  private var _circles: [CircleDescriptor]?
-  private var _onMarkerPress: ((String) -> Void)?
-  private var _onMarkerDragEnd: ((String, Coordinate) -> Void)?
-  private var _onPolylinePress: ((String) -> Void)?
-  private var _onPolygonPress: ((String) -> Void)?
-  private var _onCirclePress: ((String) -> Void)?
-  private var _onClusterPress: (([String], Coordinate) -> Void)?
+  private var _state = MapViewState()
 
   lazy var view: UIView = {
     containerView
   }()
 
   var provider: MapProvider? {
-    get { _provider }
+    get { getBacked(\.provider) }
     set {
       let nextProvider = newValue ?? .apple
       runOnMain { [weak self] in
@@ -56,482 +23,229 @@ final class HybridMapView: HybridMapViewSpec {
           return
         }
 
-        guard nextProvider != _provider || adapter == nil else {
+        let shouldInstall = withStateLock { () -> Bool in
+          guard nextProvider != self._state.provider || self.adapter == nil else {
+            return false
+          }
+
+          self._state.provider = nextProvider
+          return true
+        }
+
+        guard shouldInstall else {
           return
         }
 
-        _provider = nextProvider
         installAdapter(for: nextProvider)
       }
     }
   }
 
   var mapType: MapType {
-    get { _mapType }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _mapType = newValue
-        adapter?.mapType = newValue
-      }
-    }
+    get { getBacked(\.mapType) }
+    set { setBackedOnMain(newValue, store: \.mapType) { $0.mapType = $1 } }
   }
 
   var region: Region? {
-    get { _region }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _region = newValue
-        adapter?.region = newValue
-      }
-    }
+    get { getBacked(\.region) }
+    set { setBackedOnMain(newValue, store: \.region) { $0.region = $1 } }
   }
 
   var camera: Camera? {
-    get { _camera }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _camera = newValue
-        adapter?.camera = newValue
-      }
-    }
+    get { getBacked(\.camera) }
+    set { setBackedOnMain(newValue, store: \.camera) { $0.camera = $1 } }
   }
 
   var scrollEnabled: Bool? {
-    get { _scrollEnabled }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _scrollEnabled = newValue
-        adapter?.scrollEnabled = newValue
-      }
-    }
+    get { getBacked(\.scrollEnabled) }
+    set { setBackedOnMain(newValue, store: \.scrollEnabled) { $0.scrollEnabled = $1 } }
   }
 
   var zoomEnabled: Bool? {
-    get { _zoomEnabled }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _zoomEnabled = newValue
-        adapter?.zoomEnabled = newValue
-      }
-    }
+    get { getBacked(\.zoomEnabled) }
+    set { setBackedOnMain(newValue, store: \.zoomEnabled) { $0.zoomEnabled = $1 } }
   }
 
   var rotateEnabled: Bool? {
-    get { _rotateEnabled }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _rotateEnabled = newValue
-        adapter?.rotateEnabled = newValue
-      }
-    }
+    get { getBacked(\.rotateEnabled) }
+    set { setBackedOnMain(newValue, store: \.rotateEnabled) { $0.rotateEnabled = $1 } }
   }
 
   var pitchEnabled: Bool? {
-    get { _pitchEnabled }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _pitchEnabled = newValue
-        adapter?.pitchEnabled = newValue
-      }
-    }
+    get { getBacked(\.pitchEnabled) }
+    set { setBackedOnMain(newValue, store: \.pitchEnabled) { $0.pitchEnabled = $1 } }
   }
 
   var showsUserLocation: Bool? {
-    get { _showsUserLocation }
+    get { getBacked(\.showsUserLocation) }
     set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _showsUserLocation = newValue
-        adapter?.showsUserLocation = newValue
-      }
+      setBackedOnMain(newValue, store: \.showsUserLocation) { $0.showsUserLocation = $1 }
     }
   }
 
   var followsUserLocation: Bool? {
-    get { _followsUserLocation }
+    get { getBacked(\.followsUserLocation) }
     set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _followsUserLocation = newValue
-        adapter?.followsUserLocation = newValue
-      }
+      setBackedOnMain(newValue, store: \.followsUserLocation) { $0.followsUserLocation = $1 }
     }
   }
 
   var showsCompass: Bool? {
-    get { _showsCompass }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _showsCompass = newValue
-        adapter?.showsCompass = newValue
-      }
-    }
+    get { getBacked(\.showsCompass) }
+    set { setBackedOnMain(newValue, store: \.showsCompass) { $0.showsCompass = $1 } }
   }
 
   var showsScale: Bool? {
-    get { _showsScale }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _showsScale = newValue
-        adapter?.showsScale = newValue
-      }
-    }
+    get { getBacked(\.showsScale) }
+    set { setBackedOnMain(newValue, store: \.showsScale) { $0.showsScale = $1 } }
   }
 
   var customMapStyle: String? {
-    get { _customMapStyle }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _customMapStyle = newValue
-        adapter?.customMapStyle = newValue
-      }
-    }
+    get { getBacked(\.customMapStyle) }
+    set { setBackedOnMain(newValue, store: \.customMapStyle) { $0.customMapStyle = $1 } }
   }
 
   var googleMapId: String? {
-    get { _googleMapId }
+    get { getBacked(\.googleMapId) }
     set {
+      let nextGoogleMapId = newValue
       runOnMain { [weak self] in
         guard let self else {
           return
         }
 
-        guard _googleMapId != newValue else {
+        let shouldReinstall = withStateLock { () -> Bool in
+          guard self._state.googleMapId != nextGoogleMapId else {
+            return false
+          }
+
+          self._state.googleMapId = nextGoogleMapId
+          return self._state.provider == .google && self.adapter != nil
+        }
+
+        guard shouldReinstall else {
           return
         }
 
-        _googleMapId = newValue
-        if _provider == .google, adapter != nil {
-          installAdapter(for: _provider)
-        }
+        installAdapter(for: withStateLock { self._state.provider })
       }
     }
   }
 
   var clusteringEnabled: Bool? {
-    get { _clusteringEnabled }
+    get { getBacked(\.clusteringEnabled) }
     set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _clusteringEnabled = newValue
-        adapter?.clusteringEnabled = newValue
-      }
+      setBackedOnMain(newValue, store: \.clusteringEnabled) { $0.clusteringEnabled = $1 }
     }
   }
 
   var mapPadding: EdgePadding? {
-    get { _mapPadding }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _mapPadding = newValue
-        adapter?.mapPadding = newValue
-      }
-    }
+    get { getBacked(\.mapPadding) }
+    set { setBackedOnMain(newValue, store: \.mapPadding) { $0.mapPadding = $1 } }
   }
 
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? {
-    get { _markerEnteringAnimation }
+    get { getBacked(\.markerEnteringAnimation) }
     set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _markerEnteringAnimation = newValue
-        adapter?.markerEnteringAnimation = newValue
+      setBackedOnMain(newValue, store: \.markerEnteringAnimation) {
+        $0.markerEnteringAnimation = $1
       }
     }
   }
 
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? {
-    get { _clusterEnteringAnimation }
+    get { getBacked(\.clusterEnteringAnimation) }
     set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _clusterEnteringAnimation = newValue
-        adapter?.clusterEnteringAnimation = newValue
+      setBackedOnMain(newValue, store: \.clusterEnteringAnimation) {
+        $0.clusterEnteringAnimation = $1
       }
     }
   }
 
   var onRegionChange: ((Region) -> Void)? {
-    get { _onRegionChange }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onRegionChange = newValue
-        adapter?.onRegionChange = newValue
-      }
-    }
+    get { getBacked(\.onRegionChange) }
+    set { setBackedOnMain(newValue, store: \.onRegionChange) { $0.onRegionChange = $1 } }
   }
 
   var onRegionChangeComplete: ((Region) -> Void)? {
-    get { _onRegionChangeComplete }
+    get { getBacked(\.onRegionChangeComplete) }
     set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onRegionChangeComplete = newValue
-        adapter?.onRegionChangeComplete = newValue
+      setBackedOnMain(newValue, store: \.onRegionChangeComplete) {
+        $0.onRegionChangeComplete = $1
       }
     }
   }
 
   var onMapReady: (() -> Void)? {
-    get { _onMapReady }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onMapReady = newValue
-        adapter?.onMapReady = newValue
-      }
-    }
+    get { getBacked(\.onMapReady) }
+    set { setBackedOnMain(newValue, store: \.onMapReady) { $0.onMapReady = $1 } }
   }
 
   var onPress: ((Coordinate) -> Void)? {
-    get { _onPress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onPress = newValue
-        adapter?.onPress = newValue
-      }
-    }
+    get { getBacked(\.onPress) }
+    set { setBackedOnMain(newValue, store: \.onPress) { $0.onPress = $1 } }
   }
 
   var onPoiPress: ((NativePoiPressEvent) -> Void)? {
-    get { _onPoiPress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onPoiPress = newValue
-        adapter?.onPoiPress = newValue
-      }
-    }
+    get { getBacked(\.onPoiPress) }
+    set { setBackedOnMain(newValue, store: \.onPoiPress) { $0.onPoiPress = $1 } }
   }
 
   var onLongPress: ((Coordinate) -> Void)? {
-    get { _onLongPress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onLongPress = newValue
-        adapter?.onLongPress = newValue
-      }
-    }
+    get { getBacked(\.onLongPress) }
+    set { setBackedOnMain(newValue, store: \.onLongPress) { $0.onLongPress = $1 } }
   }
 
   var markers: [MarkerDescriptor]? {
-    get { _markers }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _markers = newValue
-        adapter?.markers = newValue
-      }
-    }
+    get { getBacked(\.markers) }
+    set { setBackedOnMain(newValue, store: \.markers) { $0.markers = $1 } }
   }
 
   var polylines: [PolylineDescriptor]? {
-    get { _polylines }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _polylines = newValue
-        adapter?.polylines = newValue
-      }
-    }
+    get { getBacked(\.polylines) }
+    set { setBackedOnMain(newValue, store: \.polylines) { $0.polylines = $1 } }
   }
 
   var polygons: [PolygonDescriptor]? {
-    get { _polygons }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _polygons = newValue
-        adapter?.polygons = newValue
-      }
-    }
+    get { getBacked(\.polygons) }
+    set { setBackedOnMain(newValue, store: \.polygons) { $0.polygons = $1 } }
   }
 
   var circles: [CircleDescriptor]? {
-    get { _circles }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _circles = newValue
-        adapter?.circles = newValue
-      }
-    }
+    get { getBacked(\.circles) }
+    set { setBackedOnMain(newValue, store: \.circles) { $0.circles = $1 } }
   }
 
   var onMarkerPress: ((String) -> Void)? {
-    get { _onMarkerPress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onMarkerPress = newValue
-        adapter?.onMarkerPress = newValue
-      }
-    }
+    get { getBacked(\.onMarkerPress) }
+    set { setBackedOnMain(newValue, store: \.onMarkerPress) { $0.onMarkerPress = $1 } }
   }
 
   var onMarkerDragEnd: ((String, Coordinate) -> Void)? {
-    get { _onMarkerDragEnd }
+    get { getBacked(\.onMarkerDragEnd) }
     set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onMarkerDragEnd = newValue
-        adapter?.onMarkerDragEnd = newValue
-      }
+      setBackedOnMain(newValue, store: \.onMarkerDragEnd) { $0.onMarkerDragEnd = $1 }
     }
   }
 
   var onPolylinePress: ((String) -> Void)? {
-    get { _onPolylinePress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onPolylinePress = newValue
-        adapter?.onPolylinePress = newValue
-      }
-    }
+    get { getBacked(\.onPolylinePress) }
+    set { setBackedOnMain(newValue, store: \.onPolylinePress) { $0.onPolylinePress = $1 } }
   }
 
   var onPolygonPress: ((String) -> Void)? {
-    get { _onPolygonPress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onPolygonPress = newValue
-        adapter?.onPolygonPress = newValue
-      }
-    }
+    get { getBacked(\.onPolygonPress) }
+    set { setBackedOnMain(newValue, store: \.onPolygonPress) { $0.onPolygonPress = $1 } }
   }
 
   var onCirclePress: ((String) -> Void)? {
-    get { _onCirclePress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onCirclePress = newValue
-        adapter?.onCirclePress = newValue
-      }
-    }
+    get { getBacked(\.onCirclePress) }
+    set { setBackedOnMain(newValue, store: \.onCirclePress) { $0.onCirclePress = $1 } }
   }
 
   var onClusterPress: (([String], Coordinate) -> Void)? {
-    get { _onClusterPress }
-    set {
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        _onClusterPress = newValue
-        adapter?.onClusterPress = newValue
-      }
-    }
+    get { getBacked(\.onClusterPress) }
+    set { setBackedOnMain(newValue, store: \.onClusterPress) { $0.onClusterPress = $1 } }
   }
 
   func fetchCamera() throws -> Promise<Camera> {
@@ -582,40 +296,9 @@ final class HybridMapView: HybridMapViewSpec {
       adapter?.prepareForRecycle()
       adapter?.contentView.removeFromSuperview()
       adapter = nil
-      _provider = .apple
-      _mapType = .standard
-      _region = nil
-      _camera = nil
-      _scrollEnabled = nil
-      _zoomEnabled = nil
-      _rotateEnabled = nil
-      _pitchEnabled = nil
-      _showsUserLocation = nil
-      _followsUserLocation = nil
-      _showsCompass = nil
-      _showsScale = nil
-      _customMapStyle = nil
-      _googleMapId = nil
-      _clusteringEnabled = nil
-      _mapPadding = nil
-      _markerEnteringAnimation = nil
-      _clusterEnteringAnimation = nil
-      _markers = nil
-      _polylines = nil
-      _polygons = nil
-      _circles = nil
-      _onRegionChange = nil
-      _onRegionChangeComplete = nil
-      _onMapReady = nil
-      _onPress = nil
-      _onPoiPress = nil
-      _onLongPress = nil
-      _onMarkerPress = nil
-      _onMarkerDragEnd = nil
-      _onPolylinePress = nil
-      _onPolygonPress = nil
-      _onCirclePress = nil
-      _onClusterPress = nil
+      withStateLock {
+        self._state = MapViewState()
+      }
     }
   }
 
@@ -628,7 +311,7 @@ final class HybridMapView: HybridMapViewSpec {
       return adapter
     }
 
-    installAdapter(for: _provider)
+    installAdapter(for: withStateLock { self._state.provider })
     return adapter!
   }
 
@@ -694,7 +377,7 @@ final class HybridMapView: HybridMapViewSpec {
       return AppleMapProviderAdapter()
     case .google:
       do {
-        return try GoogleMapProviderAdapter(googleMapId: _googleMapId)
+        return try GoogleMapProviderAdapter(googleMapId: withStateLock { self._state.googleMapId })
       } catch {
         return UnavailableMapProviderAdapter(error: error)
       }
@@ -717,39 +400,33 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   private func syncState(to adapter: MapProviderAdapter) {
-    adapter.mapType = _mapType
-    adapter.region = _region
-    adapter.camera = _camera
-    adapter.scrollEnabled = _scrollEnabled
-    adapter.zoomEnabled = _zoomEnabled
-    adapter.rotateEnabled = _rotateEnabled
-    adapter.pitchEnabled = _pitchEnabled
-    adapter.showsUserLocation = _showsUserLocation
-    adapter.followsUserLocation = _followsUserLocation
-    adapter.showsCompass = _showsCompass
-    adapter.showsScale = _showsScale
-    adapter.customMapStyle = _customMapStyle
-    adapter.googleMapId = _googleMapId
-    adapter.clusteringEnabled = _clusteringEnabled
-    adapter.mapPadding = _mapPadding
-    adapter.markerEnteringAnimation = _markerEnteringAnimation
-    adapter.clusterEnteringAnimation = _clusterEnteringAnimation
-    adapter.onRegionChange = _onRegionChange
-    adapter.onRegionChangeComplete = _onRegionChangeComplete
-    adapter.onMapReady = _onMapReady
-    adapter.onPress = _onPress
-    adapter.onPoiPress = _onPoiPress
-    adapter.onLongPress = _onLongPress
-    adapter.markers = _markers
-    adapter.polylines = _polylines
-    adapter.polygons = _polygons
-    adapter.circles = _circles
-    adapter.onMarkerPress = _onMarkerPress
-    adapter.onMarkerDragEnd = _onMarkerDragEnd
-    adapter.onPolylinePress = _onPolylinePress
-    adapter.onPolygonPress = _onPolygonPress
-    adapter.onCirclePress = _onCirclePress
-    adapter.onClusterPress = _onClusterPress
+    let snapshot = withStateLock { self._state }
+    snapshot.apply(to: adapter)
+  }
+
+  private func withStateLock<T>(_ body: () -> T) -> T {
+    stateLock.lock()
+    defer { stateLock.unlock() }
+    return body()
+  }
+
+  private func getBacked<T>(_ keyPath: KeyPath<MapViewState, T>) -> T {
+    withStateLock { self._state[keyPath: keyPath] }
+  }
+
+  private func setBackedOnMain<T>(
+    _ value: T,
+    store: WritableKeyPath<MapViewState, T>,
+    sync: @escaping (MapProviderAdapter, T) -> Void
+  ) {
+    withStateLock { self._state[keyPath: store] = value }
+    runOnMain { [weak self] in
+      guard let self, let adapter = self.adapter else {
+        return
+      }
+
+      sync(adapter, value)
+    }
   }
 
   private func runOnMain(_ work: @escaping () -> Void) {

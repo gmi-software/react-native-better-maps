@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, type RefObject } from 'react';
 import { callback } from 'react-native-nitro-modules';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
 import { NativeMapView } from '../native/MapViewNative';
@@ -13,6 +13,20 @@ import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
+
+const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
+
+function withHybridRef<T>(
+  hybridRef: RefObject<NativeMapViewHybrid | null>,
+  run: (hybrid: NativeMapViewHybrid) => T,
+): T {
+  const hybrid = hybridRef.current;
+  if (hybrid == null) {
+    return Promise.reject(new Error(MAP_VIEW_NOT_MOUNTED_ERROR)) as T;
+  }
+
+  return run(hybrid);
+}
 
 export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(
   {
@@ -167,36 +181,20 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(
   useImperativeHandle(
     ref,
     () => ({
-      getCamera: () => {
-        if (hybridRef.current == null) {
-          return Promise.reject(new Error('MapView is not mounted'));
-        }
-        return hybridRef.current.fetchCamera();
-      },
-      setCamera: (nextCamera) => {
-        if (hybridRef.current == null) {
-          return Promise.reject(new Error('MapView is not mounted'));
-        }
-        return hybridRef.current.applyCamera(nextCamera);
-      },
-      animateCamera: (nextCamera, duration) => {
-        if (hybridRef.current == null) {
-          return Promise.reject(new Error('MapView is not mounted'));
-        }
-        return hybridRef.current.animateCamera(nextCamera, duration);
-      },
-      getVisibleRegion: () => {
-        if (hybridRef.current == null) {
-          return Promise.reject(new Error('MapView is not mounted'));
-        }
-        return hybridRef.current.getVisibleRegion();
-      },
-      fitToCoordinates: (coordinates, padding, animated) => {
-        if (hybridRef.current == null) {
-          return Promise.reject(new Error('MapView is not mounted'));
-        }
-        return hybridRef.current.fitToCoordinates(coordinates, padding, animated);
-      },
+      getCamera: () =>
+        withHybridRef(hybridRef, (hybrid) => hybrid.fetchCamera()),
+      setCamera: (nextCamera) =>
+        withHybridRef(hybridRef, (hybrid) => hybrid.applyCamera(nextCamera)),
+      animateCamera: (nextCamera, duration) =>
+        withHybridRef(hybridRef, (hybrid) =>
+          hybrid.animateCamera(nextCamera, duration),
+        ),
+      getVisibleRegion: () =>
+        withHybridRef(hybridRef, (hybrid) => hybrid.getVisibleRegion()),
+      fitToCoordinates: (coordinates, padding, animated) =>
+        withHybridRef(hybridRef, (hybrid) =>
+          hybrid.fitToCoordinates(coordinates, padding, animated),
+        ),
     }),
     [],
   );

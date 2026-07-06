@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useImperativeHandle, useMemo, useRef, type Ref, type RefObject } from 'react';
 import { callback } from 'react-native-nitro-modules';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
 import { NativeMapView } from '../native/MapViewNative';
@@ -28,47 +28,45 @@ function withHybridRef<T>(
   return run(hybrid);
 }
 
-export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(
-  {
-    style,
-    children,
-    provider,
-    googleMapId,
-    region,
-    camera,
-    mapType = 'standard',
-    scrollEnabled,
-    zoomEnabled,
-    rotateEnabled,
-    pitchEnabled,
-    showsUserLocation,
-    followsUserLocation,
-    showsCompass,
-    showsScale,
-    customMapStyle,
-    clusteringEnabled,
-    mapPadding,
-    markerEnteringAnimation,
-    clusterEnteringAnimation,
-    markers: markersProp,
-    polylines: polylinesProp,
-    polygons: polygonsProp,
-    circles: circlesProp,
-    onRegionChange,
-    onRegionChangeComplete,
-    onMapReady,
-    onPress,
-    onPoiPress,
-    onLongPress,
-    onClusterPress,
-    onMarkerPress: onMarkerPressProp,
-    onMarkerDragEnd: onMarkerDragEndProp,
-    onPolylinePress: onPolylinePressProp,
-    onPolygonPress: onPolygonPressProp,
-    onCirclePress: onCirclePressProp,
-  },
+export function MapView({
   ref,
-) {
+  style,
+  children,
+  provider,
+  googleMapId,
+  region,
+  camera,
+  mapType = 'standard',
+  scrollEnabled,
+  zoomEnabled,
+  rotateEnabled,
+  pitchEnabled,
+  showsUserLocation,
+  followsUserLocation,
+  showsCompass,
+  showsScale,
+  customMapStyle,
+  clusteringEnabled,
+  mapPadding,
+  markerEnteringAnimation,
+  clusterEnteringAnimation,
+  markers: markersProp,
+  polylines: polylinesProp,
+  polygons: polygonsProp,
+  circles: circlesProp,
+  onRegionChange,
+  onRegionChangeComplete,
+  onMapReady,
+  onPress,
+  onPoiPress,
+  onLongPress,
+  onClusterPress,
+  onMarkerPress: onMarkerPressProp,
+  onMarkerDragEnd: onMarkerDragEndProp,
+  onPolylinePress: onPolylinePressProp,
+  onPolygonPress: onPolygonPressProp,
+  onCirclePress: onCirclePressProp,
+}: MapViewProps & { ref?: Ref<MapViewRef> }) {
   const resolvedProvider = resolveMapProvider(provider);
   const hybridRef = useRef<NativeMapViewHybrid>(null);
   const {
@@ -260,4 +258,4 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(
       }
     />
   );
-});
+}

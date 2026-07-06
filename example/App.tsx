@@ -1,5 +1,4 @@
 import {
-  forwardRef,
   memo,
   useCallback,
   useEffect,
@@ -7,6 +6,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -485,6 +485,7 @@ const ScenarioDock = memo(function ScenarioDock({
 });
 
 type MapSceneProps = {
+  ref?: Ref<MapViewRef>;
   scenario: MapScenario;
   provider: SupportedExampleProvider;
   mapType: MapType;
@@ -500,25 +501,22 @@ type MapSceneProps = {
   onLongPress: (coordinate: Coordinate) => void;
 };
 
-const MapScene = memo(
-  forwardRef<MapViewRef, MapSceneProps>(function MapScene(
-    {
-      scenario,
-      provider,
-      mapType,
-      mapPadding,
-      animationOption,
-      onMapReady,
-      onClusterPress,
-      onMarkerPress,
-      onMarkerDragEnd,
-      onOverlayPress,
-      onPress,
-      onPoiPress,
-      onLongPress,
-    },
-    ref,
-  ) {
+const MapScene = memo(function MapScene({
+  ref,
+  scenario,
+  provider,
+  mapType,
+  mapPadding,
+  animationOption,
+  onMapReady,
+  onClusterPress,
+  onMarkerPress,
+  onMarkerDragEnd,
+  onOverlayPress,
+  onPress,
+  onPoiPress,
+  onLongPress,
+}: MapSceneProps) {
     const commonMapProps = {
       style: styles.map,
       mapType,
@@ -569,8 +567,7 @@ const MapScene = memo(
         provider="google"
       />
     );
-  }),
-);
+});
 
 type StatusHeaderProps = {
   status: string;

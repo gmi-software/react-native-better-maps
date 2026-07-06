@@ -86,7 +86,14 @@ Delivered incrementally during Phases 3–5; polished for platform consistency i
 | Clustering library    | Custom vs platform-native                  | Platform-native (MKClusterAnnotation / maps-utils) |
 | Provider architecture | In-place SDK switching vs adapter remount  | Provider adapter + React remount                   |
 | Overlay animations    | Reanimated core path vs native descriptors | Native descriptor animations; Reanimated optional  |
+| Custom view markers   | Snapshot-only vs live/hybrid native views  | Hybrid: live MapKit, snapshot Google (ADR 0004)    |
 | Offline support       | Tile caching strategy                      | Future consideration                               |
+
+## Custom view markers (ADR 0004)
+
+- [ ] Phase 0: apply `MarkerDescriptor.image` on iOS Google provider
+- [ ] Phase 1: `<Marker>` children via snapshot into existing image pipeline
+- [ ] Phase 2: `<MarkerView>` HybridView — live MapKit views, snapshot on Google
 
 ## Future provider work
 

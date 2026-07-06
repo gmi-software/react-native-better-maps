@@ -271,12 +271,14 @@ class HybridMapView(private val context: ThemedReactContext) :
 
   override fun fetchCamera(): Promise<Camera> = currentAdapter().fetchCamera()
 
-  override fun applyCamera(camera: Camera) {
+  override fun applyCamera(camera: Camera): Promise<Unit> {
     currentAdapter().applyCamera(camera)
+    return Promise.resolved(Unit)
   }
 
-  override fun animateCamera(camera: Camera, duration: Double?) {
+  override fun animateCamera(camera: Camera, duration: Double?): Promise<Unit> {
     currentAdapter().animateCamera(camera, duration)
+    return Promise.resolved(Unit)
   }
 
   override fun getVisibleRegion(): Promise<VisibleRegion> = currentAdapter().getVisibleRegion()
@@ -285,8 +287,9 @@ class HybridMapView(private val context: ThemedReactContext) :
     coordinates: Array<Coordinate>,
     padding: EdgePadding?,
     animated: Boolean?,
-  ) {
+  ): Promise<Unit> {
     currentAdapter().fitToCoordinates(coordinates, padding, animated)
+    return Promise.resolved(Unit)
   }
 
   override fun prepareForRecycle() {

@@ -174,10 +174,16 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(
         return hybridRef.current.fetchCamera();
       },
       setCamera: (nextCamera) => {
-        hybridRef.current?.applyCamera(nextCamera);
+        if (hybridRef.current == null) {
+          return Promise.reject(new Error('MapView is not mounted'));
+        }
+        return hybridRef.current.applyCamera(nextCamera);
       },
       animateCamera: (nextCamera, duration) => {
-        hybridRef.current?.animateCamera(nextCamera, duration);
+        if (hybridRef.current == null) {
+          return Promise.reject(new Error('MapView is not mounted'));
+        }
+        return hybridRef.current.animateCamera(nextCamera, duration);
       },
       getVisibleRegion: () => {
         if (hybridRef.current == null) {
@@ -186,7 +192,10 @@ export const MapView = forwardRef<MapViewRef, MapViewProps>(function MapView(
         return hybridRef.current.getVisibleRegion();
       },
       fitToCoordinates: (coordinates, padding, animated) => {
-        hybridRef.current?.fitToCoordinates(coordinates, padding, animated);
+        if (hybridRef.current == null) {
+          return Promise.reject(new Error('MapView is not mounted'));
+        }
+        return hybridRef.current.fitToCoordinates(coordinates, padding, animated);
       },
     }),
     [],

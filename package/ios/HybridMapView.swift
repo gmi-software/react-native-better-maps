@@ -48,10 +48,14 @@ final class HybridMapView: HybridMapViewSpec {
   }()
 
   var provider: MapProvider? {
-    get { onMain { _provider } }
+    get { _provider }
     set {
       let nextProvider = newValue ?? .apple
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         guard nextProvider != _provider || adapter == nil else {
           return
         }
@@ -63,9 +67,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var mapType: MapType {
-    get { onMain { _mapType } }
+    get { _mapType }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _mapType = newValue
         adapter?.mapType = newValue
       }
@@ -73,9 +81,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var region: Region? {
-    get { onMain { _region } }
+    get { _region }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _region = newValue
         adapter?.region = newValue
       }
@@ -83,9 +95,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var camera: Camera? {
-    get { onMain { _camera } }
+    get { _camera }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _camera = newValue
         adapter?.camera = newValue
       }
@@ -93,9 +109,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var scrollEnabled: Bool? {
-    get { onMain { _scrollEnabled } }
+    get { _scrollEnabled }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _scrollEnabled = newValue
         adapter?.scrollEnabled = newValue
       }
@@ -103,9 +123,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var zoomEnabled: Bool? {
-    get { onMain { _zoomEnabled } }
+    get { _zoomEnabled }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _zoomEnabled = newValue
         adapter?.zoomEnabled = newValue
       }
@@ -113,9 +137,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var rotateEnabled: Bool? {
-    get { onMain { _rotateEnabled } }
+    get { _rotateEnabled }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _rotateEnabled = newValue
         adapter?.rotateEnabled = newValue
       }
@@ -123,9 +151,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var pitchEnabled: Bool? {
-    get { onMain { _pitchEnabled } }
+    get { _pitchEnabled }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _pitchEnabled = newValue
         adapter?.pitchEnabled = newValue
       }
@@ -133,9 +165,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var showsUserLocation: Bool? {
-    get { onMain { _showsUserLocation } }
+    get { _showsUserLocation }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _showsUserLocation = newValue
         adapter?.showsUserLocation = newValue
       }
@@ -143,9 +179,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var followsUserLocation: Bool? {
-    get { onMain { _followsUserLocation } }
+    get { _followsUserLocation }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _followsUserLocation = newValue
         adapter?.followsUserLocation = newValue
       }
@@ -153,9 +193,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var showsCompass: Bool? {
-    get { onMain { _showsCompass } }
+    get { _showsCompass }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _showsCompass = newValue
         adapter?.showsCompass = newValue
       }
@@ -163,9 +207,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var showsScale: Bool? {
-    get { onMain { _showsScale } }
+    get { _showsScale }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _showsScale = newValue
         adapter?.showsScale = newValue
       }
@@ -173,9 +221,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var customMapStyle: String? {
-    get { onMain { _customMapStyle } }
+    get { _customMapStyle }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _customMapStyle = newValue
         adapter?.customMapStyle = newValue
       }
@@ -183,9 +235,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var googleMapId: String? {
-    get { onMain { _googleMapId } }
+    get { _googleMapId }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         guard _googleMapId != newValue else {
           return
         }
@@ -199,9 +255,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var clusteringEnabled: Bool? {
-    get { onMain { _clusteringEnabled } }
+    get { _clusteringEnabled }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _clusteringEnabled = newValue
         adapter?.clusteringEnabled = newValue
       }
@@ -209,9 +269,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var mapPadding: EdgePadding? {
-    get { onMain { _mapPadding } }
+    get { _mapPadding }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _mapPadding = newValue
         adapter?.mapPadding = newValue
       }
@@ -219,9 +283,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? {
-    get { onMain { _markerEnteringAnimation } }
+    get { _markerEnteringAnimation }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _markerEnteringAnimation = newValue
         adapter?.markerEnteringAnimation = newValue
       }
@@ -229,9 +297,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? {
-    get { onMain { _clusterEnteringAnimation } }
+    get { _clusterEnteringAnimation }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _clusterEnteringAnimation = newValue
         adapter?.clusterEnteringAnimation = newValue
       }
@@ -239,9 +311,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onRegionChange: ((Region) -> Void)? {
-    get { onMain { _onRegionChange } }
+    get { _onRegionChange }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onRegionChange = newValue
         adapter?.onRegionChange = newValue
       }
@@ -249,9 +325,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onRegionChangeComplete: ((Region) -> Void)? {
-    get { onMain { _onRegionChangeComplete } }
+    get { _onRegionChangeComplete }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onRegionChangeComplete = newValue
         adapter?.onRegionChangeComplete = newValue
       }
@@ -259,9 +339,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onMapReady: (() -> Void)? {
-    get { onMain { _onMapReady } }
+    get { _onMapReady }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onMapReady = newValue
         adapter?.onMapReady = newValue
       }
@@ -269,9 +353,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onPress: ((Coordinate) -> Void)? {
-    get { onMain { _onPress } }
+    get { _onPress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onPress = newValue
         adapter?.onPress = newValue
       }
@@ -279,9 +367,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onPoiPress: ((NativePoiPressEvent) -> Void)? {
-    get { onMain { _onPoiPress } }
+    get { _onPoiPress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onPoiPress = newValue
         adapter?.onPoiPress = newValue
       }
@@ -289,9 +381,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onLongPress: ((Coordinate) -> Void)? {
-    get { onMain { _onLongPress } }
+    get { _onLongPress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onLongPress = newValue
         adapter?.onLongPress = newValue
       }
@@ -299,9 +395,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var markers: [MarkerDescriptor]? {
-    get { onMain { _markers } }
+    get { _markers }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _markers = newValue
         adapter?.markers = newValue
       }
@@ -309,9 +409,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var polylines: [PolylineDescriptor]? {
-    get { onMain { _polylines } }
+    get { _polylines }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _polylines = newValue
         adapter?.polylines = newValue
       }
@@ -319,9 +423,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var polygons: [PolygonDescriptor]? {
-    get { onMain { _polygons } }
+    get { _polygons }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _polygons = newValue
         adapter?.polygons = newValue
       }
@@ -329,9 +437,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var circles: [CircleDescriptor]? {
-    get { onMain { _circles } }
+    get { _circles }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _circles = newValue
         adapter?.circles = newValue
       }
@@ -339,9 +451,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onMarkerPress: ((String) -> Void)? {
-    get { onMain { _onMarkerPress } }
+    get { _onMarkerPress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onMarkerPress = newValue
         adapter?.onMarkerPress = newValue
       }
@@ -349,9 +465,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onMarkerDragEnd: ((String, Coordinate) -> Void)? {
-    get { onMain { _onMarkerDragEnd } }
+    get { _onMarkerDragEnd }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onMarkerDragEnd = newValue
         adapter?.onMarkerDragEnd = newValue
       }
@@ -359,9 +479,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onPolylinePress: ((String) -> Void)? {
-    get { onMain { _onPolylinePress } }
+    get { _onPolylinePress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onPolylinePress = newValue
         adapter?.onPolylinePress = newValue
       }
@@ -369,9 +493,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onPolygonPress: ((String) -> Void)? {
-    get { onMain { _onPolygonPress } }
+    get { _onPolygonPress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onPolygonPress = newValue
         adapter?.onPolygonPress = newValue
       }
@@ -379,9 +507,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onCirclePress: ((String) -> Void)? {
-    get { onMain { _onCirclePress } }
+    get { _onCirclePress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onCirclePress = newValue
         adapter?.onCirclePress = newValue
       }
@@ -389,9 +521,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   var onClusterPress: (([String], Coordinate) -> Void)? {
-    get { onMain { _onClusterPress } }
+    get { _onClusterPress }
     set {
-      onMain {
+      runOnMain { [weak self] in
+        guard let self else {
+          return
+        }
+
         _onClusterPress = newValue
         adapter?.onClusterPress = newValue
       }
@@ -402,16 +538,13 @@ final class HybridMapView: HybridMapViewSpec {
     promiseOnMain { try $0.fetchCamera() }
   }
 
-  func applyCamera(camera: Camera) throws {
-    let lifecycle = currentLifecycleSnapshot()
-    try onMain { try currentAdapter(matching: lifecycle).applyCamera(camera: camera) }
+  func applyCamera(camera: Camera) throws -> Promise<Void> {
+    promiseOnMainVoid { try $0.applyCamera(camera: camera) }
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
-    let lifecycle = currentLifecycleSnapshot()
-    try onMain {
-      try currentAdapter(matching: lifecycle)
-        .animateCamera(camera: camera, duration: duration)
+  func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
+    promiseOnMainVoid {
+      try $0.animateCamera(camera: camera, duration: duration)
     }
   }
 
@@ -423,10 +556,9 @@ final class HybridMapView: HybridMapViewSpec {
     coordinates: [Coordinate],
     padding: EdgePadding?,
     animated: Bool?
-  ) throws {
-    let lifecycle = currentLifecycleSnapshot()
-    try onMain {
-      try currentAdapter(matching: lifecycle).fitToCoordinates(
+  ) throws -> Promise<Void> {
+    promiseOnMainVoid {
+      try $0.fitToCoordinates(
         coordinates: coordinates,
         padding: padding,
         animated: animated
@@ -435,13 +567,17 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   func afterUpdate() {
-    onMain {
-      activateLifecycle()
+    runOnMain { [weak self] in
+      self?.activateLifecycle()
     }
   }
 
   func prepareForRecycle() {
-    onMain {
+    runOnMain { [weak self] in
+      guard let self else {
+        return
+      }
+
       recycleLifecycle()
       adapter?.prepareForRecycle()
       adapter?.contentView.removeFromSuperview()
@@ -616,12 +752,41 @@ final class HybridMapView: HybridMapViewSpec {
     adapter.onClusterPress = _onClusterPress
   }
 
-  private func onMain<T>(_ work: () throws -> T) rethrows -> T {
+  private func runOnMain(_ work: @escaping () -> Void) {
     if Thread.isMainThread {
-      return try work()
+      work()
+    } else {
+      DispatchQueue.main.async(execute: work)
+    }
+  }
+
+  private func promiseOnMainVoid(
+    _ work: @escaping (MapProviderAdapter) throws -> Void
+  ) -> Promise<Void> {
+    let promise = Promise<Void>()
+    let lifecycle = currentLifecycleSnapshot()
+    let run = { [weak self] in
+      guard let self else {
+        promise.reject(withError: Self.mapViewNotMountedError())
+        return
+      }
+
+      do {
+        let adapter = try self.currentAdapter(matching: lifecycle)
+        try work(adapter)
+        promise.resolve(withResult: ())
+      } catch {
+        promise.reject(withError: error)
+      }
     }
 
-    return try DispatchQueue.main.sync(execute: work)
+    if Thread.isMainThread {
+      run()
+    } else {
+      DispatchQueue.main.async(execute: run)
+    }
+
+    return promise
   }
 
   private func promiseOnMain<T>(

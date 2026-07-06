@@ -668,29 +668,35 @@ export default function App() {
   );
 
   const handleAnimateCamera = useCallback(() => {
-    mapRef.current?.animateCamera(
-      {
-        center: {
-          latitude: scenario.region.latitude,
-          longitude: scenario.region.longitude,
+    mapRef.current
+      ?.animateCamera(
+        {
+          center: {
+            latitude: scenario.region.latitude,
+            longitude: scenario.region.longitude,
+          },
+          zoom: 13,
+          heading: 0,
+          pitch: 0,
         },
-        zoom: 13,
-        heading: 0,
-        pitch: 0,
-      },
-      1,
-    );
+        1,
+      )
+      ?.catch(() => {});
   }, [scenario]);
 
   const handleGetCamera = useCallback(async () => {
-    const camera = await mapRef.current?.getCamera();
-    if (camera == null) {
-      return;
-    }
+    try {
+      const camera = await mapRef.current?.getCamera();
+      if (camera == null) {
+        return;
+      }
 
-    setStatus(
-      `zoom ${camera.zoom?.toFixed(1) ?? '?'} · ${camera.center.latitude.toFixed(4)}, ${camera.center.longitude.toFixed(4)}`,
-    );
+      setStatus(
+        `zoom ${camera.zoom?.toFixed(1) ?? '?'} · ${camera.center.latitude.toFixed(4)}, ${camera.center.longitude.toFixed(4)}`,
+      );
+    } catch {
+      // Map unmounted or native call failed — ignore.
+    }
   }, []);
 
   const cycleMapType = useCallback(() => {
@@ -785,11 +791,13 @@ export default function App() {
       scenario.advanced?.fitToCoordinatesOnReady &&
       scenario.markers != null
     ) {
-      mapRef.current?.fitToCoordinates(
-        scenario.markers.map((marker) => marker.coordinate),
-        mapPadding,
-        true,
-      );
+      mapRef.current
+        ?.fitToCoordinates(
+          scenario.markers.map((marker) => marker.coordinate),
+          mapPadding,
+          true,
+        )
+        ?.catch(() => {});
     }
   }, [scenario, mapPadding]);
 

@@ -1,4 +1,6 @@
 import Foundation
+
+#if canImport(GoogleMaps)
 import GoogleMaps
 
 enum GoogleMapsAPIKey {
@@ -20,6 +22,7 @@ enum GoogleMapsAPIKey {
     configuredKey = key
   }
 }
+#endif
 
 enum MapProviderConfigurationError: LocalizedError {
   case missingGoogleMapsIosApiKey

@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import GoogleMaps
 import MapKit
 
@@ -42,3 +43,4 @@ extension MKCoordinateRegion {
     self = bounds.toRegion().toMKCoordinateRegion()
   }
 }
+#endif

@@ -102,7 +102,7 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Called when any circle is pressed. */
   onCirclePress?: (id: string) => void;
 
-  /** Called when the map region changes after user interaction. */
+  /** Called once when a user-initiated region change begins. */
   onRegionChange?: (region: Region) => void;
 
   /** Called when the map region change completes. */

@@ -2,6 +2,7 @@ package com.margelo.nitro.nitromaps
 
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import kotlin.math.abs
 
 fun Camera.toCameraPosition(current: CameraPosition? = null): CameraPosition {
   return CameraPosition.Builder()
@@ -20,4 +21,17 @@ fun CameraPosition.toCamera(): Camera {
     pitch = tilt.toDouble(),
     altitude = null,
   )
+}
+
+fun CameraPosition.approximatelyEquals(
+  other: CameraPosition,
+  coordinateEpsilon: Double = MapApproximateEquality.COORDINATE_EPSILON,
+  zoomEpsilon: Float = MapApproximateEquality.ZOOM_EPSILON,
+  angleEpsilon: Float = MapApproximateEquality.ANGLE_EPSILON,
+): Boolean {
+  return abs(target.latitude - other.target.latitude) < coordinateEpsilon
+    && abs(target.longitude - other.target.longitude) < coordinateEpsilon
+    && abs(zoom - other.zoom) < zoomEpsilon
+    && abs(bearing - other.bearing) < angleEpsilon
+    && abs(tilt - other.tilt) < angleEpsilon
 }

@@ -9,9 +9,6 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private static let liveGestureRefreshInterval: CFTimeInterval = 0.18
   private static let liveGestureAnimationBudget = 24
 
-  private var isProgrammaticUpdate = false
-  private var pendingProgrammaticUpdateIDs: [Int] = []
-  private var nextProgrammaticUpdateID = 0
   private var isMapReady = false
   private var hasDeliveredMapReady = false
   private var isUserGestureMoving = false
@@ -75,7 +72,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var region: Region? {
     didSet {
-      guard let region, !isProgrammaticUpdate, camera == nil else {
+      guard let region, !isUserGestureMoving, camera == nil else {
         return
       }
       applyRegion(region)
@@ -84,7 +81,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var camera: Camera? {
     didSet {
-      guard let camera, !isProgrammaticUpdate else {
+      guard let camera, !isUserGestureMoving else {
         return
       }
       updateMapCamera(camera, animated: false)
@@ -261,8 +258,6 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   func prepareForRecycle() {
     isUserGestureMoving = false
     lastLiveMarkerRefreshTime = 0
-    isProgrammaticUpdate = false
-    pendingProgrammaticUpdateIDs.removeAll()
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
@@ -311,7 +306,12 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
-    let update = GMSCameraUpdate.setCamera(camera.toGMSCameraPosition(current: view.camera))
+    let target = camera.toGMSCameraPosition(current: view.camera)
+    guard !view.camera.approximatelyEquals(target) else {
+      return
+    }
+
+    let update = GMSCameraUpdate.setCamera(target)
     applyCameraUpdate(update, animated: animated, duration: duration)
   }
 
@@ -320,51 +320,38 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     animated: Bool,
     duration: Double?
   ) {
-    let updateID = beginProgrammaticUpdate()
     if animated {
       if let duration {
         CATransaction.begin()
         CATransaction.setAnimationDuration(duration)
-        CATransaction.setCompletionBlock { [weak self] in
-          self?.endProgrammaticUpdate(updateID)
-        }
         view.animate(with: update)
         CATransaction.commit()
-        scheduleProgrammaticUpdateFallback(for: updateID, delay: duration + 0.1)
       } else {
         view.animate(with: update)
-        scheduleProgrammaticUpdateFallback(for: updateID, delay: 0.5)
       }
     } else {
       view.moveCamera(update)
-      scheduleProgrammaticUpdateFallback(for: updateID, delay: 0)
     }
   }
 
-  private func beginProgrammaticUpdate() -> Int {
-    nextProgrammaticUpdateID += 1
-    let updateID = nextProgrammaticUpdateID
-    pendingProgrammaticUpdateIDs.append(updateID)
-    isProgrammaticUpdate = true
-    return updateID
-  }
-
-  private func endProgrammaticUpdate(_ updateID: Int? = nil) {
-    if let updateID {
-      guard let index = pendingProgrammaticUpdateIDs.firstIndex(of: updateID) else {
-        return
-      }
-      pendingProgrammaticUpdateIDs.remove(at: index)
-    } else if !pendingProgrammaticUpdateIDs.isEmpty {
-      pendingProgrammaticUpdateIDs.removeFirst()
+  private func handleRegionWillChange(userInteracting: Bool) {
+    if userInteracting {
+      emitRegionChange(complete: false)
     }
-
-    isProgrammaticUpdate = !pendingProgrammaticUpdateIDs.isEmpty
   }
 
-  private func scheduleProgrammaticUpdateFallback(for updateID: Int, delay: TimeInterval) {
-    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-      self?.endProgrammaticUpdate(updateID)
+  private func handleRegionDidChange(wasUserGesture: Bool) {
+    if wasUserGesture {
+      emitRegionChange(complete: true)
+    }
+  }
+
+  private func emitRegionChange(complete: Bool) {
+    let region = view.currentNitroRegion()
+    if complete {
+      onRegionChangeComplete?(region)
+    } else {
+      onRegionChange?(region)
     }
   }
 
@@ -410,19 +397,6 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private func animateToClusterRegion(_ region: MKCoordinateRegion) {
     let bounds = region.toRegion().toGMSCoordinateBounds()
     view.animate(with: GMSCameraUpdate.fit(bounds, withPadding: 72))
-  }
-
-  private func notifyRegionChange(complete: Bool) {
-    guard !isProgrammaticUpdate else {
-      return
-    }
-
-    let region = view.currentNitroRegion()
-    if complete {
-      onRegionChangeComplete?(region)
-    } else {
-      onRegionChange?(region)
-    }
   }
 
   private func notifyMapReadyIfNeeded() {
@@ -499,9 +473,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func animateToUserLocation(_ location: CLLocation, on mapView: GMSMapView) {
-    let updateID = beginProgrammaticUpdate()
     mapView.animate(with: GMSCameraUpdate.setTarget(location.coordinate))
-    scheduleProgrammaticUpdateFallback(for: updateID, delay: 0.5)
   }
 
   private func applyControlSettings(to mapView: GMSMapView) {
@@ -526,8 +498,8 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   func mapView(_ mapView: GMSMapView, willMove gesture: Bool) {
     if gesture {
       startGestureMarkerRefresh()
-      notifyRegionChange(complete: false)
     }
+    handleRegionWillChange(userInteracting: gesture)
   }
 
   func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
@@ -535,10 +507,10 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
-    stopGestureMarkerRefresh()
+    let wasUserGesture = isUserGestureMoving
     refreshVisibleMarkers()
-    notifyRegionChange(complete: true)
-    endProgrammaticUpdate()
+    stopGestureMarkerRefresh()
+    handleRegionDidChange(wasUserGesture: wasUserGesture)
     notifyMapReadyIfNeeded()
   }
 

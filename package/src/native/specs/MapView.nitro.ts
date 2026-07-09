@@ -166,7 +166,7 @@ export interface MapViewProps extends HybridViewProps {
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimationDescriptor;
 
-  /** Called when the visible region changes during user interaction. */
+  /** Called once when a user-initiated region change begins. */
   onRegionChange?: (region: Region) => void;
 
   /** Called when a region change animation completes. */

@@ -46,8 +46,14 @@ import {
   type MapViewRef,
   type OverlayEnteringAnimation,
   type PoiPressEvent,
+  Region,
 } from 'react-native-better-maps';
-import { MAP_SCENARIOS, type MapScenario, createCustomMarkerImagesScenario, CUSTOM_MARKER_IMAGES_SCENARIO_ID } from './examples';
+import {
+  MAP_SCENARIOS,
+  type MapScenario,
+  createCustomMarkerImagesScenario,
+  CUSTOM_MARKER_IMAGES_SCENARIO_ID,
+} from './examples';
 
 const MAP_TYPES: MapType[] = ['standard', 'satellite', 'hybrid'];
 type SupportedExampleProvider = Extract<MapProvider, 'apple' | 'google'>;
@@ -498,6 +504,8 @@ type MapSceneProps = {
   onPress: (coordinate: Coordinate) => void;
   onPoiPress: (event: PoiPressEvent) => void;
   onLongPress: (coordinate: Coordinate) => void;
+  onRegionChange: (region: Region) => void;
+  onRegionChangeComplete: (region: Region) => void;
 };
 
 const MapScene = memo(
@@ -516,6 +524,8 @@ const MapScene = memo(
       onPress,
       onPoiPress,
       onLongPress,
+      onRegionChange,
+      onRegionChangeComplete,
     },
     ref,
   ) {
@@ -547,6 +557,8 @@ const MapScene = memo(
       onPolylinePress: onOverlayPress,
       onPolygonPress: onOverlayPress,
       onCirclePress: onOverlayPress,
+      onRegionChange,
+      onRegionChangeComplete,
     };
 
     if (provider === 'apple') {
@@ -819,6 +831,12 @@ export default function App() {
     );
   }, []);
 
+  const updateRegionStatus = useCallback((region: Region) => {
+    setStatus(
+      `Region · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
+    );
+  }, []);
+
   return (
     <View style={styles.container}>
       <MapScene
@@ -836,6 +854,8 @@ export default function App() {
         onPress={handleMapPress}
         onPoiPress={handlePoiPress}
         onLongPress={handleMapLongPress}
+        onRegionChange={updateRegionStatus}
+        onRegionChangeComplete={updateRegionStatus}
       />
 
       <StatusHeader

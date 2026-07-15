@@ -169,7 +169,7 @@ export interface MapViewProps extends HybridViewProps {
   /** Called once when a user-initiated region change begins. */
   onRegionChange?: (region: Region) => void;
 
-  /** Called when a region change animation completes. */
+  /** Called once when a user-initiated region change ends. */
   onRegionChangeComplete?: (region: Region) => void;
 
   /** Called when the map is ready to use. */

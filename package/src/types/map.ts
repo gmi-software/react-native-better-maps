@@ -105,7 +105,7 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Called once when a user-initiated region change begins. */
   onRegionChange?: (region: Region) => void;
 
-  /** Called when the map region change completes. */
+  /** Called once when a user-initiated region change ends. */
   onRegionChangeComplete?: (region: Region) => void;
 
   /** Called when the map is ready to use. */

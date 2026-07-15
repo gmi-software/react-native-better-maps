@@ -831,9 +831,15 @@ export default function App() {
     );
   }, []);
 
-  const updateRegionStatus = useCallback((region: Region) => {
+  const handleRegionChange = useCallback((region: Region) => {
     setStatus(
-      `Region · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
+      `Region start · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
+    );
+  }, []);
+
+  const handleRegionChangeComplete = useCallback((region: Region) => {
+    setStatus(
+      `Region complete · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
     );
   }, []);
 
@@ -854,8 +860,8 @@ export default function App() {
         onPress={handleMapPress}
         onPoiPress={handlePoiPress}
         onLongPress={handleMapLongPress}
-        onRegionChange={updateRegionStatus}
-        onRegionChangeComplete={updateRegionStatus}
+        onRegionChange={handleRegionChange}
+        onRegionChangeComplete={handleRegionChangeComplete}
       />
 
       <StatusHeader

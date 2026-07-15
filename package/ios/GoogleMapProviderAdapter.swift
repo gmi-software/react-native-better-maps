@@ -11,6 +11,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   private var isMapReady = false
   private var hasDeliveredMapReady = false
+  private var isUserRegionChange = false
   private var isUserGestureMoving = false
   private var lastLiveMarkerRefreshTime: CFTimeInterval = 0
   private var myLocationObservation: NSKeyValueObservation?
@@ -256,6 +257,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   func prepareForRecycle() {
+    isUserRegionChange = false
     isUserGestureMoving = false
     lastLiveMarkerRefreshTime = 0
     isMapReady = false
@@ -335,15 +337,19 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func handleRegionWillChange(userInteracting: Bool) {
-    if userInteracting {
-      emitRegionChange(complete: false)
+    guard userInteracting, !isUserRegionChange else {
+      return
     }
+    isUserRegionChange = true
+    emitRegionChange(complete: false)
   }
 
-  private func handleRegionDidChange(wasUserGesture: Bool) {
-    if wasUserGesture {
-      emitRegionChange(complete: true)
+  private func handleRegionDidChange() {
+    guard isUserRegionChange else {
+      return
     }
+    emitRegionChange(complete: true)
+    isUserRegionChange = false
   }
 
   private func emitRegionChange(complete: Bool) {
@@ -496,10 +502,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
 extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   func mapView(_ mapView: GMSMapView, willMove gesture: Bool) {
+    handleRegionWillChange(userInteracting: gesture)
     if gesture {
       startGestureMarkerRefresh()
     }
-    handleRegionWillChange(userInteracting: gesture)
   }
 
   func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
@@ -507,10 +513,9 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
-    let wasUserGesture = isUserGestureMoving
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
-    handleRegionDidChange(wasUserGesture: wasUserGesture)
+    handleRegionDidChange()
     notifyMapReadyIfNeeded()
   }
 

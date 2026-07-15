@@ -677,7 +677,7 @@ class GoogleMapProviderAdapter(
   }
 
   private fun handleRegionWillChange(userInteracting: Boolean) {
-    if (userInteracting) {
+    if (userInteracting && !isUserGesture) {
       isUserGesture = true
       emitRegionChange(complete = false)
     }

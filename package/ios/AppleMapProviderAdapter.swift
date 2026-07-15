@@ -285,10 +285,11 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   func handleRegionWillChange(userInteracting: Bool) {
     startLiveClustering()
-    if userInteracting {
-      isUserRegionChange = true
-      emitRegionChange(complete: false)
+    guard userInteracting, !isUserRegionChange else {
+      return
     }
+    isUserRegionChange = true
+    emitRegionChange(complete: false)
   }
 
   func handleRegionDidChange() {

@@ -48,6 +48,7 @@ import {
   type PoiPressEvent,
 } from 'react-native-better-maps';
 import { MAP_SCENARIOS, type MapScenario, createCustomMarkerImagesScenario, CUSTOM_MARKER_IMAGES_SCENARIO_ID } from './examples';
+import { HotelCarouselExample } from './HotelCarouselExample';
 
 const MAP_TYPES: MapType[] = ['standard', 'satellite', 'hybrid'];
 type SupportedExampleProvider = Extract<MapProvider, 'apple' | 'google'>;
@@ -287,6 +288,7 @@ type ScenarioDockProps = {
   customMarkerFlat: boolean;
   onCycleCustomMarkerRotation: () => void;
   onToggleCustomMarkerFlat: () => void;
+  onLaunchHotelDemo: () => void;
 };
 
 const ScenarioDock = memo(function ScenarioDock({
@@ -309,6 +311,7 @@ const ScenarioDock = memo(function ScenarioDock({
   customMarkerFlat,
   onCycleCustomMarkerRotation,
   onToggleCustomMarkerFlat,
+  onLaunchHotelDemo,
 }: ScenarioDockProps) {
   const chevronRotation = useSharedValue(0);
 
@@ -360,6 +363,21 @@ const ScenarioDock = memo(function ScenarioDock({
           </View>
 
           <Text style={styles.dockDescription}>{scenario.description}</Text>
+
+          <ScalePressable
+            onPress={onLaunchHotelDemo}
+            accessibilityRole="button"
+            accessibilityLabel="Open hotel carousel custom marker demo"
+            style={styles.hotelDemoBanner}
+          >
+            <View style={styles.hotelDemoBannerText}>
+              <Text style={styles.hotelDemoBannerTitle}>Hotel carousel demo</Text>
+              <Text style={styles.hotelDemoBannerSubtitle}>
+                Custom RN pins · carousel sync · clustering
+              </Text>
+            </View>
+            <Text style={styles.hotelDemoBannerChevron}>›</Text>
+          </ScalePressable>
 
           <View style={styles.divider} />
 
@@ -452,6 +470,15 @@ const ScenarioDock = memo(function ScenarioDock({
       ) : null}
 
       <View style={styles.dockRow}>
+        <ScalePressable
+          onPress={onLaunchHotelDemo}
+          accessibilityRole="button"
+          accessibilityLabel="Open hotel carousel custom marker demo"
+          style={styles.hotelDemoLaunch}
+        >
+          <Text style={styles.hotelDemoLaunchIcon}>⌁</Text>
+          <Text style={styles.hotelDemoLaunchText}>Hotels</Text>
+        </ScalePressable>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -645,6 +672,7 @@ export default function App() {
   const [dockExpanded, setDockExpanded] = useState(false);
   const [customMarkerRotation, setCustomMarkerRotation] = useState(45);
   const [customMarkerFlat, setCustomMarkerFlat] = useState(true);
+  const [showHotelDemo, setShowHotelDemo] = useState(false);
 
   const baseScenario = MAP_SCENARIOS[scenarioIndex];
   const scenario = useMemo(() => {
@@ -824,6 +852,23 @@ export default function App() {
     );
   }, []);
 
+  const handleLaunchHotelDemo = useCallback(() => {
+    setShowHotelDemo(true);
+  }, []);
+
+  const handleCloseHotelDemo = useCallback(() => {
+    setShowHotelDemo(false);
+  }, []);
+
+  if (showHotelDemo) {
+    return (
+      <>
+        <HotelCarouselExample onClose={handleCloseHotelDemo} />
+        <StatusBar style="light" />
+      </>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <MapScene
@@ -870,6 +915,7 @@ export default function App() {
         customMarkerFlat={customMarkerFlat}
         onCycleCustomMarkerRotation={cycleCustomMarkerRotation}
         onToggleCustomMarkerFlat={toggleCustomMarkerFlat}
+        onLaunchHotelDemo={handleLaunchHotelDemo}
       />
       <StatusBar style="light" />
     </View>
@@ -1147,5 +1193,60 @@ const styles = StyleSheet.create({
   scenarioChipTextActive: {
     color: palette.text,
     fontWeight: '600',
+  },
+  hotelDemoLaunch: {
+    flexShrink: 0,
+    minWidth: 56,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(229, 57, 53, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(229, 57, 53, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  hotelDemoLaunchIcon: {
+    fontSize: 12,
+    color: '#ffb4ab',
+    lineHeight: 14,
+  },
+  hotelDemoLaunchText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffb4ab',
+    letterSpacing: 0.2,
+  },
+  hotelDemoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(229, 57, 53, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(229, 57, 53, 0.4)',
+  },
+  hotelDemoBannerText: {
+    flex: 1,
+    gap: 2,
+  },
+  hotelDemoBannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.text,
+  },
+  hotelDemoBannerSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: palette.textSecondary,
+  },
+  hotelDemoBannerChevron: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#ffb4ab',
+    marginTop: -2,
   },
 });

@@ -143,7 +143,7 @@ React callbacks (onPress, onRegionChange, etc.)
 | Build tool         | react-native-builder-bob | RN community standard                  |
 | Package manager    | Bun workspaces           | Fast, modern                           |
 | Module format      | ESM-only                 | Avoids dual-package hazard             |
-| Example app        | Expo SDK 56              | New Arch mandatory, good DX            |
+| Example app        | Expo SDK 57              | New Arch mandatory, good DX            |
 | iOS default maps   | MapKit                   | Native, no API key needed              |
 | Google maps        | Google Maps SDK          | Shared provider on iOS and Android     |
 | Provider switching | React remount            | Keeps native SDK lifecycle predictable |

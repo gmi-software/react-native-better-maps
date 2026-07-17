@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import CoreLocation
 import GoogleMaps
 import MapKit
@@ -585,3 +586,4 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
     notifyMapReadyIfNeeded()
   }
 }
+#endif

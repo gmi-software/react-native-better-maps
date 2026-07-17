@@ -376,11 +376,17 @@ final class HybridMapView: HybridMapViewSpec {
     case .apple:
       return AppleMapProviderAdapter()
     case .google:
+#if canImport(GoogleMaps)
       do {
         return try GoogleMapProviderAdapter(googleMapId: withStateLock { self._state.googleMapId })
       } catch {
         return UnavailableMapProviderAdapter(error: error)
       }
+#else
+      return UnavailableMapProviderAdapter(
+        error: MapProviderConfigurationError.googleMapsSdkNotLinked
+      )
+#endif
     case .openstreetmap, .mapbox:
       return UnavailableMapProviderAdapter(
         error: MapProviderConfigurationError.unsupportedIOSProvider(provider)

@@ -43,19 +43,45 @@ describe('applyGoogleMapsApiKey', () => {
 });
 
 describe('resolveAndroidGoogleMapsApiKey', () => {
+  it('returns the Android key when provided', () => {
+    expect(
+      resolveAndroidGoogleMapsApiKey({
+        androidGoogleMapsApiKey: 'android-key',
+      }),
+    ).toBe('android-key');
+  });
+
   it('prefers androidGoogleMapsApiKey over googleMapsApiKey', () => {
     expect(
       resolveAndroidGoogleMapsApiKey({
         googleMapsApiKey: 'shared',
-        androidGoogleMapsApiKey: 'android',
+        androidGoogleMapsApiKey: 'android-key',
       }),
-    ).toBe('android');
+    ).toBe('android-key');
   });
 
   it('falls back to googleMapsApiKey when androidGoogleMapsApiKey is omitted', () => {
-    expect(resolveAndroidGoogleMapsApiKey({ googleMapsApiKey: 'shared' })).toBe(
-      'shared',
-    );
+    expect(
+      resolveAndroidGoogleMapsApiKey({ googleMapsApiKey: 'shared' }),
+    ).toBe('shared');
+  });
+
+  it('does not fall back to iosGoogleMapsApiKey', () => {
+    expect(
+      resolveAndroidGoogleMapsApiKey({
+        iosGoogleMapsApiKey: 'ios-key',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('returns undefined when the Android key is omitted', () => {
+    expect(resolveAndroidGoogleMapsApiKey({})).toBeUndefined();
+  });
+
+  it('returns undefined when the Android key is blank', () => {
+    expect(
+      resolveAndroidGoogleMapsApiKey({ androidGoogleMapsApiKey: '   ' }),
+    ).toBeUndefined();
   });
 });
 

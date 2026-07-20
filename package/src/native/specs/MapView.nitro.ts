@@ -236,10 +236,10 @@ export interface MapViewMethods extends HybridViewMethods {
    * Named `applyCamera` in the Nitro spec to avoid colliding with the `camera`
    * prop accessor (`getCamera`/`setCamera`) in generated C++ bindings.
    */
-  applyCamera(camera: Camera): void;
+  applyCamera(camera: Camera): Promise<void>;
 
   /** Animates the camera to the given position. */
-  animateCamera(camera: Camera, duration?: number): void;
+  animateCamera(camera: Camera, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */
   getVisibleRegion(): Promise<VisibleRegion>;
@@ -249,7 +249,7 @@ export interface MapViewMethods extends HybridViewMethods {
     coordinates: Coordinate[],
     padding?: EdgePadding,
     animated?: boolean,
-  ): void;
+  ): Promise<void>;
 }
 
 /**

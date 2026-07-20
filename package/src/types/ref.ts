@@ -10,10 +10,10 @@ export interface MapViewRef {
   getCamera(): Promise<Camera>;
 
   /** Sets the camera position immediately. */
-  setCamera(camera: Camera): void;
+  setCamera(camera: Camera): Promise<void>;
 
   /** Animates the camera to the given position. */
-  animateCamera(camera: Camera, duration?: number): void;
+  animateCamera(camera: Camera, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */
   getVisibleRegion(): Promise<VisibleRegion>;
@@ -23,5 +23,5 @@ export interface MapViewRef {
     coordinates: Coordinate[],
     padding?: EdgePadding,
     animated?: boolean,
-  ): void;
+  ): Promise<void>;
 }

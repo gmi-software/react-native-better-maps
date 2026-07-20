@@ -1,5 +1,4 @@
 import {
-  forwardRef,
   memo,
   useCallback,
   useEffect,
@@ -7,6 +6,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -491,6 +491,7 @@ const ScenarioDock = memo(function ScenarioDock({
 });
 
 type MapSceneProps = {
+  ref?: Ref<MapViewRef>;
   scenario: MapScenario;
   provider: SupportedExampleProvider;
   mapType: MapType;
@@ -508,81 +509,77 @@ type MapSceneProps = {
   onRegionChangeComplete: (region: Region) => void;
 };
 
-const MapScene = memo(
-  forwardRef<MapViewRef, MapSceneProps>(function MapScene(
-    {
-      scenario,
-      provider,
-      mapType,
-      mapPadding,
-      animationOption,
-      onMapReady,
-      onClusterPress,
-      onMarkerPress,
-      onMarkerDragEnd,
-      onOverlayPress,
-      onPress,
-      onPoiPress,
-      onLongPress,
-      onRegionChange,
-      onRegionChangeComplete,
-    },
-    ref,
-  ) {
-    const commonMapProps = {
-      style: styles.map,
-      mapType,
-      region: scenario.region,
-      clusteringEnabled: scenario.advanced?.clusteringEnabled,
-      showsUserLocation: scenario.advanced?.showsUserLocation,
-      followsUserLocation: scenario.advanced?.followsUserLocation,
-      showsCompass: scenario.advanced?.showsCompass,
-      customMapStyle: scenario.advanced?.customMapStyle,
-      mapPadding,
-      markerEnteringAnimation: animationOption.value,
-      clusterEnteringAnimation: scenario.advanced?.clusteringEnabled
-        ? animationOption.value
-        : undefined,
-      markers: scenario.markers,
-      polylines: scenario.polylines,
-      polygons: scenario.polygons,
-      circles: scenario.circles,
-      onMapReady,
-      onClusterPress,
-      onMarkerPress,
-      onMarkerDragEnd,
-      onPress,
-      onPoiPress,
-      onLongPress,
-      onPolylinePress: onOverlayPress,
-      onPolygonPress: onOverlayPress,
-      onCirclePress: onOverlayPress,
-      onRegionChange,
-      onRegionChangeComplete,
-    };
+const MapScene = memo(function MapScene({
+  ref,
+  scenario,
+  provider,
+  mapType,
+  mapPadding,
+  animationOption,
+  onMapReady,
+  onClusterPress,
+  onMarkerPress,
+  onMarkerDragEnd,
+  onOverlayPress,
+  onPress,
+  onPoiPress,
+  onLongPress,
+  onRegionChange,
+  onRegionChangeComplete,
+}: MapSceneProps) {
+  const commonMapProps = {
+    style: styles.map,
+    mapType,
+    region: scenario.region,
+    clusteringEnabled: scenario.advanced?.clusteringEnabled,
+    showsUserLocation: scenario.advanced?.showsUserLocation,
+    followsUserLocation: scenario.advanced?.followsUserLocation,
+    showsCompass: scenario.advanced?.showsCompass,
+    customMapStyle: scenario.advanced?.customMapStyle,
+    mapPadding,
+    markerEnteringAnimation: animationOption.value,
+    clusterEnteringAnimation: scenario.advanced?.clusteringEnabled
+      ? animationOption.value
+      : undefined,
+    markers: scenario.markers,
+    polylines: scenario.polylines,
+    polygons: scenario.polygons,
+    circles: scenario.circles,
+    onMapReady,
+    onClusterPress,
+    onMarkerPress,
+    onMarkerDragEnd,
+    onPress,
+    onPoiPress,
+    onLongPress,
+    onPolylinePress: onOverlayPress,
+    onPolygonPress: onOverlayPress,
+    onCirclePress: onOverlayPress,
+    onRegionChange,
+    onRegionChangeComplete,
+  };
 
-    if (provider === 'apple') {
-      return (
-        <MapView
-          ref={ref}
-          key={`${scenario.id}:${animationOption.id}:apple`}
-          {...commonMapProps}
-          provider="apple"
-          showsScale={scenario.advanced?.showsScale}
-        />
-      );
-    }
-
+  if (provider === 'apple') {
     return (
       <MapView
         ref={ref}
-        key={`${scenario.id}:${animationOption.id}:google`}
+        key={`${scenario.id}:${animationOption.id}:apple`}
         {...commonMapProps}
-        provider="google"
+        provider="apple"
+        showsScale={scenario.advanced?.showsScale}
       />
     );
-  }),
-);
+  }
+
+  return (
+    <MapView
+      ref={ref}
+      key={`${scenario.id}:${animationOption.id}:google`}
+      {...commonMapProps}
+      provider="google"
+    />
+  );
+});
 
 type StatusHeaderProps = {
   status: string;
@@ -683,29 +680,35 @@ export default function App() {
   );
 
   const handleAnimateCamera = useCallback(() => {
-    mapRef.current?.animateCamera(
-      {
-        center: {
-          latitude: scenario.region.latitude,
-          longitude: scenario.region.longitude,
+    mapRef.current
+      ?.animateCamera(
+        {
+          center: {
+            latitude: scenario.region.latitude,
+            longitude: scenario.region.longitude,
+          },
+          zoom: 13,
+          heading: 0,
+          pitch: 0,
         },
-        zoom: 13,
-        heading: 0,
-        pitch: 0,
-      },
-      1,
-    );
+        1,
+      )
+      ?.catch(() => {});
   }, [scenario]);
 
   const handleGetCamera = useCallback(async () => {
-    const camera = await mapRef.current?.getCamera();
-    if (camera == null) {
-      return;
-    }
+    try {
+      const camera = await mapRef.current?.getCamera();
+      if (camera == null) {
+        return;
+      }
 
-    setStatus(
-      `zoom ${camera.zoom?.toFixed(1) ?? '?'} · ${camera.center.latitude.toFixed(4)}, ${camera.center.longitude.toFixed(4)}`,
-    );
+      setStatus(
+        `zoom ${camera.zoom?.toFixed(1) ?? '?'} · ${camera.center.latitude.toFixed(4)}, ${camera.center.longitude.toFixed(4)}`,
+      );
+    } catch {
+      // Map unmounted or native call failed — ignore.
+    }
   }, []);
 
   const cycleMapType = useCallback(() => {
@@ -800,11 +803,13 @@ export default function App() {
       scenario.advanced?.fitToCoordinatesOnReady &&
       scenario.markers != null
     ) {
-      mapRef.current?.fitToCoordinates(
-        scenario.markers.map((marker) => marker.coordinate),
-        mapPadding,
-        true,
-      );
+      mapRef.current
+        ?.fitToCoordinates(
+          scenario.markers.map((marker) => marker.coordinate),
+          mapPadding,
+          true,
+        )
+        ?.catch(() => {});
     }
   }, [scenario, mapPadding]);
 

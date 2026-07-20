@@ -10,20 +10,20 @@
     "prebuild": "expo prebuild"
   },
   "dependencies": {
-    "expo": "~56.0.3",
-    "expo-status-bar": "~3.0.8",
+    "expo": "^57.0.0",
+    "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.85.3",
+    "react-native": "0.86.0",
     "react-native-better-maps": "workspace:*",
     "react-native-nitro-modules": "^0.35.10",
-    "react-native-reanimated": "4.3.1",
-    "react-native-safe-area-context": "^5.8.0",
-    "react-native-worklets": "0.8.3"
+    "react-native-reanimated": "4.5.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-worklets": "0.10.0"
   },
   "devDependencies": {
     "@babel/core": "^7.27.4",
     "@types/react": "^19.2.15",
-    "babel-preset-expo": "~56.0.15",
-    "typescript": "^5.8.3"
+    "babel-preset-expo": "~57.0.0",
+    "typescript": "~6.0.3"
   }
 }

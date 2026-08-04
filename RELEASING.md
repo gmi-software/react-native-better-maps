@@ -56,6 +56,19 @@ change a major — but two cases are easy to get wrong:
   even though their code still compiles. Either take the major, or ship it as a
   minor with a prominent **Behavior changes** section, as 1.1.0 did.
 
+## Pre-releases
+
+A version with a prerelease identifier works without extra configuration. Tagging
+`v1.2.0-rc.1` publishes under the `rc` dist-tag rather than `latest`, so
+`npm install react-native-better-maps` is unaffected, and the GitHub Release is
+marked as a pre-release. release-it derives both from the version itself.
+
+Consumers opt in explicitly:
+
+```bash
+npm install react-native-better-maps@rc
+```
+
 ## Changelog
 
 `CHANGELOG.md` is written by hand, not generated. This is deliberate: the parts

@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: 'Version increment (auto = derive from conventional commits)'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+        default: auto
+      dry_run:
+        description: 'Dry run — resolve the version and print the plan without tagging or publishing'
+        type: boolean
+        default: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # Push the version commit + tag and create the GitHub Release.
+      contents: write
+      # Mint the OIDC token npm exchanges for a short-lived publish token,
+      # and sign the provenance attestation.
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Full history so conventional-changelog can derive the bump from all
+          # commits since the previous tag.
+          fetch-depth: 0
+          # release-it pushes the version commit and tag, so the checkout
+          # credentials must stay available.
+          persist-credentials: true
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          # Node 24 ships npm >= 11.5.1, which is required for npm trusted
+          # publishing (OIDC). Node 22 ships npm 10 and cannot authenticate.
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify npm supports trusted publishing
+        run: |
+          npm_version="$(npm --version)"
+          required=11.5.1
+          echo "npm $npm_version (need >= $required)"
+          if [ "$(printf '%s\n%s\n' "$required" "$npm_version" | sort -V | head -n1)" != "$required" ]; then
+            echo "::error::npm $npm_version is too old for trusted publishing (need >= $required)."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Codegen
+        run: bun run nitrogen
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
+
+      - name: Test
+        run: bun run --filter react-native-better-maps test
+
+      - name: Resolve target version
+        id: version
+        working-directory: package
+        env:
+          INCREMENT: ${{ inputs.increment }}
+        run: |
+          # `--hooks.before:init=` keeps the test gate from running a second time
+          # here; the Test step above and the release run below both cover it.
+          args=(--release-version --hooks.before:init=)
+          [ "$INCREMENT" != "auto" ] && args+=(--increment "$INCREMENT")
+          version="$(bunx release-it "${args[@]}")"
+          echo "Resolved version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify CHANGELOG entry exists
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! grep -qE "^## +${VERSION//./\\.}( |$)" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## $VERSION' section. Add the release notes before publishing."
+            exit 1
+          fi
+
+      - name: Configure git identity
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Release
+        working-directory: package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INCREMENT: ${{ inputs.increment }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=(--ci)
+          [ "$INCREMENT" != "auto" ] && args+=(--increment "$INCREMENT")
+          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+          echo "release-it ${args[*]}"
+          bunx release-it "${args[@]}"
+
+      - name: Summary
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "### Release ${VERSION:-unknown}"
+            echo
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "Dry run — nothing was tagged or published."
+            else
+              echo "- npm: https://www.npmjs.com/package/react-native-better-maps/v/$VERSION"
+              echo "- GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v$VERSION"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

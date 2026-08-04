@@ -1,45 +1,40 @@
 name: Release
 
+# Publishing is driven by a version tag, not by a commit pushed from CI.
+# `main` requires pull request reviews with `enforce_admins` enabled, so nothing —
+# including github-actions[bot] — can push a release commit to it. The version
+# bump therefore lands through a normal reviewed pull request, and pushing the
+# matching tag afterwards triggers the publish.
 on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  # Rehearsal against the current branch. Always a dry run: it validates the
+  # version, changelog and full gate without tagging or publishing anything.
   workflow_dispatch:
-    inputs:
-      increment:
-        description: 'Version increment (auto = derive from conventional commits)'
-        type: choice
-        options:
-          - auto
-          - patch
-          - minor
-          - major
-        default: auto
-      dry_run:
-        description: 'Dry run — resolve the version and print the plan without tagging or publishing'
-        type: boolean
-        default: true
 
 concurrency:
-  group: release
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      # Push the version commit + tag and create the GitHub Release.
+      # Create the GitHub Release for the pushed tag.
       contents: write
-      # Mint the OIDC token npm exchanges for a short-lived publish token,
-      # and sign the provenance attestation.
+      # Mint the OIDC token npm exchanges for a short-lived publish token, and
+      # sign the provenance attestation.
       id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          # Full history so conventional-changelog can derive the bump from all
-          # commits since the previous tag.
+          # Full history so conventional-changelog can build the release notes
+          # from every commit since the previous tag.
           fetch-depth: 0
-          # release-it pushes the version commit and tag, so the checkout
-          # credentials must stay available.
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
@@ -49,10 +44,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          # Node 24 ships npm >= 11.5.1, which is required for npm trusted
-          # publishing (OIDC). Node 22 ships npm 10 and cannot authenticate.
+          # Node 24 ships npm >= 11.5.1, required for npm trusted publishing.
+          # `registry-url` is deliberately omitted: it writes an `_authToken`
+          # entry into .npmrc, which makes npm assume classic token auth and skip
+          # the OIDC flow. The registry is already pinned by publishConfig.
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Verify npm supports trusted publishing
         run: |
@@ -66,6 +62,42 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        run: |
+          version="$(node -p "require('./package/package.json').version")"
+          echo "package.json version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches package.json
+        if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::Tag $TAG does not match package.json version $VERSION. Bump the version on main first."
+            exit 1
+          fi
+
+      - name: Verify CHANGELOG entry exists
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! grep -qE "^## +${VERSION//./\\.}( |$)" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## $VERSION' section. Add the release notes before publishing."
+            exit 1
+          fi
+
+      - name: Verify version is not already published
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if npm view "react-native-better-maps@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::react-native-better-maps@$VERSION is already on npm."
+            exit 1
+          fi
 
       - name: Codegen
         run: bun run nitrogen
@@ -82,60 +114,33 @@ jobs:
       - name: Test
         run: bun run --filter react-native-better-maps test
 
-      - name: Resolve target version
-        id: version
-        working-directory: package
-        env:
-          INCREMENT: ${{ inputs.increment }}
-        run: |
-          # `--hooks.before:init=` keeps the test gate from running a second time
-          # here; the Test step above and the release run below both cover it.
-          args=(--release-version --hooks.before:init=)
-          [ "$INCREMENT" != "auto" ] && args+=(--increment "$INCREMENT")
-          version="$(bunx release-it "${args[@]}")"
-          echo "Resolved version: $version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Verify CHANGELOG entry exists
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if ! grep -qE "^## +${VERSION//./\\.}( |$)" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no '## $VERSION' section. Add the release notes before publishing."
-            exit 1
-          fi
-
-      - name: Configure git identity
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-
-      - name: Release
+      - name: Publish
         working-directory: package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INCREMENT: ${{ inputs.increment }}
-          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          args=(--ci)
-          [ "$INCREMENT" != "auto" ] && args+=(--increment "$INCREMENT")
-          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
-          echo "release-it ${args[*]}"
+          # --no-increment: the version already lives in package.json, reviewed
+          #   and merged through a pull request.
+          # --no-git: the tag is pushed by the maintainer; CI never writes to git.
+          args=(--ci --no-increment --no-git)
+          if [ "${{ github.event_name }}" != 'push' ]; then
+            args+=(--dry-run)
+            echo 'Rehearsal run — nothing will be tagged or published.'
+          fi
           bunx release-it "${args[@]}"
 
       - name: Summary
         if: always()
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           {
-            echo "### Release ${VERSION:-unknown}"
+            echo "### Release v$VERSION"
             echo
-            if [ "$DRY_RUN" = "true" ]; then
-              echo "Dry run — nothing was tagged or published."
+            if [ "${{ github.event_name }}" != 'push' ]; then
+              echo "Rehearsal only — nothing was published."
             else
-              echo "- npm: https://www.npmjs.com/package/react-native-better-maps/v/$VERSION"
-              echo "- GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v$VERSION"
+              echo "- [npm](https://www.npmjs.com/package/react-native-better-maps/v/$VERSION)"
+              echo "- [GitHub Release](${{ github.server_url }}/${{ github.repository }}/releases/tag/v$VERSION)"
             fi
           } >> "$GITHUB_STEP_SUMMARY"

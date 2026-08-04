@@ -4,9 +4,7 @@ import UIKit
 
 final class AppleMapProviderAdapter: MapProviderAdapter {
   private let mapViewDelegate = HybridMapViewDelegate()
-  private var isProgrammaticUpdate = false
-  private var pendingProgrammaticUpdateIDs: [Int] = []
-  private var nextProgrammaticUpdateID = 0
+  private var isUserRegionChange = false
   private var isMapReady = false
   private var hasDeliveredMapReady = false
   private var liveClusterTimer: Timer?
@@ -55,7 +53,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   var region: Region? {
     didSet {
-      guard let region, !isProgrammaticUpdate, camera == nil else {
+      guard let region, !view.isUserInteracting, camera == nil else {
         return
       }
       applyRegion(region)
@@ -64,7 +62,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   var camera: Camera? {
     didSet {
-      guard let camera, !isProgrammaticUpdate else {
+      guard let camera, !view.isUserInteracting else {
         return
       }
       updateMapCamera(camera, animated: false)
@@ -237,45 +235,37 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
     let edgePadding = padding?.toUIEdgeInsets() ?? .zero
     let shouldAnimate = animated ?? true
-    let updateID = beginProgrammaticUpdate()
     view.setVisibleMapRect(
       mapRect,
       edgePadding: edgePadding,
       animated: shouldAnimate
     )
-    scheduleProgrammaticUpdateFallback(
-      for: updateID,
-      delay: shouldAnimate ? 1.0 : 0
-    )
   }
 
   func applyRegion(_ region: Region, animated: Bool = false) {
-    let updateID = beginProgrammaticUpdate()
-    view.setRegion(region.toMKCoordinateRegion(), animated: animated)
-    scheduleProgrammaticUpdateFallback(
-      for: updateID,
-      delay: animated ? 1.0 : 0
-    )
+    let targetRegion = region.toMKCoordinateRegion()
+    guard !view.region.approximatelyEquals(targetRegion) else {
+      return
+    }
+
+    view.setRegion(targetRegion, animated: animated)
   }
 
   func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double = 0) {
-    let updateID = beginProgrammaticUpdate()
     let mapCamera = camera.toMKMapCamera()
+    guard !view.camera.approximatelyEquals(mapCamera) else {
+      return
+    }
 
     if animated {
       UIView.animate(
         withDuration: duration,
         animations: {
           self.view.camera = mapCamera
-        },
-        completion: { [weak self] _ in
-          self?.endProgrammaticUpdate(updateID)
         }
       )
-      scheduleProgrammaticUpdateFallback(for: updateID, delay: duration + 0.1)
     } else {
       view.camera = mapCamera
-      scheduleProgrammaticUpdateFallback(for: updateID, delay: 0)
     }
   }
 
@@ -293,42 +283,36 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     view.setRegion(view.regionThatFits(region), animated: true)
   }
 
-  private func beginProgrammaticUpdate() -> Int {
-    nextProgrammaticUpdateID += 1
-    let updateID = nextProgrammaticUpdateID
-    pendingProgrammaticUpdateIDs.append(updateID)
-    isProgrammaticUpdate = true
-    return updateID
-  }
-
-  private func endProgrammaticUpdate(_ updateID: Int? = nil) {
-    if let updateID {
-      guard let index = pendingProgrammaticUpdateIDs.firstIndex(of: updateID) else {
-        return
-      }
-      pendingProgrammaticUpdateIDs.remove(at: index)
-    } else if !pendingProgrammaticUpdateIDs.isEmpty {
-      pendingProgrammaticUpdateIDs.removeFirst()
+  func handleRegionWillChange(userInteracting: Bool) {
+    startLiveClustering()
+    guard userInteracting, !isUserRegionChange else {
+      return
     }
-
-    isProgrammaticUpdate = !pendingProgrammaticUpdateIDs.isEmpty
+    isUserRegionChange = true
+    emitRegionChange(complete: false)
   }
 
-  func endProgrammaticRegionChangeIfNeeded() {
-    guard !pendingProgrammaticUpdateIDs.isEmpty else {
+  func handleRegionDidChange() {
+    stopLiveClustering()
+
+    guard isUserRegionChange else {
       return
     }
 
-    endProgrammaticUpdate()
+    guard !view.isUserInteracting else {
+      return
+    }
+
+    emitRegionChange(complete: true)
+    isUserRegionChange = false
   }
 
-  private func scheduleProgrammaticUpdateFallback(for updateID: Int, delay: TimeInterval) {
-    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-      guard let self else {
-        return
-      }
-
-      self.endProgrammaticUpdate(updateID)
+  private func emitRegionChange(complete: Bool) {
+    let region = currentRegion()
+    if complete {
+      onRegionChangeComplete?(region)
+    } else {
+      onRegionChange?(region)
     }
   }
 
@@ -347,19 +331,6 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     liveClusterTimer?.invalidate()
     liveClusterTimer = nil
     overlayController.scheduleViewportRefresh(immediate: true)
-  }
-
-  func notifyRegionChange(complete: Bool) {
-    guard !isProgrammaticUpdate else {
-      return
-    }
-
-    let region = currentRegion()
-    if complete {
-      onRegionChangeComplete?(region)
-    } else {
-      onRegionChange?(region)
-    }
   }
 
   func notifyMapReadyIfNeeded() {
@@ -432,8 +403,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   func prepareForRecycle() {
     liveClusterTimer?.invalidate()
     liveClusterTimer = nil
-    isProgrammaticUpdate = false
-    pendingProgrammaticUpdateIDs.removeAll()
+    isUserRegionChange = false
     isMapReady = false
     hasDeliveredMapReady = false
     onRegionChange = nil

@@ -14,6 +14,19 @@ extension Camera {
 }
 
 extension GMSCameraPosition {
+  func approximatelyEquals(
+    _ other: GMSCameraPosition,
+    coordinateEpsilon: Double = MapApproximateEquality.coordinateEpsilon,
+    zoomEpsilon: Float = MapApproximateEquality.zoomEpsilon,
+    angleEpsilon: CLLocationDirection = MapApproximateEquality.angleEpsilon
+  ) -> Bool {
+    abs(target.latitude - other.target.latitude) < coordinateEpsilon
+      && abs(target.longitude - other.target.longitude) < coordinateEpsilon
+      && abs(zoom - other.zoom) < zoomEpsilon
+      && abs(bearing - other.bearing) < angleEpsilon
+      && abs(viewingAngle - other.viewingAngle) < angleEpsilon
+  }
+
   func toCamera() -> Camera {
     Camera(
       center: Coordinate(latitude: target.latitude, longitude: target.longitude),

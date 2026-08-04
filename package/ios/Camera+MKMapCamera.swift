@@ -26,6 +26,19 @@ extension Camera {
 }
 
 extension MKMapCamera {
+  func approximatelyEquals(
+    _ other: MKMapCamera,
+    coordinateEpsilon: Double = MapApproximateEquality.coordinateEpsilon,
+    distanceEpsilon: Double = MapApproximateEquality.distanceEpsilon,
+    angleEpsilon: CLLocationDirection = MapApproximateEquality.angleEpsilon
+  ) -> Bool {
+    abs(centerCoordinate.latitude - other.centerCoordinate.latitude) < coordinateEpsilon
+      && abs(centerCoordinate.longitude - other.centerCoordinate.longitude) < coordinateEpsilon
+      && abs(centerCoordinateDistance - other.centerCoordinateDistance) < distanceEpsilon
+      && abs(heading - other.heading) < angleEpsilon
+      && abs(pitch - other.pitch) < angleEpsilon
+  }
+
   func toCamera() -> Camera {
     let centerCoordinate = Coordinate(
       latitude: centerCoordinate.latitude,

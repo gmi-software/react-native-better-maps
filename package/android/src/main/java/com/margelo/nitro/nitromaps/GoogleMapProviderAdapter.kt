@@ -30,8 +30,7 @@ class GoogleMapProviderAdapter(
   LifecycleEventListener {
 
   private var googleMap: GoogleMap? = null
-  private var isProgrammaticUpdate = false
-  private var programmaticUpdateCount = 0
+  private var isUserGesture = false
   private var hasFiredMapReady = false
   private var isDestroyed = false
   private val overlayController = MapOverlayController(null, context)
@@ -91,7 +90,7 @@ class GoogleMapProviderAdapter(
     get() = _region
     set(value) {
       _region = value
-      if (value != null && !isProgrammaticUpdate && _camera == null) {
+      if (value != null && !isUserGesture && _camera == null) {
         applyRegion(value)
       }
     }
@@ -101,7 +100,7 @@ class GoogleMapProviderAdapter(
     get() = _camera
     set(value) {
       _camera = value
-      if (value != null && !isProgrammaticUpdate) {
+      if (value != null && !isUserGesture) {
         updateMapCamera(value, animated = false)
       }
     }
@@ -366,13 +365,9 @@ class GoogleMapProviderAdapter(
       val runUpdate = {
         val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
         if (animated == true) {
-          animateProgrammaticCameraUpdate {
-            map.animateCamera(update, it)
-          }
+          map.animateCamera(update)
         } else {
-          moveProgrammaticCameraUpdate {
-            map.moveCamera(update)
-          }
+          map.moveCamera(update)
         }
       }
 
@@ -408,13 +403,17 @@ class GoogleMapProviderAdapter(
     overlayController.setClusteringEnabled(_clusteringEnabled == true)
     syncMarkerPressHandlers()
 
+    map.setOnCameraMoveStartedListener { reason ->
+      handleRegionWillChange(
+        userInteracting = reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE,
+      )
+    }
     map.setOnCameraMoveListener {
       overlayController.onCameraMove()
-      notifyRegionChange(complete = false)
     }
     map.setOnCameraIdleListener {
       overlayController.onCameraIdle()
-      notifyRegionChange(complete = true)
+      handleRegionDidChange()
     }
     map.setOnMapClickListener { latLng ->
       onPress?.invoke(latLng.toCoordinate())
@@ -580,13 +579,9 @@ class GoogleMapProviderAdapter(
     val runUpdate = {
       val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
       if (animated) {
-        animateProgrammaticCameraUpdate {
-          map.animateCamera(update, it)
-        }
+        map.animateCamera(update)
       } else {
-        moveProgrammaticCameraUpdate {
-          map.moveCamera(update)
-        }
+        map.moveCamera(update)
       }
     }
 
@@ -600,18 +595,20 @@ class GoogleMapProviderAdapter(
   ) {
     runOnMain {
       val map = googleMap ?: return@runOnMain
-      val update = CameraUpdateFactory.newCameraPosition(
-        camera.toCameraPosition(map.cameraPosition),
-      )
+      val target = camera.toCameraPosition(map.cameraPosition)
+      if (map.cameraPosition.approximatelyEquals(target)) {
+        return@runOnMain
+      }
 
+      val update = CameraUpdateFactory.newCameraPosition(target)
       if (animated) {
-        animateProgrammaticCameraUpdate {
-          map.animateCamera(update, durationMs, it)
+        if (durationMs > 0) {
+          map.animateCamera(update, durationMs, null)
+        } else {
+          map.animateCamera(update)
         }
       } else {
-        moveProgrammaticCameraUpdate {
-          map.moveCamera(update)
-        }
+        map.moveCamera(update)
       }
     }
   }
@@ -679,44 +676,26 @@ class GoogleMapProviderAdapter(
     return promise
   }
 
-  private fun beginProgrammaticUpdate() {
-    programmaticUpdateCount += 1
-    isProgrammaticUpdate = true
-  }
-
-  private fun endProgrammaticUpdate() {
-    if (programmaticUpdateCount > 0) {
-      programmaticUpdateCount -= 1
-    }
-    isProgrammaticUpdate = programmaticUpdateCount > 0
-  }
-
-  private fun moveProgrammaticCameraUpdate(block: () -> Unit) {
-    beginProgrammaticUpdate()
-    try {
-      block()
-    } finally {
-      endProgrammaticUpdate()
+  private fun handleRegionWillChange(userInteracting: Boolean) {
+    if (userInteracting && !isUserGesture) {
+      isUserGesture = true
+      emitRegionChange(complete = false)
     }
   }
 
-  private fun animateProgrammaticCameraUpdate(block: (GoogleMap.CancelableCallback) -> Unit) {
-    beginProgrammaticUpdate()
-    try {
-      block(
-        object : GoogleMap.CancelableCallback {
-          override fun onFinish() {
-            endProgrammaticUpdate()
-          }
+  private fun handleRegionDidChange() {
+    if (isUserGesture) {
+      emitRegionChange(complete = true)
+      isUserGesture = false
+    }
+  }
 
-          override fun onCancel() {
-            endProgrammaticUpdate()
-          }
-        },
-      )
-    } catch (throwable: Throwable) {
-      endProgrammaticUpdate()
-      throw throwable
+  private fun emitRegionChange(complete: Boolean) {
+    val region = currentRegion()
+    if (complete) {
+      onRegionChangeComplete?.invoke(region)
+    } else {
+      onRegionChange?.invoke(region)
     }
   }
 
@@ -734,19 +713,6 @@ class GoogleMapProviderAdapter(
     )
   }
 
-  private fun notifyRegionChange(complete: Boolean) {
-    if (isProgrammaticUpdate) {
-      return
-    }
-
-    val region = currentRegion()
-    if (complete) {
-      onRegionChangeComplete?.invoke(region)
-    } else {
-      onRegionChange?.invoke(region)
-    }
-  }
-
   private fun notifyMapReadyIfNeeded() {
     if (hasFiredMapReady) {
       return
@@ -757,8 +723,7 @@ class GoogleMapProviderAdapter(
   }
 
   override fun prepareForRecycle() {
-    isProgrammaticUpdate = false
-    programmaticUpdateCount = 0
+    isUserGesture = false
     hasFiredMapReady = false
     onRegionChange = null
     onRegionChangeComplete = null

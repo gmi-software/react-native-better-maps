@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
 
       - name: React Doctor
-        uses: millionco/react-doctor@0b4f4f4bd248a154e64eb508a48347f71154b3f3 # v2
+        uses: millionco/react-doctor@01820bb4fd4d0a4aebcd8df2b2a143a098649cb2 # v2.2.8
         with:
           project: 'package,example'
           blocking: none

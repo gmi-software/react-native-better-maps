@@ -46,8 +46,14 @@ import {
   type MapViewRef,
   type OverlayEnteringAnimation,
   type PoiPressEvent,
+  Region,
 } from 'react-native-better-maps';
-import { MAP_SCENARIOS, type MapScenario, createCustomMarkerImagesScenario, CUSTOM_MARKER_IMAGES_SCENARIO_ID } from './examples';
+import {
+  MAP_SCENARIOS,
+  type MapScenario,
+  createCustomMarkerImagesScenario,
+  CUSTOM_MARKER_IMAGES_SCENARIO_ID,
+} from './examples';
 
 const MAP_TYPES: MapType[] = ['standard', 'satellite', 'hybrid'];
 type SupportedExampleProvider = Extract<MapProvider, 'apple' | 'google'>;
@@ -499,6 +505,8 @@ type MapSceneProps = {
   onPress: (coordinate: Coordinate) => void;
   onPoiPress: (event: PoiPressEvent) => void;
   onLongPress: (coordinate: Coordinate) => void;
+  onRegionChange: (region: Region) => void;
+  onRegionChangeComplete: (region: Region) => void;
 };
 
 const MapScene = memo(function MapScene({
@@ -516,57 +524,61 @@ const MapScene = memo(function MapScene({
   onPress,
   onPoiPress,
   onLongPress,
+  onRegionChange,
+  onRegionChangeComplete,
 }: MapSceneProps) {
-    const commonMapProps = {
-      style: styles.map,
-      mapType,
-      region: scenario.region,
-      clusteringEnabled: scenario.advanced?.clusteringEnabled,
-      showsUserLocation: scenario.advanced?.showsUserLocation,
-      followsUserLocation: scenario.advanced?.followsUserLocation,
-      showsCompass: scenario.advanced?.showsCompass,
-      customMapStyle: scenario.advanced?.customMapStyle,
-      mapPadding,
-      markerEnteringAnimation: animationOption.value,
-      clusterEnteringAnimation: scenario.advanced?.clusteringEnabled
-        ? animationOption.value
-        : undefined,
-      markers: scenario.markers,
-      polylines: scenario.polylines,
-      polygons: scenario.polygons,
-      circles: scenario.circles,
-      onMapReady,
-      onClusterPress,
-      onMarkerPress,
-      onMarkerDragEnd,
-      onPress,
-      onPoiPress,
-      onLongPress,
-      onPolylinePress: onOverlayPress,
-      onPolygonPress: onOverlayPress,
-      onCirclePress: onOverlayPress,
-    };
+  const commonMapProps = {
+    style: styles.map,
+    mapType,
+    region: scenario.region,
+    clusteringEnabled: scenario.advanced?.clusteringEnabled,
+    showsUserLocation: scenario.advanced?.showsUserLocation,
+    followsUserLocation: scenario.advanced?.followsUserLocation,
+    showsCompass: scenario.advanced?.showsCompass,
+    customMapStyle: scenario.advanced?.customMapStyle,
+    mapPadding,
+    markerEnteringAnimation: animationOption.value,
+    clusterEnteringAnimation: scenario.advanced?.clusteringEnabled
+      ? animationOption.value
+      : undefined,
+    markers: scenario.markers,
+    polylines: scenario.polylines,
+    polygons: scenario.polygons,
+    circles: scenario.circles,
+    onMapReady,
+    onClusterPress,
+    onMarkerPress,
+    onMarkerDragEnd,
+    onPress,
+    onPoiPress,
+    onLongPress,
+    onPolylinePress: onOverlayPress,
+    onPolygonPress: onOverlayPress,
+    onCirclePress: onOverlayPress,
+    onRegionChange,
+    onRegionChangeComplete,
+  };
 
-    if (provider === 'apple') {
-      return (
-        <MapView
-          ref={ref}
-          key={`${scenario.id}:${animationOption.id}:apple`}
-          {...commonMapProps}
-          provider="apple"
-          showsScale={scenario.advanced?.showsScale}
-        />
-      );
-    }
-
+  if (provider === 'apple') {
     return (
       <MapView
         ref={ref}
-        key={`${scenario.id}:${animationOption.id}:google`}
+        key={`${scenario.id}:${animationOption.id}:apple`}
         {...commonMapProps}
-        provider="google"
+        provider="apple"
+        showsScale={scenario.advanced?.showsScale}
       />
     );
+  }
+
+  return (
+    <MapView
+      ref={ref}
+      key={`${scenario.id}:${animationOption.id}:google`}
+      {...commonMapProps}
+      provider="google"
+    />
+  );
 });
 
 type StatusHeaderProps = {
@@ -824,6 +836,18 @@ export default function App() {
     );
   }, []);
 
+  const handleRegionChange = useCallback((region: Region) => {
+    setStatus(
+      `Region start · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
+    );
+  }, []);
+
+  const handleRegionChangeComplete = useCallback((region: Region) => {
+    setStatus(
+      `Region complete · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
+    );
+  }, []);
+
   return (
     <View style={styles.container}>
       <MapScene
@@ -841,6 +865,8 @@ export default function App() {
         onPress={handleMapPress}
         onPoiPress={handlePoiPress}
         onLongPress={handleMapLongPress}
+        onRegionChange={handleRegionChange}
+        onRegionChangeComplete={handleRegionChangeComplete}
       />
 
       <StatusHeader

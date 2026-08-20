@@ -29,18 +29,11 @@ enum MarkerClusterEngine {
     }
 
     var renderVersion: Int {
-      var hasher = Hasher()
       switch self {
       case let .single(descriptor):
-        hasher.combine("single")
-        hasher.combine(descriptor.id)
-        hasher.combine(descriptor.coordinate.latitude)
-        hasher.combine(descriptor.coordinate.longitude)
-        hasher.combine(descriptor.title)
-        hasher.combine(descriptor.subtitle)
-        hasher.combine(descriptor.draggable)
-        hasher.combine(descriptor.clusterable)
+        return descriptor.displayedIdentityVersion()
       case let .cluster(key, coordinate, count, memberIds, region):
+        var hasher = Hasher()
         hasher.combine("cluster")
         hasher.combine(key)
         hasher.combine(coordinate.latitude)
@@ -53,8 +46,8 @@ enum MarkerClusterEngine {
         hasher.combine(region.center.longitude)
         hasher.combine(region.span.latitudeDelta)
         hasher.combine(region.span.longitudeDelta)
+        return hasher.finalize()
       }
-      return hasher.finalize()
     }
 
     func makeAnnotation(

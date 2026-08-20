@@ -14,16 +14,7 @@ internal sealed interface ClusterElement {
 
   data class Single(val descriptor: MarkerDescriptor) : ClusterElement {
     override val diffKey: String get() = "s:" + descriptor.id
-    override val renderVersion: Long = renderSignature(
-      "single",
-      descriptor.id,
-      descriptor.coordinate.latitude,
-      descriptor.coordinate.longitude,
-      descriptor.title,
-      descriptor.subtitle,
-      descriptor.draggable,
-      descriptor.clusterable,
-    )
+    override val renderVersion: Long = descriptor.displayedIdentityVersion()
   }
 
   data class Cluster(
@@ -47,14 +38,6 @@ internal sealed interface ClusterElement {
       bounds.northeast.longitude,
     )
   }
-}
-
-private fun renderSignature(vararg parts: Any?): Long {
-  var hash = -3750763034362895579L
-  for (part in parts) {
-    hash = 1099511628211L * hash + (part?.hashCode()?.toLong() ?: 0L)
-  }
-  return hash
 }
 
 /**

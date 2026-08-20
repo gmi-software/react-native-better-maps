@@ -109,9 +109,8 @@ natively — unlike the null-rendering `<Marker>`.
 
 ### Phase 0 — quick win (independent)
 
-- Fix the existing gap where iOS Google (`GoogleMapOverlayController.updateMarker`) sets
-  `icon = nil` and never applies `MarkerDescriptor.image`, so `<Marker image>` is
-  consistent across all three backends (MapKit, iOS Google, Android Google).
+Done: iOS Google applies `MarkerDescriptor` image, anchor, centerOffset, rotation, flat,
+and opacity so `<Marker image>` is consistent across MapKit, iOS Google, and Android Google.
 
 ### Phase 1 — MVP custom views (Option A)
 

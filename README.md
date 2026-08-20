@@ -347,7 +347,7 @@ Additional props:
 | `anchor`       | `{ x: 0.5, y: 1 }` | Point on the image aligned to the coordinate        |
 | `centerOffset` | —                  | Extra offset in dp (MapKit-style)                   |
 | `rotation`     | `0`                | Clockwise rotation in degrees                       |
-| `flat`         | `false`            | Rotate with map plane (Google Maps; limited on iOS) |
+| `flat`         | `false`            | Rotate with map plane (Google Maps; MapKit approximates via view transform) |
 | `opacity`      | `1`                | Marker opacity from 0 to 1                          |
 
 Platform notes:

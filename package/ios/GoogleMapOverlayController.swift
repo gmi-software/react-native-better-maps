@@ -2,6 +2,7 @@ import GoogleMaps
 import MapKit
 import UIKit
 
+/// Reconciles overlay descriptors with Google Maps objects.
 final class GoogleMapOverlayController {
   private static let clusterCellPoints: Double = 96
   // GMSMarker entering animations are main-thread work; cap them per diff so
@@ -25,6 +26,7 @@ final class GoogleMapOverlayController {
   private var polygons: [String: GMSPolygon] = [:]
   private var circles: [String: GMSCircle] = [:]
   private let markerPipeline: MarkerRenderPipeline
+  private let visualApplier = GoogleMarkerVisualApplier()
   private var clusterIconCache: [String: UIImage] = [:]
 
   var onMarkerPress: ((String) -> Void)?
@@ -214,7 +216,8 @@ final class GoogleMapOverlayController {
     var remainingAnimationBudget = animateEntering ? max(0, animationBudget) : 0
 
     for entry in diff.added {
-      let marker = makeMarker(for: entry.element)
+      let marker = GMSMarker()
+      updateMarker(marker, with: entry.element)
       let animation = enteringAnimation(for: entry.element)
       let shouldAnimate = animateEntering
         && remainingAnimationBudget > 0
@@ -245,12 +248,6 @@ final class GoogleMapOverlayController {
       updateMarker(marker, with: entry.element)
       markerVersions[entry.key] = entry.version
     }
-  }
-
-  private func makeMarker(for element: MarkerClusterEngine.Element) -> GMSMarker {
-    let marker = GMSMarker()
-    updateMarker(marker, with: element)
-    return marker
   }
 
   private func append(
@@ -286,9 +283,8 @@ final class GoogleMapOverlayController {
       marker.title = descriptor.title
       marker.snippet = descriptor.subtitle
       marker.isDraggable = descriptor.draggable == true
-      marker.icon = nil
-      marker.groundAnchor = CGPoint(x: 0.5, y: 1)
       marker.userData = MarkerPayload.marker(descriptor.id)
+      visualApplier.apply(descriptor, to: marker)
     case let .cluster(_, coordinate, count, memberIds, region):
       marker.position = coordinate
       marker.title = nil

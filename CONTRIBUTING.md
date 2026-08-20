@@ -92,6 +92,10 @@ chore: add commitlint configuration
 - Place imports at the top of files.
 - Use exhaustive switch handling for discriminated unions.
 
+## Releasing
+
+Maintainers cut releases from CI — see [RELEASING.md](RELEASING.md).
+
 ## Reporting issues
 
 Please use [GitHub Issues](https://github.com/gmi-software/react-native-better-maps/issues) and include:

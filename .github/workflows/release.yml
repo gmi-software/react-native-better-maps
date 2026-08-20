@@ -1,0 +1,146 @@
+name: Release
+
+# Publishing is driven by a version tag, not by a commit pushed from CI.
+# `main` requires pull request reviews with `enforce_admins` enabled, so nothing —
+# including github-actions[bot] — can push a release commit to it. The version
+# bump therefore lands through a normal reviewed pull request, and pushing the
+# matching tag afterwards triggers the publish.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  # Rehearsal against the current branch. Always a dry run: it validates the
+  # version, changelog and full gate without tagging or publishing anything.
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # Create the GitHub Release for the pushed tag.
+      contents: write
+      # Mint the OIDC token npm exchanges for a short-lived publish token, and
+      # sign the provenance attestation.
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Full history so conventional-changelog can build the release notes
+          # from every commit since the previous tag.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          # Node 24 ships npm >= 11.5.1, required for npm trusted publishing.
+          # `registry-url` is deliberately omitted: it writes an `_authToken`
+          # entry into .npmrc, which makes npm assume classic token auth and skip
+          # the OIDC flow. The registry is already pinned by publishConfig.
+          node-version: 24
+
+      - name: Verify npm supports trusted publishing
+        run: |
+          npm_version="$(npm --version)"
+          required=11.5.1
+          echo "npm $npm_version (need >= $required)"
+          if [ "$(printf '%s\n%s\n' "$required" "$npm_version" | sort -V | head -n1)" != "$required" ]; then
+            echo "::error::npm $npm_version is too old for trusted publishing (need >= $required)."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Resolve version
+        id: version
+        run: |
+          version="$(node -p "require('./package/package.json').version")"
+          echo "package.json version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches package.json
+        if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::Tag $TAG does not match package.json version $VERSION. Bump the version on main first."
+            exit 1
+          fi
+
+      - name: Verify CHANGELOG entry exists
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! grep -qE "^## +${VERSION//./\\.}( |$)" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## $VERSION' section. Add the release notes before publishing."
+            exit 1
+          fi
+
+      - name: Verify version is not already published
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if npm view "react-native-better-maps@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::react-native-better-maps@$VERSION is already on npm."
+            exit 1
+          fi
+
+      - name: Codegen
+        run: bun run nitrogen
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
+
+      - name: Test
+        run: bun run --filter react-native-better-maps test
+
+      - name: Publish
+        working-directory: package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # --no-increment: the version already lives in package.json, reviewed
+          #   and merged through a pull request.
+          # --no-git: the tag is pushed by the maintainer; CI never writes to git.
+          args=(--ci --no-increment --no-git)
+          if [ "${{ github.event_name }}" != 'push' ]; then
+            args+=(--dry-run)
+            echo 'Rehearsal run — nothing will be tagged or published.'
+          fi
+          bunx release-it "${args[@]}"
+
+      - name: Summary
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            echo "### Release v$VERSION"
+            echo
+            if [ "${{ github.event_name }}" != 'push' ]; then
+              echo "Rehearsal only — nothing was published."
+            else
+              echo "- [npm](https://www.npmjs.com/package/react-native-better-maps/v/$VERSION)"
+              echo "- [GitHub Release](${{ github.server_url }}/${{ github.repository }}/releases/tag/v$VERSION)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -48,5 +48,12 @@ interface MapProviderAdapter {
   fun animateCamera(camera: Camera, duration: Double?)
   fun getVisibleRegion(): Promise<VisibleRegion>
   fun fitToCoordinates(coordinates: Array<Coordinate>, padding: EdgePadding?, animated: Boolean?)
-  fun prepareForRecycle()
+
+  /**
+   * Destroys the underlying native map and unregisters everything the adapter owns.
+   * Every caller discards the adapter afterwards, so this is a one-way transition --
+   * it is not the Nitro `RecyclableView.prepareForRecycle` reset. Leaving the window
+   * does not trigger it; a detached map is only stopped.
+   */
+  fun release()
 }

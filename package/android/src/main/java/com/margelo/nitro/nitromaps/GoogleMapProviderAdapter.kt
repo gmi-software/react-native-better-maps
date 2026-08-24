@@ -1,7 +1,9 @@
 package com.margelo.nitro.nitromaps
 
 import android.Manifest
+import android.content.ComponentCallbacks
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -32,7 +34,6 @@ class GoogleMapProviderAdapter(
   private var googleMap: GoogleMap? = null
   private var isUserGesture = false
   private var hasFiredMapReady = false
-  private var isDestroyed = false
   private val overlayController = MapOverlayController(null, context)
   private var pendingMarkers: Array<MarkerDescriptor>? = null
   private var pendingPolylines: Array<PolylineDescriptor>? = null
@@ -49,32 +50,46 @@ class GoogleMapProviderAdapter(
         mapId(mapId)
       }
     },
-  ).also { mapView ->
-    mapView.onCreate(null)
-    context.addLifecycleEventListener(this@GoogleMapProviderAdapter)
+  )
 
-    mapView.addOnAttachStateChangeListener(
-      object : View.OnAttachStateChangeListener {
-        override fun onViewAttachedToWindow(v: View) {
-          if (!isDestroyed) {
-            mapView.onResume()
-          }
-        }
+  private val lifecycle = MapViewLifecycleOwner(view)
 
-        override fun onViewDetachedFromWindow(v: View) {
-          context.removeLifecycleEventListener(this@GoogleMapProviderAdapter)
-          mapView.onPause()
-          destroyMapViewIfNeeded(mapView)
-        }
-      },
-    )
+  private var isAttachedToWindow = false
 
-    mapView.getMapAsync { map ->
+  /** React only mounts views while the host runs; [onHostPause] corrects this. */
+  private var isHostResumed = true
+
+  private val attachStateListener = object : View.OnAttachStateChangeListener {
+    override fun onViewAttachedToWindow(v: View) {
+      isAttachedToWindow = true
+      syncLifecycleState()
+    }
+
+    override fun onViewDetachedFromWindow(v: View) {
+      isAttachedToWindow = false
+      syncLifecycleState()
+    }
+  }
+
+  private val memoryCallbacks = object : ComponentCallbacks {
+    override fun onConfigurationChanged(newConfig: Configuration) = Unit
+
+    override fun onLowMemory() {
+      lifecycle.onLowMemory()
+    }
+  }
+
+  init {
+    context.addLifecycleEventListener(this)
+    context.registerComponentCallbacks(memoryCallbacks)
+    view.addOnAttachStateChangeListener(attachStateListener)
+
+    view.getMapAsync { map ->
       googleMap = map
       configureMap(map)
     }
 
-    installViewportSizeListener(mapView)
+    installViewportSizeListener(view)
   }
 
   private var _mapType = MapType.STANDARD
@@ -298,23 +313,26 @@ class GoogleMapProviderAdapter(
       syncMarkerPressHandlers()
     }
 
-  override fun fetchCamera(): Promise<Camera> {
-    val map = googleMap
-    if (map != null) {
-      return promiseOnMain { map.cameraPosition.toCamera() }
+  override fun fetchCamera(): Promise<Camera> = promiseOnMain {
+    googleMap?.cameraPosition?.toCamera() ?: fallbackCamera()
+  }
+
+  /** The camera the caller last asked for, used until the map itself can answer. */
+  private fun fallbackCamera(): Camera {
+    val camera = _camera
+    if (camera != null) {
+      return camera
     }
 
-    return Promise.resolved(
-      _camera ?: Camera(
-        center = Coordinate(
-          latitude = _region?.latitude ?: 0.0,
-          longitude = _region?.longitude ?: 0.0,
-        ),
-        zoom = 10.0,
-        heading = null,
-        pitch = null,
-        altitude = null,
+    return Camera(
+      center = Coordinate(
+        latitude = _region?.latitude ?: 0.0,
+        longitude = _region?.longitude ?: 0.0,
       ),
+      zoom = 10.0,
+      heading = null,
+      pitch = null,
+      altitude = null,
     )
   }
 
@@ -327,21 +345,8 @@ class GoogleMapProviderAdapter(
     updateMapCamera(camera, animated = true, durationMs = (animationDuration * 1000).toInt())
   }
 
-  override fun getVisibleRegion(): Promise<VisibleRegion> {
-    val map = googleMap
-    if (map != null) {
-      return promiseOnMain { map.projection.toNitroVisibleRegion() }
-    }
-
-    val zero = Coordinate(latitude = 0.0, longitude = 0.0)
-    return Promise.resolved(
-      VisibleRegion(
-        nearLeft = zero,
-        nearRight = zero,
-        farLeft = zero,
-        farRight = zero,
-      ),
-    )
+  override fun getVisibleRegion(): Promise<VisibleRegion> = promiseOnMain {
+    googleMap?.projection?.toNitroVisibleRegion() ?: emptyVisibleRegion()
   }
 
   override fun fitToCoordinates(
@@ -376,20 +381,31 @@ class GoogleMapProviderAdapter(
   }
 
   override fun onHostResume() {
-    if (!isDestroyed) {
-      view.onResume()
-    }
+    isHostResumed = true
+    syncLifecycleState()
   }
 
   override fun onHostPause() {
-    if (!isDestroyed) {
-      view.onPause()
-    }
+    isHostResumed = false
+    syncLifecycleState()
   }
 
   override fun onHostDestroy() {
-    context.removeLifecycleEventListener(this)
-    destroyMapViewIfNeeded(view)
+    destroyMapView()
+  }
+
+  /**
+   * Brings the map to the state implied by whether it is on screen and whether the
+   * host is in the foreground. Leaving the window stops the map, never destroys it.
+   */
+  private fun syncLifecycleState() {
+    val target = when {
+      !isAttachedToWindow -> MapViewLifecycleState.CREATED
+      isHostResumed -> MapViewLifecycleState.RESUMED
+      else -> MapViewLifecycleState.STARTED
+    }
+
+    lifecycle.moveTo(target)
   }
 
   private fun configureMap(map: GoogleMap) {
@@ -722,9 +738,9 @@ class GoogleMapProviderAdapter(
     onMapReady?.invoke()
   }
 
-  override fun prepareForRecycle() {
-    isUserGesture = false
-    hasFiredMapReady = false
+  override fun release() {
+    // Drop the JS callbacks first: a map event still in flight must not reach a
+    // view that is already gone.
     onRegionChange = null
     onRegionChangeComplete = null
     onMapReady = null
@@ -737,48 +753,31 @@ class GoogleMapProviderAdapter(
     onPolygonPress = null
     onCirclePress = null
     onClusterPress = null
-    _markers = null
-    _polylines = null
-    _polygons = null
-    _circles = null
-    pendingMarkers = null
-    pendingPolylines = null
-    pendingPolygons = null
-    pendingCircles = null
+
     overlayController.clear()
-    _mapType = MapType.STANDARD
-    _region = null
-    _camera = null
-    scrollEnabled = true
-    zoomEnabled = true
-    rotateEnabled = true
-    pitchEnabled = true
-    _showsUserLocation = null
-    _followsUserLocation = null
-    _showsCompass = null
-    _showsScale = null
-    _customMapStyle = null
-    _clusteringEnabled = null
-    _mapPadding = null
-    _markerEnteringAnimation = null
-    _clusterEnteringAnimation = null
-    overlayController.markerEnteringAnimation = null
-    overlayController.clusterEnteringAnimation = null
-    googleMap?.mapType = MapType.STANDARD.toGoogleMapType()
-    googleMap?.isMyLocationEnabled = false
-    googleMap?.setMapStyle(null)
-    googleMap?.setPadding(0, 0, 0, 0)
-    applyUiSettings()
+    destroyMapView()
   }
 
-  private fun destroyMapViewIfNeeded(mapView: MapView) {
-    if (isDestroyed) {
+  /**
+   * Tears the map down for good. Both call sites discard the adapter afterwards;
+   * detaching from the window deliberately does not come here.
+   */
+  private fun destroyMapView() {
+    if (lifecycle.isDestroyed) {
       return
     }
 
-    mapView.onDestroy()
-    isDestroyed = true
+    context.removeLifecycleEventListener(this)
+    context.unregisterComponentCallbacks(memoryCallbacks)
+    view.removeOnAttachStateChangeListener(attachStateListener)
+    lifecycle.moveTo(MapViewLifecycleState.DESTROYED)
+    googleMap = null
   }
 }
 
 private fun normalizeGoogleMapId(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
+
+private fun emptyVisibleRegion(): VisibleRegion {
+  val zero = Coordinate(latitude = 0.0, longitude = 0.0)
+  return VisibleRegion(nearLeft = zero, nearRight = zero, farLeft = zero, farRight = zero)
+}

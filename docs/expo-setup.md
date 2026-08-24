@@ -47,7 +47,7 @@ module.exports = {
 | Option                     | Type              | Default | Description                                                                                                                                                                                                                     |
 | -------------------------- | ----------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `googleMapsApiKey`         | `string`          | —       | Shared fallback for iOS and Android when platform-specific keys are omitted.                                                                                                                                                    |
-| `iosGoogleMapsApiKey`      | `string`          | —       | Injects `GoogleMapsIosApiKey` into `Info.plist` for `provider="google"` on iOS.                                                                                                                                                 |
+| `iosGoogleMapsApiKey`      | `string`          | —       | Injects `GoogleMapsIosApiKey` into `Info.plist` and sets `betterMaps.iosGoogleProvider` in `Podfile.properties.json` so the Google Maps SDK is linked on iOS.                                                                 |
 | `androidGoogleMapsApiKey`  | `string`          | —       | Injects `com.google.android.geo.API_KEY` meta-data on Android.                                                                                                                                                                  |
 | `locationPermission`       | `string \| false` | —       | Foreground location message. Injects iOS `NSLocationWhenInUseUsageDescription` plus Android `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION`.                                                                                |
 | `locationAlwaysPermission` | `string \| false` | —       | Background location message. Injects iOS `NSLocationAlwaysAndWhenInUseUsageDescription` plus Android `ACCESS_BACKGROUND_LOCATION`; also supplies foreground usage strings and permissions when `locationPermission` is omitted. |
@@ -91,7 +91,9 @@ expo prebuild --clean
 The plugin injects:
 
 - **Android:** `com.google.android.geo.API_KEY` meta-data (when `googleMapsApiKey` or `androidGoogleMapsApiKey` is set) and location permissions (when location options are set)
-- **iOS:** `GoogleMapsIosApiKey` (when `googleMapsApiKey` or `iosGoogleMapsApiKey` is set) and location usage description strings (when location options are set)
+- **iOS:** `GoogleMapsIosApiKey` in `Info.plist` and `betterMaps.iosGoogleProvider` in `Podfile.properties.json` (when `googleMapsApiKey` or `iosGoogleMapsApiKey` is set), plus location usage description strings (when location options are set)
+
+On iOS, the API key and pod linkage are separate artifacts. The plugin keeps them in sync during prebuild. If you later remove Google Maps keys from the plugin config, re-run `expo prebuild` to remove both `GoogleMapsIosApiKey` and `betterMaps.iosGoogleProvider`, then run `pod install` to update the linked pods. Bare React Native apps without the plugin must manage both settings manually; see [Bare React Native](../README.md#bare-react-native) in the README.
 
 ## Run
 
@@ -116,6 +118,7 @@ The example's `prebuild` script builds the plugin (`build:plugin`) before runnin
 | Symptom                                     | Fix                                                                                                                            |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Blank Google map                            | Ensure `googleMapsApiKey` or the platform-specific Google Maps key is set, then run `expo prebuild` again.                     |
+| iOS Google Maps key present but provider fails | iOS needs `GoogleMapsIosApiKey` in `Info.plist` **and** `"betterMaps.iosGoogleProvider": "true"` in `Podfile.properties.json`, then `pod install`. Re-run prebuild after changing or removing plugin keys so both artifacts stay aligned. |
 | Location dot not showing                    | Set `locationPermission` or `locationAlwaysPermission` in the plugin options and re-run prebuild.                              |
 | Plugin not found                            | Confirm `react-native-better-maps` is installed and listed in `plugins`.                                                        |
 | `Cannot find module './plugin/build/index'` | Run `bun run build:plugin` in the package (or `bun run build` from the repo root) before prebuild when using a workspace link. |

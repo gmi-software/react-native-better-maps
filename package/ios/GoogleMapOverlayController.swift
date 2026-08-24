@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import GoogleMaps
 import MapKit
 import UIKit
@@ -473,3 +474,4 @@ private extension Array where Element == Coordinate {
     return path
   }
 }
+#endif

@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import GoogleMaps
 
 extension MapType {
@@ -14,3 +15,4 @@ extension MapType {
     }
   }
 }
+#endif

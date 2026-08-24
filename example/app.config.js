@@ -5,12 +5,6 @@ function readEnv(name) {
   return value == null || value.trim() === '' ? undefined : value;
 }
 
-const googleMapsApiKey = readEnv('GOOGLE_MAPS_API_KEY');
-const iosGoogleMapsApiKey =
-  readEnv('GOOGLE_MAPS_IOS_API_KEY') ?? googleMapsApiKey;
-const androidGoogleMapsApiKey =
-  readEnv('GOOGLE_MAPS_ANDROID_API_KEY') ?? googleMapsApiKey;
-
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = {
   expo: {
@@ -20,8 +14,9 @@ module.exports = {
       [
         'react-native-better-maps',
         {
-          iosGoogleMapsApiKey,
-          androidGoogleMapsApiKey,
+          googleMapsApiKey: readEnv('GOOGLE_MAPS_API_KEY'),
+          iosGoogleMapsApiKey: readEnv('GOOGLE_MAPS_IOS_API_KEY'),
+          androidGoogleMapsApiKey: readEnv('GOOGLE_MAPS_ANDROID_API_KEY'),
           locationPermission:
             'Allow $(PRODUCT_NAME) to use your location for map features.',
         },

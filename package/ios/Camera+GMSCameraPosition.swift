@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import CoreLocation
 import GoogleMaps
 
@@ -37,3 +38,4 @@ extension GMSCameraPosition {
     )
   }
 }
+#endif

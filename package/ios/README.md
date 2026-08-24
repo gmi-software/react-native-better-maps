@@ -36,12 +36,24 @@ Expo apps can set the key with the package config plugin:
 }
 ```
 
-Non-Expo apps can add the key directly to `Info.plist`:
+Non-Expo (bare) apps must configure **both** the runtime key and CocoaPods linkage — the Expo config plugin writes these together, but bare projects have no plugin step:
+
+1. Add the API key to `Info.plist`:
 
 ```xml
 <key>GoogleMapsIosApiKey</key>
 <string>YOUR_API_KEY</string>
 ```
+
+2. Enable the Google Maps pod in `ios/Podfile.properties.json`, then run `pod install`:
+
+```json
+{
+  "betterMaps.iosGoogleProvider": "true"
+}
+```
+
+Without the podfile property, the library builds without `GoogleMaps` and `provider="google"` fails with a SDK-not-linked error even when the key is present. After a one-time `expo prebuild`, keep `Podfile.properties.json` aligned with your `Info.plist` key — stale values can leave the SDK linked or unlinked independently of the key.
 
 For the example Expo app, set `GOOGLE_MAPS_IOS_API_KEY` or the shared `GOOGLE_MAPS_API_KEY` fallback (see `example/.env.example`) before running `expo prebuild` or `expo run:ios`.
 

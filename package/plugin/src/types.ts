@@ -1,14 +1,18 @@
 export type BetterMapsPluginOptions = {
   /**
    * Shared Google Maps API key for both platforms when platform-specific keys are omitted.
+   * When set on iOS, links the Google Maps iOS SDK via Podfile.properties.json.
    */
   googleMapsApiKey?: string;
   /**
    * Google Maps API key for iOS (`GoogleMapsIosApiKey` in Info.plist).
+   * When set, also writes `betterMaps.iosGoogleProvider` to Podfile.properties.json
+   * so the Google Maps iOS SDK is linked during `pod install`.
    */
   iosGoogleMapsApiKey?: string;
   /**
    * Google Maps API key for Android (`com.google.android.geo.API_KEY` meta-data).
+   * Does not enable the Google Maps iOS SDK.
    */
   androidGoogleMapsApiKey?: string;
   /**
@@ -43,14 +47,35 @@ export function requiresForegroundLocation(
   return wantsWhenInUseLocation(options) || wantsAlwaysLocation(options);
 }
 
+function normalizeApiKey(value: string | undefined): string | undefined {
+  if (value == null) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
 export function resolveIosGoogleMapsApiKey(
   options: BetterMapsPluginOptions,
 ): string | undefined {
-  return options.iosGoogleMapsApiKey ?? options.googleMapsApiKey;
+  return (
+    normalizeApiKey(options.iosGoogleMapsApiKey) ??
+    normalizeApiKey(options.googleMapsApiKey)
+  );
 }
 
 export function resolveAndroidGoogleMapsApiKey(
   options: BetterMapsPluginOptions,
 ): string | undefined {
-  return options.androidGoogleMapsApiKey ?? options.googleMapsApiKey;
+  return (
+    normalizeApiKey(options.androidGoogleMapsApiKey) ??
+    normalizeApiKey(options.googleMapsApiKey)
+  );
+}
+
+export function shouldEnableIosGoogleMapsProvider(
+  options: BetterMapsPluginOptions,
+): boolean {
+  return resolveIosGoogleMapsApiKey(options) != null;
 }

@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import GoogleMaps
 import NitroModules
 
@@ -22,3 +23,4 @@ extension CLLocationCoordinate2D {
     Coordinate(latitude: latitude, longitude: longitude)
   }
 }
+#endif

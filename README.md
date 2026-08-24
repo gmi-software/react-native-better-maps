@@ -181,7 +181,7 @@ export default {
 | Option                     | Platform      | Description                                                                                                                                                                                                                                       |
 | -------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `googleMapsApiKey`         | iOS + Android | Shared fallback when platform-specific keys are omitted.                                                                                                                                                                                          |
-| `iosGoogleMapsApiKey`      | iOS           | Injects `GoogleMapsIosApiKey` into `Info.plist` for `provider="google"`.                                                                                                                                                                          |
+| `iosGoogleMapsApiKey`      | iOS           | Injects `GoogleMapsIosApiKey` into `Info.plist` and sets `betterMaps.iosGoogleProvider` in `Podfile.properties.json` so the Google Maps SDK is linked.                                                                                                                                                          |
 | `androidGoogleMapsApiKey`  | Android       | Injects `com.google.android.geo.API_KEY` metadata.                                                                                                                                                                                                |
 | `locationPermission`       | iOS + Android | Foreground location message. Injects `NSLocationWhenInUseUsageDescription` plus `ACCESS_FINE_LOCATION` + `ACCESS_COARSE_LOCATION`. Pass `false` or omit to skip.                                                                                  |
 | `locationAlwaysPermission` | iOS + Android | Background location message. Injects `NSLocationAlwaysAndWhenInUseUsageDescription` plus `ACCESS_BACKGROUND_LOCATION`; also supplies foreground usage strings and permissions when `locationPermission` is omitted. Pass `false` or omit to skip. |
@@ -398,7 +398,27 @@ The example app uses the config plugin. It reads `GOOGLE_MAPS_IOS_API_KEY` and `
 
 ### Bare React Native
 
-- iOS: add a `GoogleMapsIosApiKey` string to `Info.plist`.
+On iOS, `provider="google"` needs **two** host-app settings that the config plugin normally writes together:
+
+1. **Runtime API key** — `GoogleMapsIosApiKey` in `Info.plist` (read when the map mounts).
+2. **SDK linkage** — `"betterMaps.iosGoogleProvider": "true"` in `ios/Podfile.properties.json` (read by `react-native-better-maps.podspec` during `pod install` to add the `GoogleMaps` pod).
+
+In a bare workflow the plugin does not run, so configure both manually:
+
+```xml
+<!-- Info.plist -->
+<key>GoogleMapsIosApiKey</key>
+<string>YOUR_API_KEY</string>
+```
+
+```json
+{
+  "betterMaps.iosGoogleProvider": "true"
+}
+```
+
+Then run `pod install` from `ios/`.
+
 - Android: add `com.google.android.geo.API_KEY` metadata to `AndroidManifest.xml`.
 
 ### Google Map ID
@@ -538,6 +558,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 | Problem                                     | Solution                                                                                                                                                       |
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Map is blank when using Google Maps         | Add a Google Maps API key through the Expo config plugin, `GoogleMapsIosApiKey` in `Info.plist`, or `com.google.android.geo.API_KEY` in `AndroidManifest.xml`. |
+| iOS Google Maps key set but provider errors | iOS needs both `GoogleMapsIosApiKey` in `Info.plist` **and** `"betterMaps.iosGoogleProvider": "true"` in `Podfile.properties.json`, then `pod install`. The config plugin sets both; in bare workflow or with a stale `Podfile.properties.json`, they can drift apart. |
 | New Architecture errors                     | Confirm React Native `0.78+`, New Architecture, and `react-native-nitro-modules` are installed, then rebuild the native app.                                   |
 | Provider throws before rendering            | Check the [supported platforms](#supported-platforms) table. `openstreetmap` and `mapbox` are reserved for future support but do not render yet.               |
 | Expo Go does not load native maps           | Use a development build after `expo prebuild`; native Nitro modules are not available in Expo Go.                                                              |

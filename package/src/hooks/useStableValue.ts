@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 /**
  * Keeps the previously returned value when {@linkcode next} is structurally
@@ -10,6 +10,12 @@ import { useRef } from 'react';
  * overlay array that means walking it into a `std::vector`, bridging it into a
  * native array and reconciling it against the map - all far more expensive than
  * the comparison done here.
+ *
+ * The ref is written after commit rather than during render: React may discard
+ * a render, and a value remembered from one that never committed is a value the
+ * native view never received. The effect is a no-op on the renders this hook
+ * exists for, because an unchanged value leaves `stable` - and so the
+ * dependency - untouched.
  */
 export function useStableValue<Value>(
   next: Value,
@@ -18,7 +24,9 @@ export function useStableValue<Value>(
   const previous = useRef(next);
   const stable = isEqual(previous.current, next) ? previous.current : next;
 
-  previous.current = stable;
+  useLayoutEffect(() => {
+    previous.current = stable;
+  }, [stable]);
 
   return stable;
 }

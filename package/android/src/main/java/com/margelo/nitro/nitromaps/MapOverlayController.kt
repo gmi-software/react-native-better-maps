@@ -36,7 +36,7 @@ class MapOverlayController(
   private var onMarkerPress: ((String) -> Unit)? = null
   private var onClusterPress: ((List<String>, Coordinate) -> Unit)? = null
   private var allMarkerDescriptors: Array<MarkerDescriptor> = emptyArray()
-  private var markersFingerprint: Int = 0
+  private var markersFingerprint: Long = 0L
   private var spatialIndex: MarkerSpatialIndex? = null
   private var refreshGeneration: Int = 0
   private var viewWidthPx: Int = 0
@@ -103,7 +103,7 @@ class MapOverlayController(
     polygons.clear()
     circles.clear()
     allMarkerDescriptors = emptyArray()
-    markersFingerprint = 0
+    markersFingerprint = 0L
     spatialIndex = null
     refreshGeneration += 1
     computeExecutor.shutdown()
@@ -142,7 +142,6 @@ class MapOverlayController(
 
   fun refreshViewportMarkers(
     animateEntering: Boolean = true,
-    updateRetained: Boolean = true,
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
   ) {
     val map = googleMap ?: return
@@ -172,30 +171,13 @@ class MapOverlayController(
           .map { ClusterElement.Single(it) }
       }
 
-      val nextKeys = HashSet<String>(elements.size)
-      val added = ArrayList<ClusterElement>()
-      val retained = ArrayList<ClusterElement>()
-      for (element in elements) {
-        val key = element.diffKey
-        if (!nextKeys.add(key)) {
-          continue
-        }
-        val version = element.renderVersion
-        if (displayedVersions[key] != null) {
-          if (updateRetained && displayedVersions[key] != version) {
-            retained.add(element)
-          }
-        } else {
-          added.add(element)
-        }
-      }
-      val removed = displayedVersions.keys - nextKeys
+      val diff = computeMarkerRenderDiff(elements, displayedVersions)
 
       mainHandler.post {
         if (generation != refreshGeneration) {
           return@post
         }
-        applyDiff(removed, added, retained, animateEntering, maxAnimatedMarkers)
+        applyDiff(diff, animateEntering, maxAnimatedMarkers)
       }
     }
   }
@@ -218,15 +200,13 @@ class MapOverlayController(
   }
 
   private fun applyDiff(
-    removedKeys: Set<String>,
-    added: List<ClusterElement>,
-    retained: List<ClusterElement>,
+    diff: MarkerRenderDiff,
     animateEntering: Boolean = true,
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
   ) {
     val map = googleMap ?: return
 
-    for (key in removedKeys) {
+    for (key in diff.removedKeys) {
       cancelEnteringAnimation(key)
       markers.remove(key)?.remove()
       markerVersions.remove(key)
@@ -234,8 +214,8 @@ class MapOverlayController(
     }
 
     var remainingAnimationBudget = maxAnimatedMarkers.coerceAtLeast(0)
-    val addedMarkers = ArrayList<AddedMarker>(minOf(added.size, remainingAnimationBudget))
-    for (element in added) {
+    val addedMarkers = ArrayList<AddedMarker>(minOf(diff.added.size, remainingAnimationBudget))
+    for (element in diff.added) {
       val key = element.diffKey
       when (element) {
         is ClusterElement.Single -> {
@@ -253,7 +233,8 @@ class MapOverlayController(
             markerIconFactory.applyVisualProps(element.descriptor, marker, key)
             markerVersions[key] = element.renderVersion
             if (shouldAnimate) {
-              addedMarkers.add(AddedMarker(key, marker, animation))
+              val targetAlpha = element.descriptor.opacity?.toFloat() ?: 1f
+              addedMarkers.add(AddedMarker(key, marker, animation, targetAlpha))
               remainingAnimationBudget -= 1
             }
           }
@@ -276,7 +257,7 @@ class MapOverlayController(
             markerVersions[key] = element.renderVersion
             clusterByKey[key] = element
             if (shouldAnimate) {
-              addedMarkers.add(AddedMarker(key, marker, animation))
+              addedMarkers.add(AddedMarker(key, marker, animation, targetAlpha = 1f))
               remainingAnimationBudget -= 1
             }
           }
@@ -284,11 +265,10 @@ class MapOverlayController(
       }
     }
 
-    for (element in retained) {
+    for (element in diff.retained) {
       val key = element.diffKey
       val marker = markers[key] ?: continue
       cancelEnteringAnimation(key)
-      marker.alpha = 1f
       when (element) {
         is ClusterElement.Single -> {
           marker.tag = element.descriptor.id
@@ -303,6 +283,7 @@ class MapOverlayController(
           clusterByKey.remove(key)
         }
         is ClusterElement.Cluster -> {
+          marker.alpha = 1f
           marker.position = element.position
           marker.setIcon(iconFactory.icon(element.count))
           clusterByKey[key] = element
@@ -348,7 +329,7 @@ class MapOverlayController(
           val localElapsed = elapsed - (animatedMarker.animation.delayMs - startDelay)
           val progress = (localElapsed.toFloat() / animatedMarker.animation.durationMs.toFloat())
             .coerceIn(0f, 1f)
-          animatedMarker.marker.alpha = progress
+          animatedMarker.marker.alpha = progress * animatedMarker.targetAlpha
         }
       }
       addListener(object : AnimatorListenerAdapter() {
@@ -369,7 +350,7 @@ class MapOverlayController(
 
   private fun revealAnimatedMarkers(animated: List<AddedMarker>) {
     animated.forEach { animatedMarker ->
-      animatedMarker.marker.alpha = 1f
+      animatedMarker.marker.alpha = animatedMarker.targetAlpha
     }
   }
 
@@ -422,14 +403,14 @@ class MapOverlayController(
           markers[key] = marker
           markerIconFactory.applyVisualProps(descriptor, marker, key)
           markerVersions[key] = element.renderVersion
-          animateEntering(listOf(AddedMarker(key, marker, animation)))
+          val targetAlpha = descriptor.opacity?.toFloat() ?: 1f
+          animateEntering(listOf(AddedMarker(key, marker, animation, targetAlpha)))
         }
       },
       update = { marker, descriptor ->
         val element = ClusterElement.Single(descriptor)
         val key = "s:" + descriptor.id
         (marker.tag as? String)?.let { cancelEnteringAnimation(it) }
-        marker.alpha = 1f
         marker.tag = descriptor.id
         marker.position = LatLng(
           descriptor.coordinate.latitude,
@@ -495,7 +476,6 @@ class MapOverlayController(
     if (usesViewportPipeline()) {
       refreshViewportMarkers(
         animateEntering = true,
-        updateRetained = true,
         maxAnimatedMarkers = MAX_LIVE_ANIMATED_MARKERS_PER_DIFF,
       )
     }
@@ -640,5 +620,6 @@ class MapOverlayController(
     val key: String,
     val marker: Marker,
     val animation: ResolvedOverlayEnteringAnimation,
+    val targetAlpha: Float,
   )
 }

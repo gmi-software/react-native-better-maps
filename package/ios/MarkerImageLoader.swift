@@ -1,9 +1,18 @@
 import UIKit
 
 /// Loads marker images from bundled assets or remote URLs with in-memory caching.
+/// Local images decode off-thread; completions always land on main.
 enum MarkerImageLoader {
   private static let cache = NSCache<NSString, UIImage>()
   private static let session = URLSession.shared
+  private static let decodeQueue = DispatchQueue(
+    label: "com.nitromaps.markerImageDecode",
+    qos: .userInitiated
+  )
+
+  static func cachedImage(for image: MarkerImage) -> UIImage? {
+    cache.object(forKey: cacheKey(for: image))
+  }
 
   static func load(
     _ image: MarkerImage,
@@ -21,13 +30,15 @@ enum MarkerImageLoader {
       return
     }
 
-    if let loaded = loadLocal(uri: uri, image: image) {
-      cache.setObject(loaded, forKey: cacheKey)
-      completion(loaded)
-      return
+    decodeQueue.async {
+      let loaded = loadLocal(uri: uri, image: image)
+      if let loaded {
+        cache.setObject(loaded, forKey: cacheKey)
+      }
+      DispatchQueue.main.async {
+        completion(loaded)
+      }
     }
-
-    completion(nil)
   }
 
   static func cacheKey(for image: MarkerImage) -> NSString {

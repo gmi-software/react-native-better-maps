@@ -112,7 +112,6 @@ enum OverlayEnteringAnimationResolver {
     marker.appearAnimation = .none
     marker.iconView = nil
     marker.tracksViewChanges = false
-    marker.opacity = 1
   }
 
   static func animateGoogleMarkers(

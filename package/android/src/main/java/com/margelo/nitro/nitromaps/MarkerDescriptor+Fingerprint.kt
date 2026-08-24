@@ -1,13 +1,22 @@
 package com.margelo.nitro.nitromaps
 
-internal fun Array<MarkerDescriptor>?.markersFingerprint(): Int {
+internal fun MarkerDescriptor.fingerprint(): Long =
+  renderSignature(
+    displayedIdentityVersion(),
+    enteringAnimation?.kind,
+    enteringAnimation?.duration,
+    enteringAnimation?.delay,
+    enteringAnimation?.reduceMotion,
+  )
+
+internal fun Array<MarkerDescriptor>?.markersFingerprint(): Long {
   if (this.isNullOrEmpty()) {
-    return 0
+    return 0L
   }
 
-  var hash = size
+  var hash = size.toLong()
   for (descriptor in this) {
-    hash = 31 * hash + descriptor.hashCode()
+    hash = 31L * hash + descriptor.fingerprint()
   }
   return hash
 }

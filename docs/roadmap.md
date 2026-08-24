@@ -91,7 +91,7 @@ Delivered incrementally during Phases 3–5; polished for platform consistency i
 
 ## Custom view markers (ADR 0004)
 
-- [ ] Phase 0: apply `MarkerDescriptor.image` on iOS Google provider
+- [x] Phase 0: apply `MarkerDescriptor` image, anchor, centerOffset, rotation, flat, and opacity on iOS Google
 - [ ] Phase 1: `<Marker>` children via snapshot into existing image pipeline
 - [ ] Phase 2: `<MarkerView>` HybridView — live MapKit views, snapshot on Google
 

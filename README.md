@@ -412,7 +412,6 @@ In a bare workflow the plugin does not run, so configure both manually:
 ```
 
 ```json
-// ios/Podfile.properties.json
 {
   "betterMaps.iosGoogleProvider": "true"
 }

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import {
   applyGoogleMapsIosApiKey,
+  applyIosGoogleProviderPodfileProperty,
   applyLocationPermissionsToInfoPlist,
   IOS_GOOGLE_MAPS_API_KEY,
   IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY,
@@ -23,9 +24,25 @@ describe('IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY', () => {
       '../../react-native-better-maps.podspec',
     );
     const podspec = readFileSync(podspecPath, 'utf8');
-    expect(podspec).toContain(
-      `'${IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY}'`,
-    );
+    expect(podspec).toContain(`'${IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY}'`);
+  });
+
+  it('sets the Podfile property when the iOS Google provider is enabled', () => {
+    expect(applyIosGoogleProviderPodfileProperty({}, true)).toEqual({
+      [IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY]: 'true',
+    });
+  });
+
+  it('clears the Podfile property when the iOS Google provider is disabled', () => {
+    expect(
+      applyIosGoogleProviderPodfileProperty(
+        {
+          [IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY]: 'true',
+          'expo.jsEngine': 'hermes',
+        },
+        false,
+      ),
+    ).toEqual({ 'expo.jsEngine': 'hermes' });
   });
 });
 
@@ -38,6 +55,18 @@ describe('applyGoogleMapsIosApiKey', () => {
     expect(applyGoogleMapsIosApiKey({}, 'test-ios-key')).toEqual({
       [IOS_GOOGLE_MAPS_API_KEY]: 'test-ios-key',
     });
+  });
+
+  it('removes an existing GoogleMapsIosApiKey when the API key is omitted', () => {
+    expect(
+      applyGoogleMapsIosApiKey(
+        {
+          [IOS_GOOGLE_MAPS_API_KEY]: 'stale-key',
+          CFBundleDisplayName: 'Better Maps',
+        },
+        undefined,
+      ),
+    ).toEqual({ CFBundleDisplayName: 'Better Maps' });
   });
 });
 
@@ -65,6 +94,15 @@ describe('resolveIosGoogleMapsApiKey', () => {
     expect(
       resolveIosGoogleMapsApiKey({ iosGoogleMapsApiKey: '   ' }),
     ).toBeUndefined();
+  });
+
+  it('falls back to googleMapsApiKey when the iOS key is blank', () => {
+    expect(
+      resolveIosGoogleMapsApiKey({
+        iosGoogleMapsApiKey: '   ',
+        googleMapsApiKey: 'shared',
+      }),
+    ).toBe('shared');
   });
 });
 

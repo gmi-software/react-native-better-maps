@@ -34,7 +34,7 @@ enum MapProviderConfigurationError: LocalizedError {
     case .missingGoogleMapsIosApiKey:
       return "react-native-better-maps: provider=\"google\" on iOS requires GoogleMapsIosApiKey in the host app Info.plist."
     case .googleMapsSdkNotLinked:
-      return "react-native-better-maps: provider=\"google\" on iOS requires iosGoogleMapsApiKey or googleMapsApiKey in the react-native-better-maps config plugin to link the Google Maps SDK, then run pod install."
+      return "react-native-better-maps: provider=\"google\" on iOS requires the Google Maps SDK to be linked. Configure iosGoogleMapsApiKey or googleMapsApiKey in the config plugin, or set betterMaps.iosGoogleProvider=true in Podfile.properties.json, then run pod install."
     case let .unsupportedIOSProvider(provider):
       return "Map provider \"\(provider)\" is not supported on iOS."
     }

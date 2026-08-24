@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { MarkerDescriptor } from '../../native/specs/overlays';
 
 const resolveAssetSourceMock = mock(
-  (source: number | { uri: string; width?: number; height?: number; scale?: number }) => {
+  (
+    source:
+      number | { uri: string; width?: number; height?: number; scale?: number },
+  ) => {
     if (typeof source === 'number') {
       return {
         uri: `asset:/require-${source}.png`,
@@ -20,8 +23,10 @@ mock.module('../assetSourceResolver', () => ({
   resolveAssetSource: resolveAssetSourceMock,
 }));
 
-const { clearResolvedMarkerImageCacheForTests } = await import('../resolveMarkerImage');
-const { normalizeMarkerDescriptors } = await import('../normalizeMarkerDescriptors');
+const { clearResolvedMarkerImageCacheForTests } =
+  await import('../resolveMarkerImage');
+const { normalizeMarkerDescriptors } =
+  await import('../normalizeMarkerDescriptors');
 
 const baseDescriptor: MarkerDescriptor = {
   id: 'marker-1',
@@ -35,29 +40,17 @@ describe('normalizeMarkerDescriptors', () => {
     clearResolvedMarkerImageCacheForTests();
   });
 
-  test('returns the same array reference when descriptors are unchanged', () => {
-    const descriptors = [baseDescriptor];
-
-    expect(normalizeMarkerDescriptors(descriptors)).toBe(descriptors);
+  test('carries a descriptor without an image across unchanged', () => {
+    expect(normalizeMarkerDescriptors([baseDescriptor])).toEqual([
+      { ...baseDescriptor, image: undefined },
+    ]);
   });
 
-  test('returns the same array reference when images are already resolved MarkerImage objects', () => {
-    const image = {
-      uri: 'asset:/pin.png',
-      width: 32,
-      height: 32,
-      scale: 2,
-    };
-    const descriptors = [{ ...baseDescriptor, image }];
+  test('resolves a require() image into a MarkerImage', () => {
+    const normalized = normalizeMarkerDescriptors([
+      { ...baseDescriptor, image: 42 as never },
+    ]);
 
-    expect(normalizeMarkerDescriptors(descriptors)).toBe(descriptors);
-  });
-
-  test('returns a new array when a require() image is resolved', () => {
-    const descriptors = [{ ...baseDescriptor, image: 42 as never }];
-    const normalized = normalizeMarkerDescriptors(descriptors);
-
-    expect(normalized).not.toBe(descriptors);
     expect(normalized[0]?.image).toEqual({
       uri: 'asset:/require-42.png',
       width: 32,
@@ -66,12 +59,27 @@ describe('normalizeMarkerDescriptors', () => {
     });
   });
 
-  test('stabilizes after the first require() resolution', () => {
-    const descriptors = [{ ...baseDescriptor, image: 7 as never }];
-    const first = normalizeMarkerDescriptors(descriptors);
-    const second = normalizeMarkerDescriptors(first);
+  test('carries an already resolved MarkerImage across', () => {
+    const image = { uri: 'asset:/pin.png', width: 32, height: 32, scale: 2 };
 
-    expect(second).toBe(first);
+    expect(
+      normalizeMarkerDescriptors([{ ...baseDescriptor, image }])[0]?.image,
+    ).toEqual(image);
+  });
+
+  test('resolves each require() source only once', () => {
+    const descriptors = [{ ...baseDescriptor, image: 7 as never }];
+    normalizeMarkerDescriptors(descriptors);
+    normalizeMarkerDescriptors(descriptors);
+
     expect(resolveAssetSourceMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('normalizes a per-marker entering animation', () => {
+    const normalized = normalizeMarkerDescriptors([
+      { ...baseDescriptor, enteringAnimation: false },
+    ]);
+
+    expect(normalized[0]?.enteringAnimation).toEqual({ kind: 'none' });
   });
 });

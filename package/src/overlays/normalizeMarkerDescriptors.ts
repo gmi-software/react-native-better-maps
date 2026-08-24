@@ -22,41 +22,15 @@ function normalizeDescriptor(descriptor: PublicMarkerDescriptor): MarkerDescript
   };
 }
 
-function descriptorsEqual(
-  left: MarkerDescriptor,
-  right: MarkerDescriptor,
-): boolean {
-  return (
-    left.id === right.id &&
-    left.coordinate.latitude === right.coordinate.latitude &&
-    left.coordinate.longitude === right.coordinate.longitude &&
-    left.title === right.title &&
-    left.subtitle === right.subtitle &&
-    left.draggable === right.draggable &&
-    left.clusterable === right.clusterable &&
-    left.image === right.image &&
-    left.anchor === right.anchor &&
-    left.centerOffset === right.centerOffset &&
-    left.rotation === right.rotation &&
-    left.flat === right.flat &&
-    left.opacity === right.opacity &&
-    left.enteringAnimation === right.enteringAnimation
-  );
-}
-
+/**
+ * Widens the public marker descriptors into the shape the native view expects,
+ * mainly by resolving `require()` image sources.
+ *
+ * Reference identity of the result does not matter here: `MapView` stabilizes
+ * the array structurally before it reaches the native prop.
+ */
 export function normalizeMarkerDescriptors(
   descriptors: PublicMarkerDescriptor[],
 ): MarkerDescriptor[] {
-  let changed = false;
-  const next = descriptors.map((descriptor) => {
-    const normalized = normalizeDescriptor(descriptor);
-    if (descriptorsEqual(normalized, descriptor as MarkerDescriptor)) {
-      return descriptor as MarkerDescriptor;
-    }
-
-    changed = true;
-    return normalized;
-  });
-
-  return changed ? next : (descriptors as MarkerDescriptor[]);
+  return descriptors.map(normalizeDescriptor);
 }

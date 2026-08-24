@@ -34,6 +34,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Custom marker images](#custom-marker-images)
 - [Google Maps setup](#google-maps-setup)
 - [Marker entering animations](#marker-entering-animations)
+- [Re-renders](#re-renders)
 - [Capability matrix](#capability-matrix)
 - [Public API](#public-api)
 - [Example app](#example-app)
@@ -456,6 +457,32 @@ When no animation prop is set, the default is `system`: each provider keeps its 
 Explicit configs use milliseconds. `duration` defaults to `180`, `delay` defaults to `0`, and both values are clamped to `0..3000` before they reach the native provider. `reduceMotion` defaults to `system`, which disables explicit animations when the platform Reduced Motion setting asks for it. Use `never` only when the app intentionally ignores that setting for this overlay.
 
 On Google Maps providers, marker and cluster entering animations can reduce UI-thread frame rate when a large viewport refresh adds many markers at once. The provider caps animated markers per refresh and may show the remaining markers immediately to preserve map gesture performance. For very large marker sets, prefer clustering, shorter durations, or `markerEnteringAnimation={false}` / `clusterEnteringAnimation={false}` when smooth gestures are more important than entrance motion.
+
+## Re-renders
+
+Nitro compares view props by reference identity, so a prop rebuilt from unchanged data would still be re-serialized across JSI and re-applied to the native map. `MapView` guards against that on your behalf:
+
+- Overlay arrays - whether they come from `<Marker />` children or the bulk `markers` / `polylines` / `polygons` / `circles` props - are compared field by field. Passing a freshly built array with identical content costs one comparison and nothing else.
+- `markerEnteringAnimation` and `clusterEnteringAnimation` are compared the same way, so an inline `{ preset: 'fade' }` object is fine.
+- Event handlers are wrapped once per handler identity rather than once per render, and the internal `hybridRef` wrapper is created once per mount.
+
+A re-render of the component holding the `MapView` therefore reaches native with no dirty props at all when nothing actually changed. What is left is yours to control: an arrow function created inline in JSX (`onPress={() => …}`) is a new handler on every render, so wrap it in `useCallback` if the surrounding component re-renders often.
+
+Descriptors and the objects inside them are treated as immutable. Mutating a coordinate or a descriptor you already handed to `MapView` is **not** picked up, because the comparison sees the same object on both sides - build a new object instead:
+
+```tsx
+// Not picked up - the same coordinate object is mutated in place.
+marker.coordinate.latitude = 52.5;
+
+// Picked up.
+setMarkers((current) =>
+  current.map((m) =>
+    m.id === 'm1'
+      ? { ...m, coordinate: { ...m.coordinate, latitude: 52.5 } }
+      : m,
+  ),
+);
+```
 
 ## Capability matrix
 

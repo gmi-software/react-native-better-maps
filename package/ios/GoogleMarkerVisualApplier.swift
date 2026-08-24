@@ -7,13 +7,13 @@ final class GoogleMarkerVisualApplier {
   private static let defaultPinImage = GMSMarker.markerImage(with: nil)
 
   private struct PendingIconLoad {
+    let applicationToken: NSObject
     let imageToken: NSString
-    var descriptor: MarkerDescriptor
+    let descriptor: MarkerDescriptor
   }
 
   private final class MarkerIconState: NSObject {
     var appliedImageToken: NSString?
-    var loadGeneration = 0
     var pending: PendingIconLoad?
   }
 
@@ -65,12 +65,6 @@ final class GoogleMarkerVisualApplier {
       return
     }
 
-    if var pending = state.pending, pending.imageToken == imageToken {
-      pending.descriptor = descriptor
-      state.pending = pending
-      return
-    }
-
     if let cached = cachedImage(image) {
       cancelPending(state)
       setIcon(cached, token: imageToken, on: marker, descriptor: descriptor, state: state)
@@ -78,13 +72,19 @@ final class GoogleMarkerVisualApplier {
     }
 
     cancelPending(state)
-    let generation = state.loadGeneration
-    state.pending = PendingIconLoad(imageToken: imageToken, descriptor: descriptor)
+    let applicationToken = NSObject()
+    state.pending = PendingIconLoad(
+      applicationToken: applicationToken,
+      imageToken: imageToken,
+      descriptor: descriptor
+    )
     loadImage(image) { [weak self, weak marker] uiImage in
       guard let self, let marker, let state = self.states.object(forKey: marker) else {
         return
       }
-      guard state.loadGeneration == generation, let pending = state.pending else {
+      guard let pending = state.pending,
+            pending.applicationToken === applicationToken
+      else {
         return
       }
       state.pending = nil
@@ -123,7 +123,6 @@ final class GoogleMarkerVisualApplier {
   }
 
   private func cancelPending(_ state: MarkerIconState) {
-    state.loadGeneration += 1
     state.pending = nil
   }
 

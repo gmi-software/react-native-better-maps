@@ -313,23 +313,26 @@ class GoogleMapProviderAdapter(
       syncMarkerPressHandlers()
     }
 
-  override fun fetchCamera(): Promise<Camera> {
-    val map = googleMap
-    if (map != null) {
-      return promiseOnMain { map.cameraPosition.toCamera() }
+  override fun fetchCamera(): Promise<Camera> = promiseOnMain {
+    googleMap?.cameraPosition?.toCamera() ?: fallbackCamera()
+  }
+
+  /** The camera the caller last asked for, used until the map itself can answer. */
+  private fun fallbackCamera(): Camera {
+    val camera = _camera
+    if (camera != null) {
+      return camera
     }
 
-    return Promise.resolved(
-      _camera ?: Camera(
-        center = Coordinate(
-          latitude = _region?.latitude ?: 0.0,
-          longitude = _region?.longitude ?: 0.0,
-        ),
-        zoom = 10.0,
-        heading = null,
-        pitch = null,
-        altitude = null,
+    return Camera(
+      center = Coordinate(
+        latitude = _region?.latitude ?: 0.0,
+        longitude = _region?.longitude ?: 0.0,
       ),
+      zoom = 10.0,
+      heading = null,
+      pitch = null,
+      altitude = null,
     )
   }
 
@@ -342,21 +345,8 @@ class GoogleMapProviderAdapter(
     updateMapCamera(camera, animated = true, durationMs = (animationDuration * 1000).toInt())
   }
 
-  override fun getVisibleRegion(): Promise<VisibleRegion> {
-    val map = googleMap
-    if (map != null) {
-      return promiseOnMain { map.projection.toNitroVisibleRegion() }
-    }
-
-    val zero = Coordinate(latitude = 0.0, longitude = 0.0)
-    return Promise.resolved(
-      VisibleRegion(
-        nearLeft = zero,
-        nearRight = zero,
-        farLeft = zero,
-        farRight = zero,
-      ),
-    )
+  override fun getVisibleRegion(): Promise<VisibleRegion> = promiseOnMain {
+    googleMap?.projection?.toNitroVisibleRegion() ?: emptyVisibleRegion()
   }
 
   override fun fitToCoordinates(
@@ -748,9 +738,9 @@ class GoogleMapProviderAdapter(
     onMapReady?.invoke()
   }
 
-  override fun prepareForRecycle() {
-    isUserGesture = false
-    hasFiredMapReady = false
+  override fun release() {
+    // Drop the JS callbacks first: a map event still in flight must not reach a
+    // view that is already gone.
     onRegionChange = null
     onRegionChangeComplete = null
     onMapReady = null
@@ -763,38 +753,8 @@ class GoogleMapProviderAdapter(
     onPolygonPress = null
     onCirclePress = null
     onClusterPress = null
-    _markers = null
-    _polylines = null
-    _polygons = null
-    _circles = null
-    pendingMarkers = null
-    pendingPolylines = null
-    pendingPolygons = null
-    pendingCircles = null
+
     overlayController.clear()
-    _mapType = MapType.STANDARD
-    _region = null
-    _camera = null
-    scrollEnabled = true
-    zoomEnabled = true
-    rotateEnabled = true
-    pitchEnabled = true
-    _showsUserLocation = null
-    _followsUserLocation = null
-    _showsCompass = null
-    _showsScale = null
-    _customMapStyle = null
-    _clusteringEnabled = null
-    _mapPadding = null
-    _markerEnteringAnimation = null
-    _clusterEnteringAnimation = null
-    overlayController.markerEnteringAnimation = null
-    overlayController.clusterEnteringAnimation = null
-    googleMap?.mapType = MapType.STANDARD.toGoogleMapType()
-    googleMap?.isMyLocationEnabled = false
-    googleMap?.setMapStyle(null)
-    googleMap?.setPadding(0, 0, 0, 0)
-    applyUiSettings()
     destroyMapView()
   }
 
@@ -816,3 +776,8 @@ class GoogleMapProviderAdapter(
 }
 
 private fun normalizeGoogleMapId(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
+
+private fun emptyVisibleRegion(): VisibleRegion {
+  val zero = Coordinate(latitude = 0.0, longitude = 0.0)
+  return VisibleRegion(nearLeft = zero, nearRight = zero, farLeft = zero, farRight = zero)
+}

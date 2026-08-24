@@ -50,8 +50,10 @@ interface MapProviderAdapter {
   fun fitToCoordinates(coordinates: Array<Coordinate>, padding: EdgePadding?, animated: Boolean?)
 
   /**
-   * Resets adapter state and releases the underlying native map. Every caller
-   * discards the adapter afterwards; leaving the window does not trigger it.
+   * Destroys the underlying native map and unregisters everything the adapter owns.
+   * Every caller discards the adapter afterwards, so this is a one-way transition --
+   * it is not the Nitro `RecyclableView.prepareForRecycle` reset. Leaving the window
+   * does not trigger it; a detached map is only stopped.
    */
-  fun prepareForRecycle()
+  fun release()
 }

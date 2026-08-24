@@ -356,7 +356,7 @@ class HybridMapView(private val context: ThemedReactContext) :
    * React Native has view recycling enabled.
    */
   private fun releaseAdapter() {
-    adapter?.prepareForRecycle()
+    adapter?.release()
     adapter?.view?.let(view::removeView)
     adapter = null
   }

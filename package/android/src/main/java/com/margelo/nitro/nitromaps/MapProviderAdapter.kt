@@ -48,5 +48,10 @@ interface MapProviderAdapter {
   fun animateCamera(camera: Camera, duration: Double?)
   fun getVisibleRegion(): Promise<VisibleRegion>
   fun fitToCoordinates(coordinates: Array<Coordinate>, padding: EdgePadding?, animated: Boolean?)
+
+  /**
+   * Resets adapter state and releases the underlying native map. Every caller
+   * discards the adapter afterwards; leaving the window does not trigger it.
+   */
   fun prepareForRecycle()
 }

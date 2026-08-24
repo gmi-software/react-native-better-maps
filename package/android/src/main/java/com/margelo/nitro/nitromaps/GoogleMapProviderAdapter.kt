@@ -1,7 +1,9 @@
 package com.margelo.nitro.nitromaps
 
 import android.Manifest
+import android.content.ComponentCallbacks
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -32,7 +34,6 @@ class GoogleMapProviderAdapter(
   private var googleMap: GoogleMap? = null
   private var isUserGesture = false
   private var hasFiredMapReady = false
-  private var isDestroyed = false
   private val overlayController = MapOverlayController(null, context)
   private var pendingMarkers: Array<MarkerDescriptor>? = null
   private var pendingPolylines: Array<PolylineDescriptor>? = null
@@ -49,32 +50,46 @@ class GoogleMapProviderAdapter(
         mapId(mapId)
       }
     },
-  ).also { mapView ->
-    mapView.onCreate(null)
-    context.addLifecycleEventListener(this@GoogleMapProviderAdapter)
+  )
 
-    mapView.addOnAttachStateChangeListener(
-      object : View.OnAttachStateChangeListener {
-        override fun onViewAttachedToWindow(v: View) {
-          if (!isDestroyed) {
-            mapView.onResume()
-          }
-        }
+  private val lifecycle = MapViewLifecycleOwner(view)
 
-        override fun onViewDetachedFromWindow(v: View) {
-          context.removeLifecycleEventListener(this@GoogleMapProviderAdapter)
-          mapView.onPause()
-          destroyMapViewIfNeeded(mapView)
-        }
-      },
-    )
+  private var isAttachedToWindow = false
 
-    mapView.getMapAsync { map ->
+  /** React only mounts views while the host runs; [onHostPause] corrects this. */
+  private var isHostResumed = true
+
+  private val attachStateListener = object : View.OnAttachStateChangeListener {
+    override fun onViewAttachedToWindow(v: View) {
+      isAttachedToWindow = true
+      syncLifecycleState()
+    }
+
+    override fun onViewDetachedFromWindow(v: View) {
+      isAttachedToWindow = false
+      syncLifecycleState()
+    }
+  }
+
+  private val memoryCallbacks = object : ComponentCallbacks {
+    override fun onConfigurationChanged(newConfig: Configuration) = Unit
+
+    override fun onLowMemory() {
+      lifecycle.onLowMemory()
+    }
+  }
+
+  init {
+    context.addLifecycleEventListener(this)
+    context.registerComponentCallbacks(memoryCallbacks)
+    view.addOnAttachStateChangeListener(attachStateListener)
+
+    view.getMapAsync { map ->
       googleMap = map
       configureMap(map)
     }
 
-    installViewportSizeListener(mapView)
+    installViewportSizeListener(view)
   }
 
   private var _mapType = MapType.STANDARD
@@ -376,20 +391,31 @@ class GoogleMapProviderAdapter(
   }
 
   override fun onHostResume() {
-    if (!isDestroyed) {
-      view.onResume()
-    }
+    isHostResumed = true
+    syncLifecycleState()
   }
 
   override fun onHostPause() {
-    if (!isDestroyed) {
-      view.onPause()
-    }
+    isHostResumed = false
+    syncLifecycleState()
   }
 
   override fun onHostDestroy() {
-    context.removeLifecycleEventListener(this)
-    destroyMapViewIfNeeded(view)
+    destroyMapView()
+  }
+
+  /**
+   * Brings the map to the state implied by whether it is on screen and whether the
+   * host is in the foreground. Leaving the window stops the map, never destroys it.
+   */
+  private fun syncLifecycleState() {
+    val target = when {
+      !isAttachedToWindow -> MapViewLifecycleState.CREATED
+      isHostResumed -> MapViewLifecycleState.RESUMED
+      else -> MapViewLifecycleState.STARTED
+    }
+
+    lifecycle.moveTo(target)
   }
 
   private fun configureMap(map: GoogleMap) {
@@ -769,15 +795,23 @@ class GoogleMapProviderAdapter(
     googleMap?.setMapStyle(null)
     googleMap?.setPadding(0, 0, 0, 0)
     applyUiSettings()
+    destroyMapView()
   }
 
-  private fun destroyMapViewIfNeeded(mapView: MapView) {
-    if (isDestroyed) {
+  /**
+   * Tears the map down for good. Both call sites discard the adapter afterwards;
+   * detaching from the window deliberately does not come here.
+   */
+  private fun destroyMapView() {
+    if (lifecycle.isDestroyed) {
       return
     }
 
-    mapView.onDestroy()
-    isDestroyed = true
+    context.removeLifecycleEventListener(this)
+    context.unregisterComponentCallbacks(memoryCallbacks)
+    view.removeOnAttachStateChangeListener(attachStateListener)
+    lifecycle.moveTo(MapViewLifecycleState.DESTROYED)
+    googleMap = null
   }
 }
 

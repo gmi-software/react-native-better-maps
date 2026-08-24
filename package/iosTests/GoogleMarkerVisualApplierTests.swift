@@ -24,8 +24,10 @@ final class GoogleMarkerVisualApplierTests: XCTestCase {
 
     XCTAssertEqual(completions.count, 1)
 
-    completions[0](makeIcon())
+    let icon = makeIcon()
+    completions[0](icon)
 
+    XCTAssertTrue(marker.icon === icon)
     XCTAssertEqual(marker.groundAnchor.x, 1, accuracy: 0.0001)
     XCTAssertEqual(marker.groundAnchor.y, 1, accuracy: 0.0001)
   }

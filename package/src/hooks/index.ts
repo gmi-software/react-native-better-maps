@@ -1,1 +1,0 @@
-export { useCollectedOverlays } from './useCollectedOverlays';

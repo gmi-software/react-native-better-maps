@@ -32,6 +32,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Map providers](#map-providers)
 - [Native POI press events](#native-poi-press-events)
 - [Custom marker images](#custom-marker-images)
+- [GeoJSON overlays](#geojson-overlays)
 - [Google Maps setup](#google-maps-setup)
 - [Marker entering animations](#marker-entering-animations)
 - [Capability matrix](#capability-matrix)
@@ -48,7 +49,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - **New Architecture native** - Built exclusively for React Native's New Architecture: Fabric + TurboModules.
 - **Unified map API** - One typed React API for Apple MapKit and Google Maps SDK.
 - **Provider-aware props** - TypeScript narrows provider-specific props with `MapViewPropsForProvider<P>`.
-- **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, and circles.
+- **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, circles, and GeoJSON FeatureCollections.
 - **Native POI taps** - `onPoiPress` reports provider-owned places from Apple Maps and Google Maps without confusing them with app-owned markers.
 - **Camera control** - Declarative region/camera props plus imperative camera helpers.
 - **Marker clustering** - Native marker clustering for large point sets.
@@ -300,11 +301,11 @@ Provider-owned points of interest are base-map features supplied by Apple Maps o
 
 Provider-specific props narrow the callback payload:
 
-| Provider | Payload |
-| --- | --- |
-| `apple` | `{ provider: 'apple', coordinate, name?, category, rawCategory? }` |
-| `google` | `{ provider: 'google', coordinate, name, placeId }` |
-| omitted | `ApplePoiPressEvent \| GooglePoiPressEvent` because the runtime default depends on platform |
+| Provider | Payload                                                                                     |
+| -------- | ------------------------------------------------------------------------------------------- |
+| `apple`  | `{ provider: 'apple', coordinate, name?, category, rawCategory? }`                          |
+| `google` | `{ provider: 'google', coordinate, name, placeId }`                                         |
+| omitted  | `ApplePoiPressEvent \| GooglePoiPressEvent` because the runtime default depends on platform |
 
 ## Custom marker images
 
@@ -359,7 +360,7 @@ Platform notes:
 
 ### react-native-maps migration (markers)
 
-| react-native-maps      | react-native-better-maps            |
+| react-native-maps      | react-native-better-maps           |
 | ---------------------- | ---------------------------------- |
 | `image={require(...)}` | `image={require(...)}`             |
 | `anchor={{ x, y }}`    | `anchor={{ x, y }}`                |
@@ -368,6 +369,57 @@ Platform notes:
 | `flat`                 | `flat`                             |
 | `opacity`              | `opacity`                          |
 | Custom RN child views  | Not supported (use bitmap `image`) |
+
+## GeoJSON overlays
+
+`<Geojson>` converts a GeoJSON object (or JSON string) into the existing marker, polyline, and polygon overlay pipeline. There is no native GeoJSON parser — conversion happens in JavaScript so overlay diffing stays shared.
+
+```tsx
+import { MapView, Geojson, type GeojsonInput } from 'react-native-better-maps';
+
+export function DeliveryMap({
+  deliveryZones,
+}: {
+  deliveryZones: GeojsonInput;
+}) {
+  return (
+    <MapView style={{ flex: 1 }}>
+      <Geojson
+        geojson={deliveryZones}
+        strokeColor="#FF3B30"
+        fillColor="#FF3B3044"
+        strokeWidth={2}
+        onPress={(feature) => console.log(feature.properties)}
+      />
+    </MapView>
+  );
+}
+```
+
+| GeoJSON type                                           | Rendered as                    |
+| ------------------------------------------------------ | ------------------------------ |
+| `Point` / `MultiPoint`                                 | Marker(s)                      |
+| `LineString` / `MultiLineString`                       | Polyline(s)                    |
+| `Polygon` / `MultiPolygon`                             | Polygon(s)                     |
+| `FeatureCollection` / `Feature` / `GeometryCollection` | Flattened into the types above |
+
+Per-feature style follows the [simplestyle](https://github.com/mapbox/simplestyle-spec) property names used by `react-native-maps`: `stroke`, `stroke-width`, `stroke-opacity`, `fill`, `fill-opacity`. Marker titles use `properties.title` or `properties.name`.
+
+For large FeatureCollections, convert once with `geojsonToOverlayDescriptors` and pass the result to bulk `markers` / `polylines` / `polygons` props. Collections that expand to more than 1000 overlays log a development warning.
+
+Not supported today: polygon holes (interior rings are ignored), pin colors, custom marker views, TopoJSON, and altitude (Z is dropped). Invalid GeoJSON is skipped with a development warning instead of crashing.
+
+See [docs/geojson.md](docs/geojson.md) for the full geometry, style, and limit notes.
+
+### react-native-maps migration (GeoJSON)
+
+| react-native-maps                  | react-native-better-maps                   |
+| ---------------------------------- | ------------------------------------------ |
+| `<Geojson geojson={collection} />` | Same                                       |
+| `color` / `markerComponent`        | Not supported (default markers)            |
+| `lineDashPattern` / `zIndex`       | Not supported                              |
+| `onPress` overlay event            | `onPress(feature)` with the source Feature |
+| Polygon holes                      | Ignored until native hole support lands    |
 
 ## Google Maps setup
 
@@ -474,6 +526,7 @@ On Google Maps providers, marker and cluster entering animations can reduce UI-t
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |
 | Overlay press events       | Supported                                                   | Supported                                  | Supported                                  |
+| GeoJSON overlays           | Supported (JS conversion)                                   | Supported (JS conversion)                  | Supported (JS conversion)                  |
 | Native POI press events    | Supported on iOS 16+                                        | Supported                                  | Supported                                  |
 | Marker entering animation  | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Cluster entering animation | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
@@ -485,46 +538,51 @@ On Google Maps providers, marker and cluster entering animations can reduce UI-t
 
 ### Components
 
-| Component  | Description           |
-| ---------- | --------------------- |
-| `MapView`  | Root map container    |
-| `Marker`   | Point annotation      |
-| `Polyline` | Line overlay          |
-| `Polygon`  | Filled area overlay   |
-| `Circle`   | Circular area overlay |
+| Component  | Description                       |
+| ---------- | --------------------------------- |
+| `MapView`  | Root map container                |
+| `Marker`   | Point annotation                  |
+| `Polyline` | Line overlay                      |
+| `Polygon`  | Filled area overlay               |
+| `Circle`   | Circular area overlay             |
+| `Geojson`  | GeoJSON FeatureCollection overlay |
 
 ### Types
 
-| Type                       | Description                                          |
-| -------------------------- | ---------------------------------------------------- |
-| `Coordinate`               | `{ latitude, longitude }`                            |
-| `Region`                   | Center + span                                        |
-| `Camera`                   | Position, zoom, heading, pitch                       |
-| `MapType`                  | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
-| `MapProvider`              | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
-| `PoiPressEvent`            | Provider-discriminated native POI press payload             |
-| `ApplePoiPressEvent`       | Apple Maps POI payload with category                        |
-| `GooglePoiPressEvent`      | Google Maps POI payload with place ID                       |
-| `ApplePoiCategory`         | Known MapKit POI categories plus `unknown`                  |
-| `MapViewRef`               | Imperative handle for camera control                 |
-| `MapViewProps`             | Props for `MapView`                                  |
-| `MapViewPropsForProvider`  | Provider-specific `MapView` props                    |
-| `MarkerDescriptor`         | Bulk marker descriptor                               |
-| `MarkerProps`              | Props for `Marker`                                   |
-| `MarkerImage`              | Resolved marker image descriptor                     |
-| `MarkerAnchor`             | Anchor point on marker image (0..1)                  |
-| `MarkerPoint`              | Point offset in dp                                   |
-| `OverlayEnteringAnimation` | Marker / marker-cluster entering animation config    |
-| `PolylineProps`            | Props for `Polyline`                                 |
-| `PolygonProps`             | Props for `Polygon`                                  |
-| `CircleProps`              | Props for `Circle`                                   |
+| Type                        | Description                                          |
+| --------------------------- | ---------------------------------------------------- |
+| `Coordinate`                | `{ latitude, longitude }`                            |
+| `Region`                    | Center + span                                        |
+| `Camera`                    | Position, zoom, heading, pitch                       |
+| `MapType`                   | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
+| `MapProvider`               | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
+| `PoiPressEvent`             | Provider-discriminated native POI press payload      |
+| `ApplePoiPressEvent`        | Apple Maps POI payload with category                 |
+| `GooglePoiPressEvent`       | Google Maps POI payload with place ID                |
+| `ApplePoiCategory`          | Known MapKit POI categories plus `unknown`           |
+| `MapViewRef`                | Imperative handle for camera control                 |
+| `MapViewProps`              | Props for `MapView`                                  |
+| `MapViewPropsForProvider`   | Provider-specific `MapView` props                    |
+| `MarkerDescriptor`          | Bulk marker descriptor                               |
+| `MarkerProps`               | Props for `Marker`                                   |
+| `MarkerImage`               | Resolved marker image descriptor                     |
+| `MarkerAnchor`              | Anchor point on marker image (0..1)                  |
+| `MarkerPoint`               | Point offset in dp                                   |
+| `OverlayEnteringAnimation`  | Marker / marker-cluster entering animation config    |
+| `PolylineProps`             | Props for `Polyline`                                 |
+| `PolygonProps`              | Props for `Polygon`                                  |
+| `CircleProps`               | Props for `Circle`                                   |
+| `GeojsonProps`              | Props for `Geojson`                                  |
+| `GeojsonFeature`            | Feature passed to `Geojson` `onPress`                |
+| `GeojsonOverlayDescriptors` | Result of `geojsonToOverlayDescriptors`              |
 
 ### Utilities
 
-| Function                                            | Description                         |
-| --------------------------------------------------- | ----------------------------------- |
-| `regionFromCoordinate(coord, latDelta?, lonDelta?)` | Create a `Region` from a coordinate |
-| `distanceBetween(a, b)`                             | Haversine distance in meters        |
+| Function                                            | Description                                   |
+| --------------------------------------------------- | --------------------------------------------- |
+| `regionFromCoordinate(coord, latDelta?, lonDelta?)` | Create a `Region` from a coordinate           |
+| `distanceBetween(a, b)`                             | Haversine distance in meters                  |
+| `geojsonToOverlayDescriptors(geojson, options?)`    | Convert GeoJSON into bulk overlay descriptors |
 
 ## Example app
 
@@ -533,7 +591,7 @@ bun install
 bun run example start
 ```
 
-The example app lives in [example](example). It demonstrates provider switching, overlays, clustering, Google Map IDs, entering animation presets, and native POI tap logging.
+The example app lives in [example](example). It demonstrates provider switching, overlays, GeoJSON FeatureCollections, clustering, Google Map IDs, entering animation presets, and native POI tap logging.
 
 For Google Maps in the example app, configure one shared key or platform-specific keys:
 
@@ -549,6 +607,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 
 - [Expo setup](docs/expo-setup.md)
 - [Architecture](docs/architecture.md)
+- [GeoJSON overlays](docs/geojson.md)
 - [Roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
 - [ADRs](docs/adr)

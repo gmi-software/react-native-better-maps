@@ -1,4 +1,12 @@
-export { MapView, Marker, Polyline, Polygon, Circle } from './components';
+export {
+  MapView,
+  Marker,
+  Polyline,
+  Polygon,
+  Circle,
+  Geojson,
+} from './components';
+export { geojsonToOverlayDescriptors } from './geojson/geojsonToDescriptors';
 
 export type {
   Coordinate,
@@ -27,6 +35,13 @@ export type {
   PolylineProps,
   PolygonProps,
   CircleProps,
+  GeojsonFeature,
+  GeojsonFeatureCollection,
+  GeojsonGeometry,
+  GeojsonInput,
+  GeojsonOverlayDescriptors,
+  GeojsonProps,
+  GeojsonToOverlayOptions,
   MapViewRef,
 } from './types';
 

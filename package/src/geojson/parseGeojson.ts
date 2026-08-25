@@ -156,6 +156,11 @@ function parseGeojsonObject(value: unknown): GeojsonFeature[] {
 
   switch (readType(value)) {
     case 'FeatureCollection': {
+      if (!hasValidBbox(value)) {
+        warnGeojson('Skipping invalid FeatureCollection.');
+        return [];
+      }
+
       if (!Array.isArray(value.features)) {
         warnGeojson('FeatureCollection.features must be an array.');
         return [];

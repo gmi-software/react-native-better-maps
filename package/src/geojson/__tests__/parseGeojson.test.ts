@@ -39,6 +39,23 @@ describe('parseGeojsonFeatures', () => {
     expect(features[0]?.geometry?.type).toBe('Point');
   });
 
+  test('rejects a FeatureCollection with an invalid bbox', () => {
+    const features = parseGeojsonFeatures({
+      type: 'FeatureCollection',
+      bbox: [],
+      features: [
+        {
+          type: 'Feature',
+          properties: null,
+          geometry: { type: 'Point', coordinates: [21, 52] },
+        },
+      ],
+    });
+
+    expect(features).toEqual([]);
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
   test('parses a JSON string', () => {
     const features = parseGeojsonFeatures(
       JSON.stringify({

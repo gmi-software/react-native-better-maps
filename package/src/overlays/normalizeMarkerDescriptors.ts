@@ -13,11 +13,13 @@ function normalizeDescriptor(descriptor: PublicMarkerDescriptor): MarkerDescript
     clusterable: descriptor.clusterable,
     image:
       descriptor.image != null ? resolveMarkerImage(descriptor.image) : undefined,
+    markerColor: descriptor.markerColor,
     anchor: descriptor.anchor,
     centerOffset: descriptor.centerOffset,
     rotation: descriptor.rotation,
     flat: descriptor.flat,
     opacity: descriptor.opacity,
+    zIndex: descriptor.zIndex,
     enteringAnimation: normalizeEnteringAnimation(descriptor.enteringAnimation),
   };
 }
@@ -35,11 +37,13 @@ function descriptorsEqual(
     left.draggable === right.draggable &&
     left.clusterable === right.clusterable &&
     left.image === right.image &&
+    left.markerColor === right.markerColor &&
     left.anchor === right.anchor &&
     left.centerOffset === right.centerOffset &&
     left.rotation === right.rotation &&
     left.flat === right.flat &&
     left.opacity === right.opacity &&
+    left.zIndex === right.zIndex &&
     left.enteringAnimation === right.enteringAnimation
   );
 }

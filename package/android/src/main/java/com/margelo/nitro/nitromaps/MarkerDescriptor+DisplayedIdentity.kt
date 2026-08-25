@@ -14,6 +14,7 @@ internal fun MarkerDescriptor.displayedIdentityVersion(): Long =
     image?.width,
     image?.height,
     image?.scale,
+    markerColor,
     anchor?.x,
     anchor?.y,
     centerOffset?.x,
@@ -21,4 +22,5 @@ internal fun MarkerDescriptor.displayedIdentityVersion(): Long =
     rotation,
     flat,
     opacity,
+    zIndex,
   )

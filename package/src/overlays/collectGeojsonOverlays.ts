@@ -85,9 +85,11 @@ export function collectGeojsonOverlays(
     id: layerId,
     strokeColor: props.strokeColor,
     fillColor: props.fillColor,
+    markerColor: props.markerColor,
     strokeWidth: props.strokeWidth,
     tappable: tappableFromPress(props.onPress, props.tappable),
     title: props.title,
+    zIndex: props.zIndex,
   });
 
   mergeConvertedOverlays(state, converted, props.onPress);

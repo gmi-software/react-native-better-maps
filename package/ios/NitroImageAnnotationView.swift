@@ -24,6 +24,9 @@ final class NitroImageAnnotationView: MKAnnotationView {
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil
     alpha = marker.opacity
+    zPriority = marker.zIndex.map {
+      MKAnnotationViewZPriority(rawValue: Float($0))
+    } ?? .defaultUnselected
 
     guard let imageDescriptor = marker.image else {
       loadToken = nil

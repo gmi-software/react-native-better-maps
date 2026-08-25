@@ -3,6 +3,7 @@ package com.margelo.nitro.nitromaps
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -48,10 +49,12 @@ internal class MarkerIconFactory(
     marker.rotation = descriptor.rotation?.toFloat() ?: 0f
     marker.isFlat = descriptor.flat == true
     marker.alpha = descriptor.opacity?.toFloat() ?: 1f
+    marker.zIndex = descriptor.zIndex?.toFloat() ?: 0f
 
     applyIcon(
       marker = marker,
       image = descriptor.image,
+      markerColor = descriptor.markerColor,
       isMarkerActive = { isMarkerCurrent(key, marker) },
       onIconApplied = { applyAnchor(descriptor, marker) },
     )
@@ -73,15 +76,24 @@ internal class MarkerIconFactory(
   private fun applyIcon(
     marker: Marker,
     image: MarkerImage?,
+    markerColor: String?,
     isMarkerActive: () -> Boolean,
     onIconApplied: () -> Unit,
   ) {
     if (image == null) {
-      if (isIconApplied(marker, DEFAULT_ICON_KEY)) {
+      val iconKey = markerColor?.let { "$DEFAULT_ICON_KEY:$it" } ?: DEFAULT_ICON_KEY
+      if (isIconApplied(marker, iconKey)) {
         return
       }
-      marker.setIcon(BitmapDescriptorFactory.defaultMarker())
-      setApplied(marker, DEFAULT_ICON_KEY)
+      val icon = if (markerColor == null) {
+        BitmapDescriptorFactory.defaultMarker()
+      } else {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(markerColor.toColorInt(Color.RED), hsv)
+        BitmapDescriptorFactory.defaultMarker(hsv[0])
+      }
+      marker.setIcon(icon)
+      setApplied(marker, iconKey)
       onIconApplied()
       return
     }

@@ -403,11 +403,11 @@ export function DeliveryMap({
 | `Polygon` / `MultiPolygon`                             | Polygon(s)                     |
 | `FeatureCollection` / `Feature` / `GeometryCollection` | Flattened into the types above |
 
-Per-feature style follows the [simplestyle](https://github.com/mapbox/simplestyle-spec) property names used by `react-native-maps`: `stroke`, `stroke-width`, `stroke-opacity`, `fill`, `fill-opacity`. Marker titles use `properties.title` or `properties.name`.
+Per-feature style follows the [simplestyle](https://github.com/mapbox/simplestyle-spec) property names used by `react-native-maps`: `stroke`, `stroke-width`, `stroke-opacity`, `fill`, `fill-opacity`, and `marker-color`. Marker titles use `properties.title` or `properties.name`; `properties.zIndex` overrides the component-level drawing order.
 
 For large FeatureCollections, convert once with `geojsonToOverlayDescriptors` and pass the result to bulk `markers` / `polylines` / `polygons` props. Collections that expand to more than 1000 overlays log a development warning.
 
-Not supported today: pin colors, custom marker views, TopoJSON, and altitude (Z is dropped). Invalid GeoJSON is skipped with a development warning instead of crashing.
+Not supported today: custom marker views, TopoJSON, and altitude (Z is dropped). Invalid GeoJSON is skipped with a development warning instead of crashing.
 
 See [docs/geojson.md](docs/geojson.md) for the full geometry, style, and limit notes.
 
@@ -416,8 +416,10 @@ See [docs/geojson.md](docs/geojson.md) for the full geometry, style, and limit n
 | react-native-maps                  | react-native-better-maps                   |
 | ---------------------------------- | ------------------------------------------ |
 | `<Geojson geojson={collection} />` | Same                                       |
-| `color` / `markerComponent`        | Not supported (default markers)            |
-| `lineDashPattern` / `zIndex`       | Not supported                              |
+| `color`                            | `markerColor`                              |
+| `markerComponent`                  | Not supported (default markers)            |
+| `lineDashPattern`                  | Not supported                              |
+| `zIndex`                           | Same                                       |
 | `onPress` overlay event            | `onPress(feature)` with the source Feature |
 | Polygon holes                      | Supported                                  |
 

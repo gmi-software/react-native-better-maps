@@ -21,6 +21,7 @@ import {
   resolveMarkerTitle,
   resolvePaintColor,
   resolveStrokeWidth,
+  resolveZIndex,
 } from './geojsonStyle';
 import { parseGeojsonFeatures } from './parseGeojson';
 import { warnGeojson } from './warnGeojson';
@@ -68,6 +69,12 @@ function convertPoint(
     id,
     coordinate,
     title: resolveMarkerTitle(feature.properties, state.options.title),
+    markerColor: resolvePaintColor(
+      feature.properties,
+      'marker-color',
+      state.options.markerColor,
+    ),
+    zIndex: resolveZIndex(feature.properties, state.options.zIndex),
   });
   state.featuresByOverlayId[id] = feature;
 }
@@ -91,6 +98,7 @@ function convertLine(
       feature.properties,
       state.options.strokeWidth,
     ),
+    zIndex: resolveZIndex(feature.properties, state.options.zIndex),
     tappable: state.options.tappable,
   });
   state.featuresByOverlayId[id] = feature;
@@ -127,6 +135,7 @@ function convertPolygon(
       feature.properties,
       state.options.strokeWidth,
     ),
+    zIndex: resolveZIndex(feature.properties, state.options.zIndex),
     tappable: state.options.tappable,
   });
   state.featuresByOverlayId[id] = feature;

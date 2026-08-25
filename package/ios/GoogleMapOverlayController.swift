@@ -10,6 +10,14 @@ final class GoogleMapOverlayController {
   // bulk viewport refreshes do not block active Google Maps gestures.
   private static let maximumAnimatedMarkersPerDiff = 96
 
+  private static func nativeZIndex(_ value: Double?) -> Int32 {
+    guard let value, value.isFinite else {
+      return 0
+    }
+    let clamped = min(Double(Int32.max), max(Double(Int32.min), value))
+    return Int32(clamped)
+  }
+
   private enum MarkerPayload {
     case marker(String)
     case cluster(memberIds: [String], region: MKCoordinateRegion)
@@ -284,6 +292,7 @@ final class GoogleMapOverlayController {
       marker.title = descriptor.title
       marker.snippet = descriptor.subtitle
       marker.isDraggable = descriptor.draggable == true
+      marker.zIndex = Self.nativeZIndex(descriptor.zIndex)
       marker.userData = MarkerPayload.marker(descriptor.id)
       visualApplier.apply(descriptor, to: marker)
     case let .cluster(_, coordinate, count, memberIds, region):
@@ -291,6 +300,7 @@ final class GoogleMapOverlayController {
       marker.title = nil
       marker.snippet = nil
       marker.isDraggable = false
+      marker.zIndex = 0
       let icon = clusterIcon(count: count)
       if marker.icon !== icon {
         marker.icon = icon
@@ -387,6 +397,7 @@ final class GoogleMapOverlayController {
     polyline.path = descriptor.coordinates.toGMSPath()
     polyline.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
     polyline.strokeWidth = CGFloat(descriptor.strokeWidth ?? 4)
+    polyline.zIndex = Self.nativeZIndex(descriptor.zIndex)
     polyline.isTappable = descriptor.tappable ?? false
     polyline.userData = descriptor.id
   }
@@ -405,6 +416,7 @@ final class GoogleMapOverlayController {
       fallback: UIColor.systemBlue.withAlphaComponent(0.2)
     ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
     polygon.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
+    polygon.zIndex = Self.nativeZIndex(descriptor.zIndex)
     polygon.isTappable = descriptor.tappable ?? false
     polygon.userData = descriptor.id
   }

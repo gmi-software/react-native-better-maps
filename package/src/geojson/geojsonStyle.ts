@@ -116,6 +116,14 @@ export function resolveStrokeWidth(
   return width;
 }
 
+export function resolveZIndex(
+  properties: Record<string, unknown> | null,
+  fallback: number | undefined,
+): number | undefined {
+  const zIndex = asFiniteNumber(readProperty(properties, 'zIndex'));
+  return zIndex ?? fallback;
+}
+
 export function resolveMarkerTitle(
   properties: Record<string, unknown> | null,
   fallback: string | undefined,

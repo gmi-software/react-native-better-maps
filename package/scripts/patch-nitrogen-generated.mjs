@@ -25,7 +25,10 @@ function replaceOnce(filePath, from, to) {
 }
 
 replaceOnce(
-  join(packageDir, 'nitrogen/generated/shared/c++/views/HybridMapViewComponent.cpp'),
+  join(
+    packageDir,
+    'nitrogen/generated/shared/c++/views/HybridMapViewComponent.cpp',
+  ),
   `    const std::shared_ptr<const HybridMapViewProps>& constProps = concreteShadowNode.getConcreteSharedProps();
     const std::shared_ptr<HybridMapViewProps>& props = std::const_pointer_cast<HybridMapViewProps>(constProps);
 `,
@@ -35,7 +38,10 @@ replaceOnce(
 );
 
 replaceOnce(
-  join(packageDir, 'nitrogen/generated/shared/c++/views/HybridMapViewComponent.hpp'),
+  join(
+    packageDir,
+    'nitrogen/generated/shared/c++/views/HybridMapViewComponent.hpp',
+  ),
   `  HybridMapViewState(const HybridMapViewState& /* previousState */, folly::dynamic /* data */) {}
 `,
   `  HybridMapViewState(const HybridMapViewState& previousState, folly::dynamic /* data */):
@@ -55,3 +61,36 @@ for (const fileName of [
     'import CxxStdlib\nimport NitroModules\n',
   );
 }
+
+for (const fileName of [
+  'PolygonDescriptor.swift',
+  'PolylineDescriptor.swift',
+]) {
+  replaceOnce(
+    join(generatedSwiftDir, fileName),
+    '    return self.__coordinates.map({ __item in __item })\n',
+    `    let count = Int(self.__coordinates.size())
+    return (0..<count).map { index in self.__coordinates[index] }
+`,
+  );
+}
+
+replaceOnce(
+  join(generatedSwiftDir, 'PolygonDescriptor.swift'),
+  '        return __unwrapped.map({ __item in __item.map({ __item in __item }) })\n',
+  `        let holeCount = Int(__unwrapped.size())
+        return (0..<holeCount).map { holeIndex in
+          let hole = __unwrapped[holeIndex]
+          let coordinateCount = Int(hole.size())
+          return (0..<coordinateCount).map { coordinateIndex in
+            hole[coordinateIndex]
+          }
+        }
+`,
+);
+
+replaceOnce(
+  join(generatedSwiftDir, 'HybridMapViewSpec_cxx.swift'),
+  'coordinates: coordinates.map({ __item in __item })',
+  'coordinates: (0..<Int(coordinates.size())).map({ index in coordinates[index] })',
+);

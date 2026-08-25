@@ -76,7 +76,9 @@ describe('collectGeojsonOverlays', () => {
       {
         id: 'layer',
         geojson: collection,
+        markerColor: '#FF9500',
         onPress,
+        zIndex: 4,
       },
       state,
     );
@@ -86,6 +88,10 @@ describe('collectGeojsonOverlays', () => {
     expect(state.polygons).toHaveLength(1);
     expect(state.polylines[0]?.tappable).toBe(true);
     expect(state.polygons[0]?.tappable).toBe(true);
+    expect(state.markers[0]?.markerColor).toBe('#FF9500');
+    expect(state.markers[0]?.zIndex).toBe(4);
+    expect(state.polylines[0]?.zIndex).toBe(4);
+    expect(state.polygons[0]?.zIndex).toBe(4);
     expect(state.hasMarkerPress).toBe(true);
     expect(state.hasPolylinePress).toBe(true);
     expect(state.hasPolygonPress).toBe(true);

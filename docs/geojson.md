@@ -29,16 +29,20 @@ Component props supply defaults. Feature `properties` override them using simple
 | `stroke-opacity` | Line, polygon | Replaces alpha on hex `stroke` |
 | `fill`           | Polygon       | Hex color                      |
 | `fill-opacity`   | Polygon       | Replaces alpha on hex `fill`   |
+| `marker-color`   | Point         | Default marker color           |
 | `title` / `name` | Point         | Marker title                   |
+| `zIndex`         | All overlays  | Drawing order                  |
 
 Colors follow the library-wide format: `#RGB`, `#RGBA`, `#RRGGBB`, or `#RRGGBBAA` with alpha last. Opacity properties replace the color's alpha, so `fill: '#34C75980'` with `fill-opacity: 0.25` becomes `#34C75940`. Non-hex colors are left unchanged.
+
+Component-level `markerColor` and `zIndex` provide defaults. Feature properties take precedence. `zIndex` applies to every generated Google Maps overlay and to Apple Maps markers; MapKit does not expose shape overlay z-ordering.
 
 `onPress` receives the original `GeojsonFeature`, including `properties`.
 
 ## Limits
 
 - Prefer `geojsonToOverlayDescriptors` plus bulk `MapView` overlay props above about 1000 generated overlays.
-- Point styling is limited to title text; pin color and custom marker views are not applied.
+- Point styling supports title text and default marker color; custom marker views are not applied.
 - TopoJSON is not parsed. Convert it to GeoJSON first.
 - Invalid GeoJSON does not throw. It is skipped with a development warning.
 

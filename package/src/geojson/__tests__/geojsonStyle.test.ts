@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { resolvePaintColor } from '../geojsonStyle';
+import { resolvePaintColor, resolveZIndex } from '../geojsonStyle';
 
 describe('resolvePaintColor', () => {
   test('returns the fallback when the property is missing', () => {
@@ -59,5 +59,17 @@ describe('resolvePaintColor', () => {
         undefined,
       ),
     ).toBe('red');
+  });
+});
+
+describe('resolveZIndex', () => {
+  test('prefers a finite feature value over the fallback', () => {
+    expect(resolveZIndex({ zIndex: 7 }, 2)).toBe(7);
+    expect(resolveZIndex({ zIndex: '4' }, 2)).toBe(4);
+  });
+
+  test('uses the fallback when the feature value is invalid', () => {
+    expect(resolveZIndex({ zIndex: 'top' }, 2)).toBe(2);
+    expect(resolveZIndex(null, undefined)).toBeUndefined();
   });
 });

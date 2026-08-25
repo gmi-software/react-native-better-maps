@@ -101,6 +101,12 @@ export interface GeojsonToOverlayOptions {
   fillColor?: string;
 
   /**
+   * Default marker color for points when a feature does not set
+   * `properties['marker-color']`.
+   */
+  markerColor?: string;
+
+  /**
    * Default stroke width in density-independent pixels when a feature does not
    * set `properties['stroke-width']`.
    */
@@ -117,6 +123,11 @@ export interface GeojsonToOverlayOptions {
    * or `properties.name`.
    */
   title?: string;
+
+  /**
+   * Default drawing order when a feature does not set `properties.zIndex`.
+   */
+  zIndex?: number;
 }
 
 export interface GeojsonOverlayDescriptors {

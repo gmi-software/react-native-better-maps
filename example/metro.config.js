@@ -16,7 +16,6 @@ config.resolver.nodeModulesPaths = [
 config.resolver.unstable_enablePackageExports = true;
 config.resolver.unstable_conditionNames = [
   'react-native',
-  'source',
   'import',
   'require',
   'default',

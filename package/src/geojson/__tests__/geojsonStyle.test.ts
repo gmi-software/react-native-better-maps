@@ -15,6 +15,12 @@ describe('resolvePaintColor', () => {
     );
   });
 
+  test('applies feature opacity to the fallback color', () => {
+    expect(resolvePaintColor({ 'fill-opacity': 0.25 }, 'fill', '#007AFF')).toBe(
+      '#007AFF40',
+    );
+  });
+
   test('appends alpha to #RGB and #RRGGBB', () => {
     expect(
       resolvePaintColor({ fill: '#0F0', 'fill-opacity': 1 }, 'fill', undefined),

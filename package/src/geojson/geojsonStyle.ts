@@ -92,18 +92,16 @@ export function resolvePaintColor(
   fallback: string | undefined,
 ): string | undefined {
   const color = readProperty(properties, propertyName);
-  if (!isNonEmptyString(color)) {
-    return fallback;
-  }
+  const resolvedColor = isNonEmptyString(color) ? color : fallback;
 
   const opacity = asFiniteNumber(
     readProperty(properties, `${propertyName}-opacity`),
   );
-  if (opacity == null) {
-    return color;
+  if (resolvedColor == null || opacity == null) {
+    return resolvedColor;
   }
 
-  return applyHexOpacity(color, opacity);
+  return applyHexOpacity(resolvedColor, opacity);
 }
 
 export function resolveStrokeWidth(

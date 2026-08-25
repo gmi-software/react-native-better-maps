@@ -5,5 +5,8 @@
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": true
-  }
+  },
+  // Tests are typechecked by tsconfig.json but must never reach lib/: they
+  // import `bun:test`, which consumers do not have.
+  "exclude": ["src/**/__tests__/**"]
 }

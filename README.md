@@ -407,7 +407,7 @@ Per-feature style follows the [simplestyle](https://github.com/mapbox/simplestyl
 
 For large FeatureCollections, convert once with `geojsonToOverlayDescriptors` and pass the result to bulk `markers` / `polylines` / `polygons` props. Collections that expand to more than 1000 overlays log a development warning.
 
-Not supported today: polygon holes (interior rings are ignored), pin colors, custom marker views, TopoJSON, and altitude (Z is dropped). Invalid GeoJSON is skipped with a development warning instead of crashing.
+Not supported today: pin colors, custom marker views, TopoJSON, and altitude (Z is dropped). Invalid GeoJSON is skipped with a development warning instead of crashing.
 
 See [docs/geojson.md](docs/geojson.md) for the full geometry, style, and limit notes.
 
@@ -419,7 +419,7 @@ See [docs/geojson.md](docs/geojson.md) for the full geometry, style, and limit n
 | `color` / `markerComponent`        | Not supported (default markers)            |
 | `lineDashPattern` / `zIndex`       | Not supported                              |
 | `onPress` overlay event            | `onPress(feature)` with the source Feature |
-| Polygon holes                      | Ignored until native hole support lands    |
+| Polygon holes                      | Supported                                  |
 
 ## Google Maps setup
 

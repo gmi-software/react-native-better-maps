@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const packageDir = join(scriptDir, '..');
+const generatedSwiftDir = join(packageDir, 'nitrogen/generated/ios/swift');
 
 function replaceOnce(filePath, from, to) {
   const source = readFileSync(filePath, 'utf8');
@@ -41,3 +42,16 @@ replaceOnce(
     _props(previousState.getProps()) {}
 `,
 );
+
+for (const fileName of [
+  'Func_void_std__vector_std__string__Coordinate.swift',
+  'HybridMapViewSpec_cxx.swift',
+  'PolygonDescriptor.swift',
+  'PolylineDescriptor.swift',
+]) {
+  replaceOnce(
+    join(generatedSwiftDir, fileName),
+    'import NitroModules\n',
+    'import CxxStdlib\nimport NitroModules\n',
+  );
+}

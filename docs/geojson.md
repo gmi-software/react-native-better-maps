@@ -4,17 +4,17 @@
 
 ## Supported geometry
 
-| GeoJSON type         | Overlay                          |
-| -------------------- | -------------------------------- |
-| `Point`              | `Marker`                         |
-| `MultiPoint`         | One `Marker` per position        |
-| `LineString`         | `Polyline`                       |
-| `MultiLineString`    | One `Polyline` per line          |
-| `Polygon`            | `Polygon` from the exterior ring |
-| `MultiPolygon`       | One `Polygon` per part           |
-| `Feature`            | Inner geometry                   |
-| `FeatureCollection`  | Each feature                     |
-| `GeometryCollection` | Each nested geometry             |
+| GeoJSON type         | Overlay                       |
+| -------------------- | ----------------------------- |
+| `Point`              | `Marker`                      |
+| `MultiPoint`         | One `Marker` per position     |
+| `LineString`         | `Polyline`                    |
+| `MultiLineString`    | One `Polyline` per line       |
+| `Polygon`            | `Polygon` with interior holes |
+| `MultiPolygon`       | One `Polygon` per part        |
+| `Feature`            | Inner geometry                |
+| `FeatureCollection`  | Each feature                  |
+| `GeometryCollection` | Each nested geometry          |
 
 Coordinates are `[longitude, latitude]`. A third value (altitude) is ignored.
 
@@ -38,7 +38,6 @@ Colors follow the library-wide format: `#RGB`, `#RGBA`, `#RRGGBB`, or `#RRGGBBAA
 ## Limits
 
 - Prefer `geojsonToOverlayDescriptors` plus bulk `MapView` overlay props above about 1000 generated overlays.
-- Interior polygon rings (holes) are ignored until native hole support exists.
 - Point styling is limited to title text; pin color and custom marker views are not applied.
 - TopoJSON is not parsed. Convert it to GeoJSON first.
 - Invalid GeoJSON does not throw. It is skipped with a development warning.

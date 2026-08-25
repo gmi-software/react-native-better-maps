@@ -159,6 +159,11 @@ describe('geojsonToOverlayDescriptors', () => {
                   [21.03, 52.24],
                   [21.03, 52.25],
                 ]),
+                closedRing([
+                  [21.022, 52.242],
+                  [21.024, 52.242],
+                  [21.024, 52.244],
+                ]),
               ],
             ],
           },
@@ -171,6 +176,14 @@ describe('geojsonToOverlayDescriptors', () => {
     expect(overlays.markers[1]?.id).toBe('geojson:stops:marker-1');
     expect(overlays.polylines).toHaveLength(2);
     expect(overlays.polygons).toHaveLength(2);
+    expect(overlays.polygons[0]?.holes).toBeUndefined();
+    expect(overlays.polygons[1]?.holes).toEqual([
+      [
+        { latitude: 52.242, longitude: 21.022 },
+        { latitude: 52.242, longitude: 21.024 },
+        { latitude: 52.244, longitude: 21.024 },
+      ],
+    ]);
   });
 
   test('flattens GeometryCollection onto the original feature', () => {
@@ -203,7 +216,7 @@ describe('geojsonToOverlayDescriptors', () => {
     ).toEqual({ name: 'Mixed' });
   });
 
-  test('ignores altitude and polygon holes', () => {
+  test('ignores altitude and preserves polygon holes', () => {
     const source: GeojsonFeature = {
       type: 'Feature',
       id: 'zone',
@@ -234,6 +247,13 @@ describe('geojsonToOverlayDescriptors', () => {
       { latitude: 52.24, longitude: 21.02 },
       { latitude: 52.24, longitude: 21.0 },
     ]);
+    expect(overlays.polygons[0]?.holes).toEqual([
+      [
+        { latitude: 52.225, longitude: 21.005 },
+        { latitude: 52.225, longitude: 21.01 },
+        { latitude: 52.23, longitude: 21.01 },
+      ],
+    ]);
     expect(overlays.featuresByOverlayId['geojson:zone:polygon-0']).toBe(source);
     expect(
       source.geometry?.type === 'Polygon' && source.geometry.coordinates[0],
@@ -244,9 +264,6 @@ describe('geojsonToOverlayDescriptors', () => {
       [21.0, 52.24, 10],
       [21.0, 52.22, 10],
     ]);
-    expect(
-      warnSpy.mock.calls.some((call) => String(call[0]).includes('holes')),
-    ).toBe(true);
   });
 
   test('applies component style defaults when properties are absent', () => {

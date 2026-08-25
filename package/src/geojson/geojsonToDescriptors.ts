@@ -101,22 +101,18 @@ function convertPolygon(
   feature: GeojsonFeature,
   rings: GeojsonPosition[][],
 ): void {
-  if (rings.length > 1) {
-    warnGeojson(
-      'Polygon interior rings (holes) are ignored until native hole support lands.',
-    );
-  }
-
   const exterior = rings[0];
   if (exterior == null) {
     return;
   }
 
+  const holes = rings.slice(1).map(ringToCoordinates);
   const id = overlayId(state.layerId, feature, 'polygon', state.polygonIndex);
   state.polygonIndex += 1;
   state.polygons.push({
     id,
     coordinates: ringToCoordinates(exterior),
+    holes: holes.length > 0 ? holes : undefined,
     fillColor: resolvePaintColor(
       feature.properties,
       'fill',
@@ -184,8 +180,8 @@ function convertGeometry(
  * Prefer the GeoJSON overlay child for typical use. Use this helper with bulk
  * `markers` / `polylines` / `polygons` props for large FeatureCollections.
  *
- * Invalid geometry is skipped with a development warning. Interior polygon
- * rings (holes) and altitude (Z) values are ignored when rendering.
+ * Invalid geometry is skipped with a development warning. Altitude (Z) values
+ * are ignored when rendering.
  */
 export function geojsonToOverlayDescriptors(
   geojson: GeojsonInput,

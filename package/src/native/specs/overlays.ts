@@ -117,8 +117,11 @@ export interface PolygonDescriptor {
   /** Unique identifier for the polygon. */
   id: string;
 
-  /** Ordered list of coordinates forming the polygon boundary. */
+  /** Ordered list of coordinates forming the polygon exterior boundary. */
   coordinates: Coordinate[];
+
+  /** Interior polygon boundaries that remain unfilled. */
+  holes?: Coordinate[][];
 
   /** Fill color in hex format (e.g. '#FF000080'). */
   fillColor?: string;

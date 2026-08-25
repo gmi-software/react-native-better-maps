@@ -9,6 +9,9 @@ fun PolygonDescriptor.toPolygonOptions(): PolygonOptions {
     .strokeWidth((strokeWidth ?: 2.0).toFloat())
     .clickable(tappable == true)
 
+  holes?.forEach { hole ->
+    options.addHole(hole.map { LatLng(it.latitude, it.longitude) })
+  }
   strokeColor?.let { options.strokeColor(it.toColorInt()) }
   fillColor?.let { options.fillColor(it.toColorInt()) }
 

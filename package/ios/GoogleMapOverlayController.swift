@@ -399,6 +399,7 @@ final class GoogleMapOverlayController {
 
   private func updatePolygon(_ polygon: GMSPolygon, _ descriptor: PolygonDescriptor) {
     polygon.path = descriptor.coordinates.toGMSPath()
+    polygon.holes = descriptor.holes?.map { $0.toGMSPath() }
     polygon.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
     polygon.fillColor = descriptor.fillColor?.toUIColor(
       fallback: UIColor.systemBlue.withAlphaComponent(0.2)

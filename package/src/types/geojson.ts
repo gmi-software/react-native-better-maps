@@ -31,7 +31,7 @@ export interface GeojsonMultiLineString {
   bbox?: number[];
 }
 
-/** First ring is the exterior; additional rings are holes and are ignored when rendering. */
+/** First ring is the exterior; additional rings are rendered as holes. */
 export interface GeojsonPolygon {
   type: 'Polygon';
   coordinates: GeojsonPosition[][];
@@ -126,7 +126,7 @@ export interface GeojsonOverlayDescriptors {
   /** LineString and MultiLineString features, one polyline per line. */
   polylines: PolylineDescriptor[];
 
-  /** Polygon and MultiPolygon features, one polygon per outer ring. */
+  /** Polygon and MultiPolygon features, one descriptor per polygon. */
   polygons: PolygonDescriptor[];
 
   /**

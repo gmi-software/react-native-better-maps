@@ -131,7 +131,7 @@ React callbacks (onPress, onRegionChange, etc.)
 
 - **Source**: TypeScript in `package/src/`
 - **Build**: `react-native-builder-bob` (ESM-only, `module` + `typescript` targets)
-- **Metro**: Resolves `source` export condition for development
+- **Metro**: Resolves the `react-native` export condition to `src/` (Nitro HybridView pattern)
 - **Codegen**: Nitrogen reads `*.nitro.ts` specs and generates native bindings
 
 ## Technology choices

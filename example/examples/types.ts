@@ -1,4 +1,10 @@
-import type { EdgePadding, MapViewProps, Region } from 'react-native-better-maps';
+import type {
+  EdgePadding,
+  GeojsonInput,
+  GeojsonProps,
+  MapViewProps,
+  Region,
+} from 'react-native-better-maps';
 
 export interface MapScenarioAdvancedOptions {
   clusteringEnabled?: boolean;
@@ -20,5 +26,10 @@ export interface MapScenario {
   polylines?: NonNullable<MapViewProps['polylines']>;
   polygons?: NonNullable<MapViewProps['polygons']>;
   circles?: NonNullable<MapViewProps['circles']>;
+  geojson?: GeojsonInput;
+  geojsonStyle?: Pick<
+    GeojsonProps,
+    'strokeColor' | 'fillColor' | 'strokeWidth'
+  >;
   advanced?: MapScenarioAdvancedOptions;
 }

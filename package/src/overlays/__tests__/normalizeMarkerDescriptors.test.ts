@@ -27,6 +27,8 @@ const baseDescriptor: MarkerDescriptor = {
   id: 'marker-1',
   coordinate: { latitude: 37.7749, longitude: -122.4194 },
   title: 'Test',
+  markerColor: '#FF9500',
+  zIndex: 3,
 };
 
 describe('normalizeMarkerDescriptors', () => {

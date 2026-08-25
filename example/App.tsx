@@ -52,6 +52,7 @@ import {
   MAP_SCENARIOS,
   type MapScenario,
   createCustomMarkerImagesScenario,
+  createScenarioOverlayProps,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
 } from './examples';
 
@@ -541,20 +542,17 @@ const MapScene = memo(function MapScene({
     clusterEnteringAnimation: scenario.advanced?.clusteringEnabled
       ? animationOption.value
       : undefined,
-    markers: scenario.markers,
-    polylines: scenario.polylines,
-    polygons: scenario.polygons,
-    circles: scenario.circles,
+    ...createScenarioOverlayProps(
+      scenario,
+      onMarkerPress,
+      onMarkerDragEnd,
+      onOverlayPress,
+    ),
     onMapReady,
     onClusterPress,
-    onMarkerPress,
-    onMarkerDragEnd,
     onPress,
     onPoiPress,
     onLongPress,
-    onPolylinePress: onOverlayPress,
-    onPolygonPress: onOverlayPress,
-    onCirclePress: onOverlayPress,
     onRegionChange,
     onRegionChangeComplete,
   };

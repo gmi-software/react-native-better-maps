@@ -3,11 +3,13 @@ package com.margelo.nitro.nitromaps
 internal fun marker(
   id: String = "marker-1",
   image: MarkerImage? = null,
+  markerColor: String? = null,
   anchor: MarkerAnchor? = null,
   centerOffset: MarkerPoint? = null,
   rotation: Double? = null,
   flat: Boolean? = null,
   opacity: Double? = null,
+  zIndex: Double? = null,
   enteringAnimation: OverlayEnteringAnimationDescriptor? = null,
 ): MarkerDescriptor {
   return MarkerDescriptor(
@@ -18,11 +20,13 @@ internal fun marker(
     false,
     true,
     image,
+    markerColor,
     anchor,
     centerOffset,
     rotation,
     flat,
     opacity,
+    zIndex,
     enteringAnimation,
   )
 }

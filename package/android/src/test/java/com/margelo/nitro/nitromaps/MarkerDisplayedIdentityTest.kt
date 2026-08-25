@@ -15,6 +15,8 @@ class MarkerDisplayedIdentityTest {
         ),
       "rotation" to (marker(rotation = 0.0) to marker(rotation = 45.0)),
       "opacity" to (marker(opacity = 1.0) to marker(opacity = 0.4)),
+      "markerColor" to (marker(markerColor = "#FF0000") to marker(markerColor = "#00FF00")),
+      "zIndex" to (marker(zIndex = 1.0) to marker(zIndex = 2.0)),
       "anchor" to (
         marker(anchor = MarkerAnchor(0.5, 1.0)) to marker(anchor = MarkerAnchor(0.5, 0.5))
         ),
@@ -47,6 +49,11 @@ class MarkerDisplayedIdentityTest {
       "opacity fingerprint",
       arrayOf(marker(opacity = null)).markersFingerprint(),
       arrayOf(marker(opacity = 0.0)).markersFingerprint(),
+    )
+    assertNotEquals(
+      "zIndex",
+      marker(zIndex = null).displayedIdentityVersion(),
+      marker(zIndex = 0.0).displayedIdentityVersion(),
     )
   }
 

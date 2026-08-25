@@ -71,6 +71,9 @@ export interface MarkerDescriptor {
   /** Custom marker image. */
   image?: MarkerImage;
 
+  /** Color applied to the default marker when no custom image is set. */
+  markerColor?: string;
+
   /** Anchor point on the image relative to the coordinate (default bottom-center). */
   anchor?: MarkerAnchor;
 
@@ -85,6 +88,9 @@ export interface MarkerDescriptor {
 
   /** Opacity from 0 to 1. */
   opacity?: number;
+
+  /** Drawing order relative to other map overlays. */
+  zIndex?: number;
 
   /** Entering animation override for this marker. */
   enteringAnimation?: OverlayEnteringAnimationDescriptor;
@@ -106,6 +112,9 @@ export interface PolylineDescriptor {
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
 
+  /** Drawing order relative to other map overlays. */
+  zIndex?: number;
+
   /** Whether the polyline is tappable. */
   tappable?: boolean;
 }
@@ -117,8 +126,11 @@ export interface PolygonDescriptor {
   /** Unique identifier for the polygon. */
   id: string;
 
-  /** Ordered list of coordinates forming the polygon boundary. */
+  /** Ordered list of coordinates forming the polygon exterior boundary. */
   coordinates: Coordinate[];
+
+  /** Interior polygon boundaries that remain unfilled. */
+  holes?: Coordinate[][];
 
   /** Fill color in hex format (e.g. '#FF000080'). */
   fillColor?: string;
@@ -128,6 +140,9 @@ export interface PolygonDescriptor {
 
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
+
+  /** Drawing order relative to other map overlays. */
+  zIndex?: number;
 
   /** Whether the polygon is tappable. */
   tappable?: boolean;

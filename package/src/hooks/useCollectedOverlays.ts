@@ -6,6 +6,7 @@ import type {
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../native/specs/overlays';
+import type { GeojsonProps } from '../types/geojson';
 import type {
   CircleProps,
   MarkerProps,
@@ -13,18 +14,24 @@ import type {
   PolylineProps,
 } from '../types/overlays';
 import { Circle } from '../components/Circle';
+import { Geojson } from '../components/Geojson';
 import { Marker } from '../components/Marker';
 import { Polygon } from '../components/Polygon';
 import { Polyline } from '../components/Polyline';
-import type { OverlayComponentType, OverlayTypeName } from '../overlays/overlayType';
+import { collectGeojsonOverlays } from '../overlays/collectGeojsonOverlays';
+import {
+  resolveOverlayId,
+  tappableFromPress,
+  type OverlayCallbacks,
+  type OverlayCollectorState,
+} from '../overlays/overlayCollect';
+import type {
+  OverlayComponentType,
+  OverlayTypeName,
+} from '../overlays/overlayType';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
 import { resolveMarkerImage } from '../overlays/resolveMarkerImage';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-
-interface OverlayCallbacks {
-  onPress?: () => void;
-  onDragEnd?: (coordinate: MarkerProps['coordinate']) => void;
-}
 
 export interface CollectedOverlays {
   markers: MarkerDescriptor[];
@@ -37,18 +44,6 @@ export interface CollectedOverlays {
   hasPolylinePress: boolean;
   hasPolygonPress: boolean;
   hasCirclePress: boolean;
-}
-
-function resolveOverlayId(
-  providedId: string | undefined,
-  type: string,
-  index: number,
-): string {
-  if (providedId != null && providedId.length > 0) {
-    return providedId;
-  }
-
-  return `${type}-${index}`;
 }
 
 function isOverlayChild(
@@ -66,34 +61,10 @@ function isOverlayChild(
   return child.type === component;
 }
 
-interface OverlayCollectorState {
-  registry: Map<string, OverlayCallbacks>;
-  markers: MarkerDescriptor[];
-  polylines: PolylineDescriptor[];
-  polygons: PolygonDescriptor[];
-  circles: CircleDescriptor[];
-  markerIndex: number;
-  polylineIndex: number;
-  polygonIndex: number;
-  circleIndex: number;
-  hasMarkerPress: boolean;
-  hasMarkerDragEnd: boolean;
-  hasPolylinePress: boolean;
-  hasPolygonPress: boolean;
-  hasCirclePress: boolean;
-}
-
 interface OverlayCollector {
   overlayType: OverlayTypeName;
   component: unknown;
   collect: (child: ReactElement, state: OverlayCollectorState) => void;
-}
-
-function tappableFromPress(
-  onPress: (() => void) | undefined,
-  tappable: boolean | undefined,
-): boolean | undefined {
-  return onPress != null ? (tappable ?? true) : tappable;
 }
 
 const overlayCollectors: OverlayCollector[] = [
@@ -147,7 +118,9 @@ const overlayCollectors: OverlayCollector[] = [
         strokeWidth: props.strokeWidth,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
-      state.registry.set(overlayCallbackKey(OverlayType.Polyline, id), { onPress: props.onPress });
+      state.registry.set(overlayCallbackKey(OverlayType.Polyline, id), {
+        onPress: props.onPress,
+      });
       if (props.onPress != null) {
         state.hasPolylinePress = true;
       }
@@ -169,7 +142,9 @@ const overlayCollectors: OverlayCollector[] = [
         strokeWidth: props.strokeWidth,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
-      state.registry.set(overlayCallbackKey(OverlayType.Polygon, id), { onPress: props.onPress });
+      state.registry.set(overlayCallbackKey(OverlayType.Polygon, id), {
+        onPress: props.onPress,
+      });
       if (props.onPress != null) {
         state.hasPolygonPress = true;
       }
@@ -192,10 +167,19 @@ const overlayCollectors: OverlayCollector[] = [
         strokeWidth: props.strokeWidth,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
-      state.registry.set(overlayCallbackKey(OverlayType.Circle, id), { onPress: props.onPress });
+      state.registry.set(overlayCallbackKey(OverlayType.Circle, id), {
+        onPress: props.onPress,
+      });
       if (props.onPress != null) {
         state.hasCirclePress = true;
       }
+    },
+  },
+  {
+    overlayType: OverlayType.Geojson,
+    component: Geojson,
+    collect: (child, state) => {
+      collectGeojsonOverlays(child.props as GeojsonProps, state);
     },
   },
 ];
@@ -214,6 +198,7 @@ export function useCollectedOverlays(children: ReactNode): CollectedOverlays {
       polylineIndex: 0,
       polygonIndex: 0,
       circleIndex: 0,
+      geojsonIndex: 0,
       hasMarkerPress: false,
       hasMarkerDragEnd: false,
       hasPolylinePress: false,
@@ -227,7 +212,9 @@ export function useCollectedOverlays(children: ReactNode): CollectedOverlays {
       }
 
       for (const collector of overlayCollectors) {
-        if (!isOverlayChild(child, collector.overlayType, collector.component)) {
+        if (
+          !isOverlayChild(child, collector.overlayType, collector.component)
+        ) {
           continue;
         }
 

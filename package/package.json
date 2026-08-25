@@ -33,7 +33,9 @@
     "!**/__tests__",
     "!**/__fixtures__",
     "!**/__mocks__",
-    "!android/src/test"
+    "!android/src/test",
+    "!ios/Package.swift",
+    "!ios/Tests"
   ],
   "scripts": {
     "prebuild": "bun run nitrogen",
@@ -42,8 +44,8 @@
     "build:plugin": "bun run clean:plugin && tsc --project tsconfig.plugin.json",
     "prepack": "cp ../README.md ./README.md && bun run build",
     "postpack": "rm ./README.md",
-    "test": "jest",
-    "test:ci": "jest --runInBand --ci --watchman=false",
+    "test": "jest && bun test src/geojson src/overlays",
+    "test:ci": "jest --runInBand --ci --watchman=false && bun test src/geojson src/overlays",
     "typecheck": "tsc --noEmit && tsc --project tsconfig.plugin.json --noEmit",
     "typecheck:provider-types": "tsc --noEmit -p tsconfig.type-tests.json",
     "nitrogen": "nitrogen && bun ./scripts/patch-nitrogen-generated.mjs",

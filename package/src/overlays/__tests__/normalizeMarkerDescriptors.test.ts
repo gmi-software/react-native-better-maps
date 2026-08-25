@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { MarkerDescriptor } from '../../native/specs/overlays';
+import type { MarkerDescriptor } from '../../types/overlays';
 
 const resolveAssetSourceMock = mock(
   (source: number | { uri: string; width?: number; height?: number; scale?: number }) => {
@@ -23,11 +23,11 @@ mock.module('../assetSourceResolver', () => ({
 const { clearResolvedMarkerImageCacheForTests } = await import('../resolveMarkerImage');
 const { normalizeMarkerDescriptors } = await import('../normalizeMarkerDescriptors');
 
-const baseDescriptor: MarkerDescriptor = {
+const baseDescriptor = {
   id: 'marker-1',
   coordinate: { latitude: 37.7749, longitude: -122.4194 },
   title: 'Test',
-};
+} satisfies MarkerDescriptor;
 
 describe('normalizeMarkerDescriptors', () => {
   beforeEach(() => {
@@ -69,7 +69,10 @@ describe('normalizeMarkerDescriptors', () => {
   test('stabilizes after the first require() resolution', () => {
     const descriptors = [{ ...baseDescriptor, image: 7 as never }];
     const first = normalizeMarkerDescriptors(descriptors);
-    const second = normalizeMarkerDescriptors(first);
+    // The serialized shape is not a public descriptor (`enteringAnimation` is a
+    // descriptor object there, a union here), but feeding the output back in is
+    // exactly what this test asserts is stable, so cast it back.
+    const second = normalizeMarkerDescriptors(first as MarkerDescriptor[]);
 
     expect(second).toBe(first);
     expect(resolveAssetSourceMock).toHaveBeenCalledTimes(1);

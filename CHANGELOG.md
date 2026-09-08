@@ -61,6 +61,10 @@ frames after the inner ones; no frame waits for all of them.
   stream into a Reanimated shared value; `react-native-reanimated` is an optional peer
   dependency.
 - `pinStyle` prop (`'flat' | 'system'`) for the Apple provider.
+- `markerRendering` prop (`'views' | 'sprites'`) for the Apple provider. `sprites` draws the
+  displayed markers and cluster badges into map tiles through an `MKOverlayRenderer`
+  instead of one annotation view per marker; taps and callouts still work, draggable
+  markers stay views.
 - `MarkerCollection` and `useMarkerCollection`: a native-owned marker dataset updated
   through `set`, `upsert`, `remove` and `updatePositions`, passed to `MapView` with the
   new `markerCollection` prop. Each call ships one packed batch that only carries what

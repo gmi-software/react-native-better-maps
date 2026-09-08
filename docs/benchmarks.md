@@ -35,24 +35,28 @@ They are implemented in `benchmark/thresholds.ts` and unit-tested with
 
 ## Scenarios
 
-| ID  | Setup                              | Script                                                                               |
-| --- | ---------------------------------- | ------------------------------------------------------------------------------------ |
-| A   | empty map                          | 3 s idle, short pan                                                                  |
-| B   | 100 markers                        | pan                                                                                  |
-| C   | 1,000 markers                      | pan                                                                                  |
-| D   | 10,000 markers                     | pan                                                                                  |
-| E   | 10,000 markers, clustering on      | zoom sweep across five levels, then pan                                              |
-| F   | 10,000 markers                     | ten-leg pan                                                                          |
-| G   | 10,000 markers                     | zoom sweep                                                                           |
-| H   | 10,000 markers                     | four heading changes                                                                 |
-| I   | 1,000 markers in a collection      | 100 of them move at 10 Hz for 5 s through `updatePositions`; JS lag is checked       |
-| I2  | 1,000 markers                      | 100 of them move at 10 Hz for 5 s through new `markers` arrays; JS lag is checked    |
-| K   | 5,000-point route and 200 polygons | five style changes, then pan                                                         |
-| L   | 10,000 markers                     | three pan legs, then 5 s idle                                                        |
-| M   | 10,000 markers in a collection     | one marker is upserted every 100 ms for 3 s; JS lag is checked                       |
-| N   | 10,000 markers inside the viewport | street-level zoom sweep, where the LOD cap allows 2,000 markers on screen            |
-| O   | 10,000 markers                     | pan while `onCameraMove` feeds a shared value at a 16 ms throttle; JS lag is checked |
-| P   | 100,000 markers, clustering on     | zoom sweep across five levels, then pan                                              |
+| ID  | Setup                               | Script                                                                               |
+| --- | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| A   | empty map                           | 3 s idle, short pan                                                                  |
+| B   | 100 markers                         | pan                                                                                  |
+| C   | 1,000 markers                       | pan                                                                                  |
+| D   | 10,000 markers                      | pan                                                                                  |
+| E   | 10,000 markers, clustering on       | zoom sweep across five levels, then pan                                              |
+| F   | 10,000 markers                      | ten-leg pan                                                                          |
+| F2  | 10,000 markers, sprites             | F with `markerRendering="sprites"` (Apple Maps; same as F elsewhere)                 |
+| G   | 10,000 markers                      | zoom sweep                                                                           |
+| G2  | 10,000 markers, sprites             | G with `markerRendering="sprites"` (Apple Maps; same as G elsewhere)                 |
+| H   | 10,000 markers                      | four heading changes                                                                 |
+| I   | 1,000 markers in a collection       | 100 of them move at 10 Hz for 5 s through `updatePositions`; JS lag is checked       |
+| I2  | 1,000 markers                       | 100 of them move at 10 Hz for 5 s through new `markers` arrays; JS lag is checked    |
+| K   | 5,000-point route and 200 polygons  | five style changes, then pan                                                         |
+| L   | 10,000 markers                      | three pan legs, then 5 s idle                                                        |
+| M   | 10,000 markers in a collection      | one marker is upserted every 100 ms for 3 s; JS lag is checked                       |
+| N   | 10,000 markers inside the viewport  | street-level zoom sweep, where the LOD cap allows 2,000 markers on screen            |
+| N2  | 10,000 markers inside, sprites      | N with `markerRendering="sprites"` (Apple Maps; same as N elsewhere)                 |
+| O   | 10,000 markers                      | pan while `onCameraMove` feeds a shared value at a 16 ms throttle; JS lag is checked |
+| P   | 100,000 markers, clustering on      | zoom sweep across five levels, then pan                                              |
+| P2  | 100,000 markers, clustered, sprites | P with `markerRendering="sprites"` (Apple Maps; same as P elsewhere)                 |
 
 Scenario J (live location) is not scripted: it needs location permission and a
 GPS feed. Use the simulator's location menu with the manual recorder.
@@ -445,6 +449,69 @@ O.
 - I2-animated-prop: JS lag p95 18.60 ms > budget 17.50 ms
 - M-one-of-10k: JS lag p95 18.79 ms > budget 17.50 ms
 - O-camera-stream: JS lag p95 18.07 ms > budget 17.50 ms
+
+### Sprite layer runs (not a device baseline)
+
+The same simulator after ADR 0008, with the four sprite scenarios next to the
+view-mode scenarios they copy. Sprite mode changes nothing about which markers
+are shown; it changes who draws them.
+
+**iOS**, iPhone 17 Pro simulator, release build, MapKit, 60 Hz, started by
+hand, recorded 2026-09-08. The zoom sweeps are where the sprites earn their
+keep: G2 against G goes from 4.4 % jank to 1.6 % with a 33 ms p99 in place of
+36 ms, N2 against N from 4.1 % to 1.6 % with a 28 ms p99 in place of 38 ms and
+a 40 ms worst frame in place of 46 ms, and P2 passes outright where P holds a
+33 ms p99 and 1.7 % jank with 100,000 clustered markers. The ten-leg pan is a
+wash: F2 sits a hair over the p99 threshold that F sits a hair under, because
+a pan only touches the edge tiles and the view path is already cheap there.
+What is left in G2 and N2 is MapKit's own overlay tile pipeline at an octave
+crossing; K, which has no markers and restyles a route and 200 polygons,
+shows the same two-frame p99. The 17 ms JS-lag column from L onward is host
+contention during that stretch of the run (it fails M, a scenario that does
+not touch the sprite layer) and does not follow the sprite scenarios.
+
+| Scenario                  | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | RSS Δ   |
+| ------------------------- | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ------- |
+| A-empty-idle              | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 47 ms | 0.6 % | 1.0 ms     | +72 MB  |
+| B-markers-100             | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 45 ms | 0.3 % | 1.1 ms     | +71 MB  |
+| C-markers-1k              | pass     | 59  | 16.7 ms | 16.7 ms | 21.5 ms | 45 ms | 1.0 % | 1.1 ms     | +66 MB  |
+| D-markers-10k             | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 45 ms | 1.7 % | 1.1 ms     | +88 MB  |
+| E-clustered-10k           | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 34 ms | 1.0 % | 1.0 ms     | +90 MB  |
+| F-pan-10k                 | pass     | 59  | 16.7 ms | 16.7 ms | 23.1 ms | 44 ms | 1.0 % | 1.0 ms     | +88 MB  |
+| F2-pan-10k-sprites        | fail (2) | 59  | 16.7 ms | 16.7 ms | 27.8 ms | 46 ms | 1.2 % | 1.1 ms     | +70 MB  |
+| G-zoom-10k                | fail (2) | 57  | 16.7 ms | 16.7 ms | 35.8 ms | 38 ms | 4.4 % | 1.1 ms     | +66 MB  |
+| G2-zoom-10k-sprites       | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 37 ms | 1.6 % | 1.4 ms     | +97 MB  |
+| H-rotate-10k              | fail (3) | 58  | 16.7 ms | 16.7 ms | 41.9 ms | 79 ms | 1.6 % | 1.1 ms     | +53 MB  |
+| I-animated-collection     | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.9 % | 1.4 ms     | -1 MB   |
+| I2-animated-prop          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.0 ms     | -1 MB   |
+| K-shapes                  | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 44 ms | 1.1 % | 1.1 ms     | +61 MB  |
+| L-idle-after-pan          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 42 ms | 0.6 % | 17.5 ms    | +52 MB  |
+| M-one-of-10k              | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 17.7 ms    | -0 MB   |
+| O-camera-stream           | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 45 ms | 0.7 % | 17.3 ms    | +82 MB  |
+| P-clustered-100k          | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 41 ms | 1.7 % | 17.3 ms    | +131 MB |
+| P2-clustered-100k-sprites | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 34 ms | 0.6 % | 17.1 ms    | +174 MB |
+| N-dense-10k               | fail (2) | 57  | 16.7 ms | 16.7 ms | 38.1 ms | 46 ms | 4.1 % | 17.0 ms    | +104 MB |
+| N2-dense-10k-sprites      | fail (2) | 59  | 16.7 ms | 16.7 ms | 28.5 ms | 40 ms | 1.6 % | 17.7 ms    | +86 MB  |
+
+- D-markers-10k: p99 33.33 ms > 25.00 ms; jank 1.66% > 1%
+- F2-pan-10k-sprites: p99 27.82 ms > 25.00 ms; jank 1.21% > 1%
+- G-zoom-10k: p99 35.76 ms > 25.00 ms; jank 4.39% > 1%
+- G2-zoom-10k-sprites: p99 33.33 ms > 25.00 ms; jank 1.64% > 1%
+- H-rotate-10k: p99 41.93 ms > 25.00 ms; worst frame 79.39 ms > 50.00 ms; jank 1.55% > 1%
+- K-shapes: p99 33.33 ms > 25.00 ms; jank 1.15% > 1%
+- M-one-of-10k: JS lag p95 17.74 ms > budget 17.50 ms
+- P-clustered-100k: p99 33.33 ms > 25.00 ms; jank 1.73% > 1%
+- N-dense-10k: p99 38.07 ms > 25.00 ms; jank 4.05% > 1%
+- N2-dense-10k-sprites: p99 28.51 ms > 25.00 ms; jank 1.64% > 1%
+
+The signposts recorded during the same run show what the main thread stops
+doing. In N the main-thread apply (`applyMarkerDiff`, MapKit adding and
+removing annotation views under the frame budget) ran 120 times at a p95 of
+7.4 ms and a maximum of 13.9 ms; in N2 the sprite publish (`publishSprites`,
+a dictionary sort and a snapshot swap) ran 46 times at a p95 of 1.1 ms and a
+maximum of 1.4 ms, and there was no view apply at all. In G2 and P2 the
+publish stays under 0.5 ms. The compute side is the same in both modes, as it
+should be, since sprite mode only changes what happens with the diff.
 
 ## Profiling markers
 

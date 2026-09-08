@@ -130,7 +130,7 @@ class MapOverlayController(
 
   fun setMarkers(descriptors: Array<MarkerDescriptor>?) {
     val next = descriptors ?: emptyArray()
-    val fingerprint = next.markersFingerprint()
+    val fingerprint = traceSection("NitroMaps.markersFingerprint") { next.markersFingerprint() }
     if (fingerprint == markersFingerprint) {
       return
     }
@@ -216,7 +216,7 @@ class MapOverlayController(
         return@execute
       }
 
-      val index = MarkerSpatialIndex(descriptors)
+      val index = traceSection("NitroMaps.buildSpatialIndex") { MarkerSpatialIndex(descriptors) }
       mainHandler.post {
         if (builtForDataset != datasetGeneration) {
           return@post
@@ -227,7 +227,9 @@ class MapOverlayController(
     }
   }
 
-  private fun computeViewportDiff(request: ViewportRefreshRequest): MarkerRenderDiff {
+  private fun computeViewportDiff(
+    request: ViewportRefreshRequest,
+  ): MarkerRenderDiff = traceSection("NitroMaps.computeViewportDiff") {
     val candidates = request.index.candidates(request.bounds)
     val elements: List<ClusterElement> = if (request.clustering) {
       MarkerClusterEngine.clusters(
@@ -242,7 +244,7 @@ class MapOverlayController(
         .map { ClusterElement.Single(it) }
     }
 
-    return computeMarkerRenderDiff(elements, request.displayedVersions)
+    computeMarkerRenderDiff(elements, request.displayedVersions)
   }
 
   private fun advanceDatasetGeneration() {
@@ -254,8 +256,8 @@ class MapOverlayController(
     diff: MarkerRenderDiff,
     animateEntering: Boolean = true,
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
-  ) {
-    val map = googleMap ?: return
+  ) = traceSection("NitroMaps.applyMarkerDiff") {
+    val map = googleMap ?: return@traceSection
 
     for (key in diff.removedKeys) {
       cancelEnteringAnimation(key)

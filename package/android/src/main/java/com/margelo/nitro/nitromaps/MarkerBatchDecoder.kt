@@ -51,11 +51,12 @@ internal class MarkerBatchHeader(
   val removeCount: Int,
   val positionCount: Int,
 ) {
-  val totalBytes: Int
-    get() = MarkerBatchLayout.HEADER_BYTES +
-      upsertCount * MarkerBatchLayout.UPSERT_BYTES +
-      removeCount * MarkerBatchLayout.REMOVE_BYTES +
-      positionCount * MarkerBatchLayout.POSITION_BYTES
+  /** In `Long`: the counts are untrusted and their products overflow `Int`. */
+  val totalBytes: Long
+    get() = MarkerBatchLayout.HEADER_BYTES.toLong() +
+      upsertCount.toLong() * MarkerBatchLayout.UPSERT_BYTES +
+      removeCount.toLong() * MarkerBatchLayout.REMOVE_BYTES +
+      positionCount.toLong() * MarkerBatchLayout.POSITION_BYTES
 }
 
 class MalformedMarkerBatchException(message: String) : IllegalArgumentException(message)
@@ -82,7 +83,7 @@ internal object MarkerBatchDecoder {
       positionCount = buffer.getInt(12),
     )
     if (header.upsertCount < 0 || header.removeCount < 0 || header.positionCount < 0 ||
-      header.totalBytes != buffer.limit()
+      header.totalBytes != buffer.limit().toLong()
     ) {
       throw MalformedMarkerBatchException(
         "Marker batch is ${buffer.limit()} bytes, expected ${header.totalBytes}",

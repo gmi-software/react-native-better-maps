@@ -231,7 +231,6 @@ class MapOverlayController(
       clustering = clusteringEnabled,
       widthPx = viewWidthPx,
       heightPx = viewHeightPx,
-      displayedVersions = HashMap(markerVersions),
       animateEntering = animateEntering,
       maxAnimatedMarkers = maxAnimatedMarkers,
     )
@@ -242,20 +241,24 @@ class MapOverlayController(
 
     computeExecutor.execute {
       val pending = refreshInbox.take() ?: return@execute
-      val diff = computeViewportDiff(pending)
+      val target = computeViewportTarget(pending)
 
       mainHandler.post {
         if (pending.generation != refreshGeneration) {
           return@post
         }
-        applyDiff(diff, pending.animateEntering, pending.maxAnimatedMarkers)
+        // Diffed here, against what is on the map now: the scheduler may have
+        // applied adds from the previous diff while the target was computed,
+        // and a diff against an older snapshot would add those markers twice.
+        applyDiff(computeMarkerRenderDiff(target, markerVersions), pending.animateEntering, pending.maxAnimatedMarkers)
       }
     }
   }
 
-  private fun computeViewportDiff(
+  /** What the viewport should show: the index query, the cluster or LOD pass, and the materialized elements. */
+  private fun computeViewportTarget(
     request: ViewportRefreshRequest,
-  ): MarkerRenderDiff = traceSection("NitroMaps.computeViewportDiff") {
+  ): List<ClusterElement> = traceSection("NitroMaps.computeViewportDiff") {
     // Only the index query holds the store lock. The geometry runs on the
     // arrays as they were under it: a batch applied meanwhile replaces the
     // store's arrays instead of writing into these, and the notification that
@@ -285,8 +288,7 @@ class MapOverlayController(
         .map { MarkerClusterEngine.Element.Single(it) }
     }
 
-    val target = request.store.read { access -> materialize(elements, access) }
-    computeMarkerRenderDiff(target, request.displayedVersions)
+    request.store.read { access -> materialize(elements, access) }
   }
 
   /** What one viewport refresh takes from the store under its lock. */
@@ -729,7 +731,6 @@ class MapOverlayController(
     val clustering: Boolean,
     val widthPx: Int,
     val heightPx: Int,
-    val displayedVersions: Map<MarkerRenderKey, Long>,
     val animateEntering: Boolean,
     val maxAnimatedMarkers: Int,
   )

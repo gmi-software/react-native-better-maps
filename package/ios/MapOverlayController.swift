@@ -99,11 +99,10 @@ final class MapOverlayController {
     }
 
     markerPipeline.reapply(
-      displayedVersions: displayedAnnotationVersions,
       region: mapView.region,
       viewSize: mapView.bounds.size,
-      apply: { [weak self] diff in
-        self?.applyDiff(diff)
+      apply: { [weak self] target in
+        self?.applyTarget(target)
       }
     )
   }
@@ -136,9 +135,12 @@ final class MapOverlayController {
     guard let mapView else {
       return
     }
-    let markers = displayedAnnotations.values.filter { $0 is MapMarkerAnnotation }
+    let markers = displayedAnnotations.values.compactMap { $0 as? MapMarkerAnnotation }
     guard !markers.isEmpty else {
       return
+    }
+    for marker in markers {
+      marker.suppressesNextEnteringAnimation = true
     }
     mapView.removeAnnotations(markers)
     mapView.addAnnotations(markers)
@@ -150,11 +152,10 @@ final class MapOverlayController {
       return
     }
     markerPipeline.refreshNow(
-      displayedVersions: displayedAnnotationVersions,
       region: mapView.region,
       viewSize: mapView.bounds.size,
-      apply: { [weak self] diff in
-        self?.applyDiff(diff)
+      apply: { [weak self] target in
+        self?.applyTarget(target)
       }
     )
   }
@@ -166,14 +167,20 @@ final class MapOverlayController {
     }
 
     markerPipeline.scheduleViewportRefresh(
-      displayedVersions: displayedAnnotationVersions,
       region: mapView.region,
       viewSize: mapView.bounds.size,
       immediate: immediate,
-      apply: { [weak self] diff in
-        self?.applyDiff(diff)
+      apply: { [weak self] target in
+        self?.applyTarget(target)
       }
     )
+  }
+
+  /// Diffs a computed target against what is on the map now. The scheduler
+  /// may have applied adds from the previous diff while the target was being
+  /// computed, and a diff against an older snapshot would add those twice.
+  private func applyTarget(_ target: [MarkerRenderEntry]) {
+    applyDiff(MarkerRenderPipeline.computeDiff(target: target, displayed: displayedAnnotationVersions))
   }
 
   /// Hands a diff to the frame scheduler: removals now, adds spread over
@@ -259,6 +266,7 @@ final class MapOverlayController {
     let hasImageView = view is NitroImageAnnotationView
 
     if needsImageView != hasImageView {
+      marker.suppressesNextEnteringAnimation = true
       mapView.removeAnnotation(marker)
       mapView.addAnnotation(marker)
       return

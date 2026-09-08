@@ -207,10 +207,29 @@ internal object MarkerClusterEngine {
       bucket.memberHandles.add(handle)
     }
 
-    val inView = ArrayList(buckets.values)
+    // Render the cells that overlap the padded region and nothing else: the
+    // cache may still hold cells from the previous viewport, and a stale cell
+    // would merge into an on-screen cluster and churn the trailing edge.
+    val latPad = (ne.latitude - sw.latitude) * CANDIDATE_PADDING
+    val lonPad = longitudeSpan(sw, ne) * CANDIDATE_PADDING
+    val inView: ArrayList<Bucket>
+    if (wraps) {
+      inView = ArrayList(buckets.values)
+    } else {
+      val overlapping = CellRange(
+        rowMin = floor((sw.latitude - latPad) / cellLat).toInt(),
+        rowMax = floor((ne.latitude + latPad) / cellLat).toInt(),
+        colMin = floor((sw.longitude - lonPad) / cellLon).toInt(),
+        colMax = floor((ne.longitude + lonPad) / cellLon).toInt(),
+      )
+      inView = ArrayList(buckets.size)
+      for ((key, bucket) in buckets) {
+        if (overlapping.contains(key)) {
+          inView.add(bucket)
+        }
+      }
+    }
     if (activeCache != null) {
-      val latPad = (ne.latitude - sw.latitude) * CANDIDATE_PADDING
-      val lonPad = longitudeSpan(sw, ne) * CANDIDATE_PADDING
       activeCache.finish(
         CellRange(
           rowMin = ceil((sw.latitude - latPad) / cellLat).toInt(),

@@ -197,14 +197,28 @@ enum MarkerClusterEngine {
       buckets[key, default: Bucket(row: row, column: col)].include(handle, lat: lat, lon: lon)
     }
 
-    let inView = Array(buckets.values)
+    // Render the cells that overlap the padded region and nothing else: the
+    // cache may still hold cells from the previous viewport, and a stale cell
+    // would merge into an on-screen cluster and churn the trailing edge.
+    let latPad = region.span.latitudeDelta * candidatePadding
+    let lonPad = region.span.longitudeDelta * candidatePadding
+    let minLat = region.center.latitude - region.span.latitudeDelta / 2 - latPad
+    let maxLat = region.center.latitude + region.span.latitudeDelta / 2 + latPad
+    let minLon = region.center.longitude - region.span.longitudeDelta / 2 - lonPad
+    let maxLon = region.center.longitude + region.span.longitudeDelta / 2 + lonPad
+    let inView: [Bucket]
+    if wraps {
+      inView = Array(buckets.values)
+    } else {
+      let overlapping = CellRange(
+        rowMin: Int((minLat / cellLat).rounded(.down)),
+        rowMax: Int((maxLat / cellLat).rounded(.down)),
+        colMin: Int((minLon / cellLon).rounded(.down)),
+        colMax: Int((maxLon / cellLon).rounded(.down))
+      )
+      inView = buckets.compactMap { key, bucket in overlapping.contains(key) ? bucket : nil }
+    }
     if let activeCache {
-      let latPad = region.span.latitudeDelta * candidatePadding
-      let lonPad = region.span.longitudeDelta * candidatePadding
-      let minLat = region.center.latitude - region.span.latitudeDelta / 2 - latPad
-      let maxLat = region.center.latitude + region.span.latitudeDelta / 2 + latPad
-      let minLon = region.center.longitude - region.span.longitudeDelta / 2 - lonPad
-      let maxLon = region.center.longitude + region.span.longitudeDelta / 2 + lonPad
       activeCache.buckets = buckets
       activeCache.finish(CellRange(
         rowMin: Int((minLat / cellLat).rounded(.up)),
@@ -413,13 +427,13 @@ final class MarkerRenderPipeline {
   private static let asyncThreshold = 500
   static let liveRefreshInterval: TimeInterval = 0.1
 
-  /// The inputs of one refresh: what to show for a viewport, diffed against
-  /// what is shown, and where to deliver the result.
+  /// The inputs of one refresh: the viewport to compute a target for, and
+  /// where to deliver it. The caller diffs the target against what is on the
+  /// map at delivery time, on the main thread.
   private struct RefreshParameters {
-    let displayedVersions: [MarkerRenderKey: Int]
     let region: MKCoordinateRegion
     let viewSize: CGSize
-    let apply: (MarkerRenderDiff) -> Void
+    let apply: ([MarkerRenderEntry]) -> Void
   }
 
   /// One viewport query, cluster or filter pass, and diff, computed off the
@@ -527,15 +541,14 @@ final class MarkerRenderPipeline {
   }
 
   /// Recomputes what is shown for the current dataset: synchronously for small
-  /// unclustered datasets, through the viewport pipeline otherwise.
+  /// unclustered datasets, through the viewport pipeline otherwise. `apply`
+  /// receives the target; the caller diffs it against what is on the map.
   func reapply(
-    displayedVersions: [MarkerRenderKey: Int],
     region: MKCoordinateRegion,
     viewSize: CGSize,
-    apply: @escaping (MarkerRenderDiff) -> Void
+    apply: @escaping ([MarkerRenderEntry]) -> Void
   ) {
     let parameters = RefreshParameters(
-      displayedVersions: displayedVersions,
       region: region,
       viewSize: viewSize,
       apply: apply
@@ -549,15 +562,14 @@ final class MarkerRenderPipeline {
     let target: [MarkerRenderEntry] = store?.read { access in
       Self.materialize(access.aliveHandles().map { .single(handle: $0) }, access: access)
     } ?? []
-    apply(Self.computeDiff(target: target, displayed: displayedVersions))
+    apply(target)
   }
 
   func scheduleViewportRefresh(
-    displayedVersions: [MarkerRenderKey: Int],
     region: MKCoordinateRegion,
     viewSize: CGSize,
     immediate: Bool = false,
-    apply: @escaping (MarkerRenderDiff) -> Void
+    apply: @escaping ([MarkerRenderEntry]) -> Void
   ) {
     guard usesViewportPipeline else {
       return
@@ -571,7 +583,6 @@ final class MarkerRenderPipeline {
         return
       }
       self.refreshNow(
-        displayedVersions: displayedVersions,
         region: region,
         viewSize: viewSize,
         apply: apply
@@ -587,17 +598,15 @@ final class MarkerRenderPipeline {
   }
 
   func refreshNow(
-    displayedVersions: [MarkerRenderKey: Int],
     region: MKCoordinateRegion,
     viewSize: CGSize,
-    apply: @escaping (MarkerRenderDiff) -> Void
+    apply: @escaping ([MarkerRenderEntry]) -> Void
   ) {
     guard usesViewportPipeline else {
       return
     }
 
     refreshNow(RefreshParameters(
-      displayedVersions: displayedVersions,
       region: region,
       viewSize: viewSize,
       apply: apply
@@ -629,12 +638,12 @@ final class MarkerRenderPipeline {
         return
       }
 
-      let diff = Self.computeViewportDiff(request, clusterCellPoints: clusterCellPoints)
+      let target = Self.computeViewportTarget(request, clusterCellPoints: clusterCellPoints)
       DispatchQueue.main.async { [weak self] in
         guard let self, request.generation == self.refreshGeneration else {
           return
         }
-        request.parameters.apply(diff)
+        request.parameters.apply(target)
       }
     }
   }
@@ -646,10 +655,14 @@ final class MarkerRenderPipeline {
     refreshInbox.discardPending()
   }
 
-  private static func computeViewportDiff(
+  /// The index query, the cluster or LOD pass, and the materialized elements
+  /// for one viewport. Diffing happens on the main thread against what is on
+  /// the map at that moment, because the frame scheduler may have applied adds
+  /// from the previous diff while this ran.
+  private static func computeViewportTarget(
     _ request: ViewportRefreshRequest,
     clusterCellPoints: Double
-  ) -> MarkerRenderDiff {
+  ) -> [MarkerRenderEntry] {
     let signpost = MapTrace.begin("computeViewportDiff")
     defer { MapTrace.end("computeViewportDiff", signpost) }
     let parameters = request.parameters
@@ -690,8 +703,7 @@ final class MarkerRenderPipeline {
         .map { .single(handle: $0) }
     }
 
-    let target = store.read { access in materialize(elements, access: access) }
-    return computeDiff(target: target, displayed: parameters.displayedVersions)
+    return store.read { access in materialize(elements, access: access) }
   }
 
   /// Turns handles into render entries with their descriptors and versions.

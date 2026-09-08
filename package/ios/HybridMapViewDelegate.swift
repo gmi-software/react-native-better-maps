@@ -149,6 +149,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
   func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
     for view in views {
+      if let marker = view.annotation as? MapMarkerAnnotation, marker.suppressesNextEnteringAnimation {
+        marker.suppressesNextEnteringAnimation = false
+        continue
+      }
       if let marker = view.annotation as? MapMarkerAnnotation,
          marker.enteringAnimation.kind != .system {
         OverlayEnteringAnimationResolver.animateAnnotationView(

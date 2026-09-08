@@ -26,6 +26,9 @@ final class GoogleMapOverlayController {
   private var polylines: [String: GMSPolyline] = [:]
   private var polygons: [String: GMSPolygon] = [:]
   private var circles: [String: GMSCircle] = [:]
+  private var polylineVersions: [String: ShapeRenderVersion] = [:]
+  private var polygonVersions: [String: ShapeRenderVersion] = [:]
+  private var circleVersions: [String: ShapeRenderVersion] = [:]
   private let markerPipeline: MarkerRenderPipeline
   private let visualApplier = GoogleMarkerVisualApplier()
   private var clusterIconCache: [String: UIImage] = [:]
@@ -160,6 +163,7 @@ final class GoogleMapOverlayController {
   func updatePolylines(_ descriptors: [PolylineDescriptor]?) {
     reconcile(
       current: &polylines,
+      versions: &polylineVersions,
       next: descriptors ?? [],
       make: makePolyline,
       update: updatePolyline
@@ -169,6 +173,7 @@ final class GoogleMapOverlayController {
   func updatePolygons(_ descriptors: [PolygonDescriptor]?) {
     reconcile(
       current: &polygons,
+      versions: &polygonVersions,
       next: descriptors ?? [],
       make: makePolygon,
       update: updatePolygon
@@ -178,6 +183,7 @@ final class GoogleMapOverlayController {
   func updateCircles(_ descriptors: [CircleDescriptor]?) {
     reconcile(
       current: &circles,
+      versions: &circleVersions,
       next: descriptors ?? [],
       make: makeCircle,
       update: updateCircle
@@ -375,6 +381,9 @@ final class GoogleMapOverlayController {
     polylines.removeAll()
     polygons.removeAll()
     circles.removeAll()
+    polylineVersions.removeAll()
+    polygonVersions.removeAll()
+    circleVersions.removeAll()
   }
 
   private func makePolyline(_ descriptor: PolylineDescriptor) -> GMSPolyline {
@@ -429,8 +438,11 @@ final class GoogleMapOverlayController {
     circle.userData = descriptor.id
   }
 
+  /// Keeps a render version per overlay id so a descriptor that is sent again
+  /// unchanged costs one hash, and a changed one is updated in place.
   private func reconcile<Descriptor, Overlay: GMSOverlay>(
     current: inout [String: Overlay],
+    versions: inout [String: ShapeRenderVersion],
     next descriptors: [Descriptor],
     make: (Descriptor) -> Overlay,
     update: (Overlay, Descriptor) -> Void
@@ -442,23 +454,29 @@ final class GoogleMapOverlayController {
     var nextIds = Set<String>()
     for descriptor in descriptors {
       nextIds.insert(descriptor.id)
+      let version = descriptor.renderVersion()
       if let overlay = current[descriptor.id] {
-        update(overlay, descriptor)
+        if versions[descriptor.id] != version {
+          update(overlay, descriptor)
+        }
       } else {
         let overlay = make(descriptor)
         overlay.map = mapView
         current[descriptor.id] = overlay
       }
+      versions[descriptor.id] = version
     }
 
     for id in Set(current.keys).subtracting(nextIds) {
       current.removeValue(forKey: id)?.map = nil
+      versions.removeValue(forKey: id)
     }
   }
 }
 
 private protocol IdentifiedOverlayDescriptor {
   var id: String { get }
+  func renderVersion() -> ShapeRenderVersion
 }
 
 extension PolylineDescriptor: IdentifiedOverlayDescriptor {}

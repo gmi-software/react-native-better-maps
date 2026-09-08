@@ -14,6 +14,9 @@ final class MapMarkerAnnotation: NSObject, MKAnnotation {
   private(set) var opacity: CGFloat
   private(set) var zIndex: Double?
   let enteringAnimation: ResolvedOverlayEnteringAnimation
+  /// Set before an annotation that is already on screen is re-added for a
+  /// view change, so the re-add does not replay its entering animation.
+  var suppressesNextEnteringAnimation = false
 
   @objc dynamic var coordinate: CLLocationCoordinate2D
   @objc dynamic var title: String?

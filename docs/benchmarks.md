@@ -50,6 +50,7 @@ They are implemented in `benchmark/thresholds.ts` and unit-tested with
 | K   | 5,000-point route and 200 polygons | five style changes, then pan                                                      |
 | L   | 10,000 markers                     | three pan legs, then 5 s idle                                                     |
 | M   | 10,000 markers in a collection     | one marker is upserted every 100 ms for 3 s; JS lag is checked                    |
+| N   | 10,000 markers inside the viewport | street-level zoom sweep, where the LOD cap allows 2,000 markers on screen         |
 
 Scenario J (live location) is not scripted: it needs location permission and a
 GPS feed. Use the simulator's location menu with the manual recorder.
@@ -253,6 +254,103 @@ hundreds of `MKMarkerAnnotationView`s at once; that is the phase-3 work
 
 - G-zoom-10k: p99 33.33 ms > 25.00 ms; jank 3.33% > 1%
 - H-rotate-10k: p99 35.56 ms > 25.00 ms; jank 1.01% > 1%
+
+### Frame-budgeted rendering runs (not a device baseline)
+
+The same simulator and emulator after ADR 0006: viewport diffs applied over
+frames with an adaptive per-frame add count, flat pins on MapKit, the live
+refresh on a display link, and the cluster octave cache. Scenario N (10,000
+markers inside the city viewport, street-level zoom sweep) is new in this
+round, so the "before" tables below were recorded on the marker-store build
+from the previous section with the scenario added, minutes before the "after"
+tables on the same host.
+
+**iOS before**, iPhone 17 Pro simulator, release build, MapKit, 60 Hz, started
+by hand, recorded 2026-09-08:
+
+| Scenario              | Result   | FPS | p50     | p95     | p99     | Worst  | Jank   | JS lag p95 | RSS Δ   |
+| --------------------- | -------- | --- | ------- | ------- | ------- | ------ | ------ | ---------- | ------- |
+| A-empty-idle          | fail (3) | 59  | 16.7 ms | 16.7 ms | 26.8 ms | 57 ms  | 1.1 %  | 1.0 ms     | +73 MB  |
+| B-markers-100         | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 45 ms  | 0.7 %  | 1.2 ms     | +71 MB  |
+| C-markers-1k          | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 43 ms  | 0.7 %  | 1.0 ms     | +70 MB  |
+| D-markers-10k         | pass     | 59  | 16.7 ms | 16.7 ms | 23.7 ms | 43 ms  | 1.0 %  | 1.0 ms     | +89 MB  |
+| E-clustered-10k       | pass     | 59  | 16.7 ms | 16.7 ms | 16.9 ms | 50 ms  | 1.0 %  | 1.1 ms     | +123 MB |
+| F-pan-10k             | pass     | 59  | 16.7 ms | 16.7 ms | 23.0 ms | 44 ms  | 1.0 %  | 1.0 ms     | +72 MB  |
+| G-zoom-10k            | fail (2) | 58  | 16.7 ms | 16.7 ms | 34.7 ms | 38 ms  | 3.7 %  | 1.1 ms     | +94 MB  |
+| H-rotate-10k          | fail (3) | 59  | 16.7 ms | 16.7 ms | 36.8 ms | 62 ms  | 1.0 %  | 1.1 ms     | +61 MB  |
+| I-animated-collection | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 44 ms  | 0.3 %  | 1.2 ms     | +5 MB   |
+| I2-animated-prop      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms  | 0.0 %  | 1.0 ms     | -7 MB   |
+| K-shapes              | pass     | 59  | 16.7 ms | 16.7 ms | 20.9 ms | 46 ms  | 0.9 %  | 1.1 ms     | +81 MB  |
+| L-idle-after-pan      | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 44 ms  | 0.6 %  | 1.0 ms     | +53 MB  |
+| M-one-of-10k          | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 37 ms  | 1.0 %  | 1.2 ms     | -3 MB   |
+| N-dense-10k           | fail (4) | 46  | 16.7 ms | 40.9 ms | 99.4 ms | 315 ms | 14.6 % | 1.5 ms     | +168 MB |
+
+- A-empty-idle: p99 26.78 ms > 25.00 ms; worst frame 56.55 ms > 50.00 ms; jank 1.14% > 1%
+- G-zoom-10k: p99 34.68 ms > 25.00 ms; jank 3.68% > 1%
+- H-rotate-10k: p99 36.82 ms > 25.00 ms; worst frame 62.34 ms > 50.00 ms; jank 1.02% > 1%
+- M-one-of-10k: p99 33.33 ms > 25.00 ms; jank 1.01% > 1%
+- N-dense-10k: p95 40.91 ms > budget 17.50 ms; p99 99.40 ms > 25.00 ms; worst frame 315.15 ms > 50.00 ms; jank 14.64% > 1%
+
+**iOS after**, same simulator and build type, started by hand, recorded
+2026-09-08. The dense scenario N went from a p95 of 41 ms, a p99 of 99 ms and
+a worst frame of 315 ms to a p95 of one frame, a p99 of two and a worst frame
+of 46 ms; jank fell from 14.6 % to 3.3 %. D and E hold one frame at p99 with
+a 33 ms worst frame, and M stays at 17 ms. What is left at the octave
+crossings of G and N is MapKit laying out the flat pins that are already on
+screen, which is the sprite-layer work noted in ADR 0006. The JS-lag column
+in B–D of this run coincides with the Android emulator shutting down on the
+same host; the frame columns do not show it.
+
+| Scenario              | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | RSS Δ   |
+| --------------------- | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ------- |
+| A-empty-idle          | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 49 ms | 0.6 % | 1.2 ms     | +69 MB  |
+| B-markers-100         | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 43 ms | 0.7 % | 16.9 ms    | +71 MB  |
+| C-markers-1k          | pass     | 59  | 16.7 ms | 16.7 ms | 20.6 ms | 46 ms | 1.0 % | 17.4 ms    | +65 MB  |
+| D-markers-10k         | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.7 % | 17.2 ms    | +64 MB  |
+| E-clustered-10k       | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.4 % | 1.3 ms     | +91 MB  |
+| F-pan-10k             | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 42 ms | 1.0 % | 1.1 ms     | +97 MB  |
+| G-zoom-10k            | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 38 ms | 2.3 % | 1.1 ms     | +90 MB  |
+| H-rotate-10k          | fail (3) | 58  | 16.7 ms | 16.7 ms | 42.1 ms | 83 ms | 1.0 % | 1.1 ms     | +56 MB  |
+| I-animated-collection | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.6 % | 1.4 ms     | +0 MB   |
+| I2-animated-prop      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.1 ms     | -3 MB   |
+| K-shapes              | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 43 ms | 1.1 % | 1.3 ms     | +64 MB  |
+| L-idle-after-pan      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 44 ms | 0.4 % | 1.1 ms     | +43 MB  |
+| M-one-of-10k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.3 ms     | -0 MB   |
+| N-dense-10k           | fail (2) | 58  | 16.7 ms | 16.7 ms | 33.3 ms | 46 ms | 3.3 % | 1.0 ms     | +138 MB |
+
+- G-zoom-10k: p99 33.33 ms > 25.00 ms; jank 2.32% > 1%
+- H-rotate-10k: p99 42.13 ms > 25.00 ms; worst frame 83.21 ms > 50.00 ms; jank 1.03% > 1%
+- K-shapes: p99 33.33 ms > 25.00 ms; jank 1.15% > 1%
+- N-dense-10k: p99 33.33 ms > 25.00 ms; jank 3.34% > 1%
+
+**Android after**, API 35 emulator, arm64, Google Maps, 60 Hz, release build,
+Maestro-driven, recorded 2026-09-08. The "before" numbers are the Android table
+in the previous section (same build type, one scenario fewer). Every scenario
+but N now holds 16.7 ms at p99 with a worst frame of 17 ms; the `(1)` failures
+are the emulator's JS-lag floor of about 18 ms, which the empty map shows too.
+N keeps a 67 ms worst frame at the octave crossings.
+
+| Scenario              | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | RSS Δ  |
+| --------------------- | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ------ |
+| A-empty-idle          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.3 % | 18.9 ms    | -24 MB |
+| B-markers-100         | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.5 ms    | -17 MB |
+| C-markers-1k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.3 ms    | +25 MB |
+| D-markers-10k         | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.3 ms    | +35 MB |
+| E-clustered-10k       | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.4 ms    | +23 MB |
+| F-pan-10k             | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.3 ms    | -80 MB |
+| G-zoom-10k            | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.3 ms    | +24 MB |
+| H-rotate-10k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.0 ms    | -37 MB |
+| I-animated-collection | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.5 ms    | -46 MB |
+| I2-animated-prop      | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.9 ms    | -61 MB |
+| K-shapes              | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.7 ms    | -43 MB |
+| L-idle-after-pan      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.9 ms    | -18 MB |
+| M-one-of-10k          | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 19.1 ms    | +14 MB |
+| N-dense-10k           | fail (3) | 58  | 16.7 ms | 16.7 ms | 33.3 ms | 67 ms | 2.0 % | 23.2 ms    | -63 MB |
+
+- I-animated-collection: JS lag p95 18.52 ms > budget 17.50 ms
+- I2-animated-prop: JS lag p95 18.88 ms > budget 17.50 ms
+- M-one-of-10k: JS lag p95 19.08 ms > budget 17.50 ms
+- N-dense-10k: p99 33.33 ms > 25.00 ms; worst frame 66.67 ms > 50.00 ms; jank 2.01% > 1%
 
 ## Profiling markers
 

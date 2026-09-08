@@ -8,6 +8,7 @@ import {
 import {
   POLAND_REGION,
   WARSAW_REGION,
+  denseMarkers,
   longRoute,
   markers,
   polygonGrid,
@@ -309,6 +310,16 @@ export const SCENARIOS: BenchmarkScenario[] = [
     },
   },
 ];
+
+SCENARIOS.push({
+  id: 'N-dense-10k',
+  name: 'N · Dense 10,000',
+  description:
+    '10,000 markers inside the city viewport; a street-level zoom sweep where the LOD cap allows 2,000 on screen.',
+  props: () => ({ region: WARSAW_REGION, markers: denseMarkers(10_000) }),
+  settleMs: 2500,
+  run: (context) => zoomSweep(context, WARSAW_REGION, [13, 14, 12, 15, 11]),
+});
 
 export const SKIPPED_SCENARIOS = [
   'J · Live location: needs location permission and a scripted GPS feed; run manually with the simulator location menu.',

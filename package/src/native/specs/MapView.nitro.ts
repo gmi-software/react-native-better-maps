@@ -198,6 +198,15 @@ export interface MapViewProps extends HybridViewProps {
   /** Called once when a user-initiated region change ends. */
   onRegionChangeComplete?: (region: Region) => void;
 
+  /**
+   * Called while the camera moves, at most every `cameraMoveThrottleMs`, and
+   * once more when it stops. Opt-in: nothing runs unless it is set.
+   */
+  onCameraMove?: (camera: Camera) => void;
+
+  /** Minimum interval between `onCameraMove` calls, in milliseconds. */
+  cameraMoveThrottleMs?: number;
+
   /** Called when the map is ready to use. */
   onMapReady?: () => void;
 

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.annotation.Keep
@@ -34,6 +35,8 @@ class GoogleMapProviderAdapter(
 
   private var googleMap: GoogleMap? = null
   private var isUserGesture = false
+  private var isCameraStreaming = false
+  private var lastCameraEmitMs = 0L
   private var hasFiredMapReady = false
   private val overlayController = MapOverlayController(null, context)
   private var pendingPolylines: Array<PolylineDescriptor>? = null
@@ -228,6 +231,8 @@ class GoogleMapProviderAdapter(
 
   override var onRegionChange: ((region: Region) -> Unit)? = null
   override var onRegionChangeComplete: ((region: Region) -> Unit)? = null
+  override var onCameraMove: ((camera: Camera) -> Unit)? = null
+  override var cameraMoveThrottleMs: Double? = null
   override var onMapReady: (() -> Unit)? = null
   override var onPress: ((coordinate: Coordinate) -> Unit)? = null
   override var onPoiPress: ((event: NativePoiPressEvent) -> Unit)? = null
@@ -409,12 +414,15 @@ class GoogleMapProviderAdapter(
       handleRegionWillChange(
         userInteracting = reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE,
       )
+      startCameraStream()
     }
     map.setOnCameraMoveListener {
       overlayController.onCameraMove()
+      emitCameraMoveIfDue(map)
     }
     map.setOnCameraIdleListener {
       overlayController.onCameraIdle()
+      stopCameraStream(map)
       handleRegionDidChange()
     }
     map.setOnMapClickListener { latLng ->
@@ -689,6 +697,40 @@ class GoogleMapProviderAdapter(
     }
   }
 
+  /**
+   * `onCameraMove` while the camera moves, at most every `cameraMoveThrottleMs`,
+   * and once more with the final camera. Nothing runs unless it is set.
+   */
+  private fun startCameraStream() {
+    if (onCameraMove == null) {
+      return
+    }
+    isCameraStreaming = true
+    lastCameraEmitMs = 0L
+  }
+
+  private fun emitCameraMoveIfDue(map: GoogleMap) {
+    val callback = onCameraMove ?: return
+    if (!isCameraStreaming) {
+      return
+    }
+    val now = SystemClock.uptimeMillis()
+    val interval = (cameraMoveThrottleMs ?: DEFAULT_CAMERA_MOVE_THROTTLE_MS).coerceAtLeast(0.0).toLong()
+    if (lastCameraEmitMs != 0L && now - lastCameraEmitMs < interval) {
+      return
+    }
+    lastCameraEmitMs = now
+    callback(map.cameraPosition.toCamera())
+  }
+
+  private fun stopCameraStream(map: GoogleMap) {
+    if (!isCameraStreaming) {
+      return
+    }
+    isCameraStreaming = false
+    onCameraMove?.invoke(map.cameraPosition.toCamera())
+  }
+
   private fun handleRegionDidChange() {
     if (isUserGesture) {
       emitRegionChange(complete = true)
@@ -733,6 +775,8 @@ class GoogleMapProviderAdapter(
     // view that is already gone.
     onRegionChange = null
     onRegionChangeComplete = null
+    onCameraMove = null
+    cameraMoveThrottleMs = null
     onMapReady = null
     onPress = null
     onPoiPress = null
@@ -773,3 +817,5 @@ private fun emptyVisibleRegion(): VisibleRegion {
   val zero = Coordinate(latitude = 0.0, longitude = 0.0)
   return VisibleRegion(nearLeft = zero, nearRight = zero, farLeft = zero, farRight = zero)
 }
+
+private const val DEFAULT_CAMERA_MOVE_THROTTLE_MS = 100.0

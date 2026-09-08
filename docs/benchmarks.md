@@ -43,9 +43,9 @@ They are implemented in `benchmark/thresholds.ts` and unit-tested with
 | D   | 10,000 markers                      | pan                                                                                  |
 | E   | 10,000 markers, clustering on       | zoom sweep across five levels, then pan                                              |
 | F   | 10,000 markers                      | ten-leg pan                                                                          |
-| F2  | 10,000 markers, sprites             | F with `markerRendering="sprites"` (Apple Maps; same as F elsewhere)                 |
+| F2  | 10,000 markers, sprites             | F with `markerRendering="sprites"` (Apple Maps only; skipped on Android)             |
 | G   | 10,000 markers                      | zoom sweep                                                                           |
-| G2  | 10,000 markers, sprites             | G with `markerRendering="sprites"` (Apple Maps; same as G elsewhere)                 |
+| G2  | 10,000 markers, sprites             | G with `markerRendering="sprites"` (Apple Maps only; skipped on Android)             |
 | H   | 10,000 markers                      | four heading changes                                                                 |
 | I   | 1,000 markers in a collection       | 100 of them move at 10 Hz for 5 s through `updatePositions`; JS lag is checked       |
 | I2  | 1,000 markers                       | 100 of them move at 10 Hz for 5 s through new `markers` arrays; JS lag is checked    |
@@ -53,10 +53,10 @@ They are implemented in `benchmark/thresholds.ts` and unit-tested with
 | L   | 10,000 markers                      | three pan legs, then 5 s idle                                                        |
 | M   | 10,000 markers in a collection      | one marker is upserted every 100 ms for 3 s; JS lag is checked                       |
 | N   | 10,000 markers inside the viewport  | street-level zoom sweep, where the LOD cap allows 2,000 markers on screen            |
-| N2  | 10,000 markers inside, sprites      | N with `markerRendering="sprites"` (Apple Maps; same as N elsewhere)                 |
+| N2  | 10,000 markers inside, sprites      | N with `markerRendering="sprites"` (Apple Maps only; skipped on Android)             |
 | O   | 10,000 markers                      | pan while `onCameraMove` feeds a shared value at a 16 ms throttle; JS lag is checked |
 | P   | 100,000 markers, clustering on      | zoom sweep across five levels, then pan                                              |
-| P2  | 100,000 markers, clustered, sprites | P with `markerRendering="sprites"` (Apple Maps; same as P elsewhere)                 |
+| P2  | 100,000 markers, clustered, sprites | P with `markerRendering="sprites"` (Apple Maps only; skipped on Android)             |
 
 Scenario J (live location) is not scripted: it needs location permission and a
 GPS feed. Use the simulator's location menu with the manual recorder.

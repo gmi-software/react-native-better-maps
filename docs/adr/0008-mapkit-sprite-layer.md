@@ -19,8 +19,11 @@ through `MKOverlayRenderer`, left for later; this is it.
 - **`markerRendering="sprites"` on the Apple provider.** The displayed markers and cluster
   badges are drawn into map tiles by `MarkerSpriteRenderer`, an `MKOverlayRenderer` on a
   world-sized overlay above the labels. MapKit calls it per tile on its own threads and
-  composites the tiles on the GPU, so a pan costs the main thread nothing and a viewport
-  change is a snapshot swap plus a background re-render.
+  composites the tiles on the GPU. What the main thread keeps is the sprite publish, a
+  sort and a snapshot swap that stays under 1.5 ms at 2,000 sprites; what it loses is the
+  annotation-view layout of every viewport change. The zoom sweeps and the 100,000-marker
+  scenario gain from that; a plain pan, which only touches edge tiles, measures the same as
+  views (see `docs/benchmarks.md`).
 - **Same pipeline, different apply.** The store, index, viewport filter, clustering and
   diffing are untouched; sprite mode changes only what the controller does with a diff.
   Sprites are applied at once (a dictionary update, no frame budget needed) and published

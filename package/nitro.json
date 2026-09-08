@@ -18,6 +18,16 @@
         "language": "kotlin",
         "implementationClassName": "HybridMapView"
       }
+    },
+    "MarkerCollection": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridMarkerCollection"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridMarkerCollection"
+      }
     }
   }
 }

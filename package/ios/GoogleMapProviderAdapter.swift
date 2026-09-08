@@ -188,9 +188,9 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
   var onLongPress: ((Coordinate) -> Void)?
 
-  var markers: [MarkerDescriptor]? {
+  var markerCollection: HybridMarkerCollection? {
     didSet {
-      overlayController.setMarkers(markers)
+      overlayController.attach(store: markerCollection?.store)
     }
   }
 
@@ -227,7 +227,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   var onCirclePress: ((String) -> Void)? {
     didSet { overlayController.onCirclePress = onCirclePress }
   }
-  var onClusterPress: (([String], Coordinate) -> Void)? {
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)? {
     didSet { overlayController.onClusterPress = onClusterPress }
   }
 
@@ -265,6 +265,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     applyCameraUpdate(update, animated: animated ?? true, duration: nil)
   }
 
+  func getClusterMembers(clusterId: String) throws -> Promise<[String]> {
+    Promise.resolved(withResult: overlayController.clusterMembers(id: clusterId))
+  }
+
   func prepareForRecycle() {
     isUserRegionChange = false
     isUserGestureMoving = false
@@ -287,7 +291,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     onPolygonPress = nil
     onCirclePress = nil
     onClusterPress = nil
-    markers = nil
+    markerCollection = nil
     polylines = nil
     polygons = nil
     circles = nil

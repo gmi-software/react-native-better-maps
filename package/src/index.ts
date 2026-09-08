@@ -7,6 +7,8 @@ export {
   Geojson,
 } from './components';
 export { geojsonToOverlayDescriptors } from './geojson/geojsonToDescriptors';
+export { MarkerCollection, useMarkerCollection } from './markers';
+export type { MarkerPositionUpdate } from './markers';
 
 export type {
   Coordinate,
@@ -16,6 +18,7 @@ export type {
   VisibleRegion,
   ApplePoiCategory,
   ApplePoiPressEvent,
+  ClusterPressEvent,
   GooglePoiPressEvent,
   MapProvider,
   MapType,

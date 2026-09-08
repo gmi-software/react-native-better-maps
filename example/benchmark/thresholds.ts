@@ -2,7 +2,7 @@ import type { FrameStatsSummary } from './frameStats';
 import type { LagSummary } from './jsLagSampler';
 
 /**
- * Pass/fail rules from the performance audit, section 16, expressed against
+ * Pass/fail rules for the benchmark scenarios, expressed against
  * the display's own frame budget so the same rules apply at 60, 90 and 120 Hz.
  */
 export interface EvaluationOptions {

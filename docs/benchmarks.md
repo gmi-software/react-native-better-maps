@@ -453,8 +453,7 @@ O.
 ### Sprite layer runs (not a device baseline)
 
 The same simulator after ADR 0008, with the four sprite scenarios next to the
-view-mode scenarios they copy. Sprite mode changes nothing about which markers
-are shown; it changes who draws them.
+view-mode scenarios they copy. Sprite mode changes nothing about which markers are shown; it changes who draws the eligible ones, since draggable markers and the marker with an open callout stay annotation views.
 
 **iOS**, iPhone 17 Pro simulator, release build, MapKit, 60 Hz, started by
 hand, recorded 2026-09-08. The zoom sweeps are where the sprites earn their

@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["FrameStatsModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.framestats.FrameStatsModule"]
+  }
+}

@@ -119,6 +119,9 @@ final class MapOverlayController {
       return
     }
 
+    let signpost = MapTrace.begin("applyMarkerDiff")
+    defer { MapTrace.end("applyMarkerDiff", signpost) }
+
     if !diff.removedKeys.isEmpty {
       let removed = diff.removedKeys.compactMap { key in
         displayedAnnotationVersions.removeValue(forKey: key)

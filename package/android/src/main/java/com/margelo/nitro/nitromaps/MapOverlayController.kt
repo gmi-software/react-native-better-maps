@@ -215,11 +215,12 @@ class MapOverlayController(
   private fun computeViewportDiff(
     request: ViewportRefreshRequest,
   ): MarkerRenderDiff = traceSection("NitroMaps.computeViewportDiff") {
-    // Only the index query holds the store lock. The geometry runs over the
-    // live arrays: a batch applied meanwhile moves a marker to where either
-    // batch put it, and the notification that follows every batch schedules
-    // the refresh that settles it. Holding the lock through the cluster pass
-    // would stall the main thread, which reads the store on every camera move.
+    // Only the index query holds the store lock. The geometry runs on the
+    // arrays as they were under it: a batch applied meanwhile replaces the
+    // store's arrays instead of writing into these, and the notification that
+    // follows every batch schedules the refresh that picks the new ones up.
+    // Holding the lock through the cluster pass would stall the main thread,
+    // which reads the store on every camera move.
     val snapshot = request.store.read { access ->
       ViewportSnapshot(access.index.candidates(request.bounds), access.latitudes, access.longitudes, access.flags)
     }

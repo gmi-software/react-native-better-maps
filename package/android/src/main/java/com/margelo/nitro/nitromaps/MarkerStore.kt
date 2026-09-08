@@ -14,11 +14,11 @@ internal interface MarkerStoreListener {
 }
 
 /**
- * Read access to the store's arrays. The arrays are the live ones: a batch
- * applied after [MarkerStore.read] returns may update elements in place, and
- * the next batch may replace them with longer copies (an array read here keeps
- * its length). Handles from the index are valid indices into these arrays.
- * Descriptors and versions should be read inside [MarkerStore.read].
+ * Read access to the store's arrays. The coordinate and flag arrays are a
+ * consistent snapshot that stays valid after [MarkerStore.read] returns: a
+ * batch never writes into them, it replaces them with copies. Handles from the
+ * index are valid indices into them. Descriptors, versions and the index are
+ * only valid inside [MarkerStore.read].
  */
 internal class MarkerStoreAccess(
   val latitudes: DoubleArray,
@@ -131,6 +131,13 @@ class MarkerStore {
 
   private fun apply(bytes: ByteArray, strings: Array<String>) = traceSection("NitroMaps.applyMarkerBatch") {
     synchronized(lock) {
+      // Copy on write, once per batch: readers keep the arrays they took under
+      // the lock and run their geometry on a consistent state while this batch
+      // mutates the copies. Three arrays of 17 bytes per handle, only when the
+      // dataset changes.
+      latitudes = latitudes.copyOf()
+      longitudes = longitudes.copyOf()
+      flags = flags.copyOf()
       try {
         MarkerBatchDecoder.decode(
           MarkerBatchDecoder.wrap(bytes),

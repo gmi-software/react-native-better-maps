@@ -38,6 +38,31 @@ class MarkerStoreTest {
   }
 
   @Test
+  fun `arrays taken from a read stay consistent while a batch is applied`() {
+    val store = MarkerStore()
+    store.apply(MarkerBatchBuilder().upsert(handle = 0, id = "a", latitude = 52.23, longitude = 21.01))
+    val (latitudes, longitudes, flags) = store.read { access ->
+      Triple(access.latitudes, access.longitudes, access.flags)
+    }
+
+    store.apply(
+      MarkerBatchBuilder()
+        .position(handle = 0, latitude = 50.06, longitude = 19.94)
+        .upsert(handle = 1, id = "b", latitude = 54.35, longitude = 18.65),
+    )
+
+    // The snapshot still says what it said; the store has moved on.
+    assertEquals(52.23, latitudes[0], 0.0)
+    assertEquals(21.01, longitudes[0], 0.0)
+    assertEquals(MarkerStore.FLAG_ALIVE or MarkerStore.FLAG_CLUSTERABLE, flags[0].toInt())
+    store.read { access ->
+      assertEquals(50.06, access.latitudes[0], 0.0)
+      assertEquals(19.94, access.longitudes[0], 0.0)
+      assertTrue(access.isAlive(1))
+    }
+  }
+
+  @Test
   fun `positions move markers in the index and bump their version`() {
     val store = MarkerStore()
     store.apply(MarkerBatchBuilder().upsert(handle = 0, id = "a", latitude = 50.06, longitude = 19.94))

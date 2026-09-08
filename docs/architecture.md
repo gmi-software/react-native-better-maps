@@ -15,6 +15,7 @@
 ├─────────────────────────────────────────────────┤
 │  Nitro Layer                                    │
 │  MapView.nitro.ts (HybridView spec)             │
+│  MarkerCollection.nitro.ts (HybridObject spec)  │
 │  nitro.json (autolinking)                       │
 │  nitrogen/generated/ (codegen output)             │
 ├─────────────────────────────────────────────────┤
@@ -73,7 +74,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `onMapReady`                                | none                     | Fires once after the map finishes loading tiles.                                                                                                                                                   |
 | `Marker.onPress` / `onDragEnd`              | none / `Coordinate`      | Dispatched by overlay `id` from native to JS registry.                                                                                                                                             |
 | Overlay `onPress`                           | none                     | Polyline/polygon/circle with `onPress` default to `tappable` on native.                                                                                                                            |
-| `onClusterPress`                            | `string[]`, `Coordinate` | Fires when a marker cluster is tapped; IDs are member marker overlay ids.                                                                                                                          |
+| `onClusterPress`                            | `ClusterPressEvent`      | Fires when a marker cluster is tapped with `{ clusterId, count, coordinate }`. Member ids are fetched on demand through `MapViewRef.getClusterMembers(clusterId)`.                                 |
 
 ### Advanced MapView props
 
@@ -91,6 +92,8 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only (`showsScale` is a no-op on Android). |
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
+| `markerCollection` | A `MarkerCollection` owned by the app. Replaces `markers` and `<Marker>` children; updated through `set`, `upsert`, `remove` and `updatePositions`. |
+| `getClusterMembers(clusterId)` | Imperative ref method; resolves the marker ids inside a displayed cluster. |
 
 ### Platform gaps (Phase 8)
 
@@ -104,6 +107,8 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 
 `Marker`, `Polyline`, `Polygon`, `Circle`, and `Geojson` are overlay components that compose inside `MapView`. Overlay props are collected on the JS side and serialized into descriptor structs passed to the native `HybridMapView` (data-driven architecture). `Geojson` is converted into marker, polyline, and polygon descriptors before that native pass; invalid GeoJSON is skipped with a development warning.
 
+Markers take a different route, because their datasets are large and change often. The dataset lives in a native `MarkerStore` behind the `MarkerCollection` HybridObject. JS assigns every marker an integer handle, keeps the last descriptor it sent per id, and compiles `set` / `upsert` / `remove` / `updatePositions` into packed batches (`src/markers/markerBatch.ts`: a fixed-size record per upsert, four bytes per removal, 24 bytes per position update, plus a string table). The `markers` prop and `<Marker>` children compile to the same batches through a collection `MapView` owns. Natively the store decodes batches on a background thread into flat coordinate arrays, flags, versions and one descriptor per handle, keeps a grid index over handles that is updated in place, and notifies every attached map view. The map's pipeline queries the index for the viewport, clusters or thins the candidate handles, materializes descriptors only for what will be displayed, and diffs by `(handle, id)` against what is on screen. See [ADR 0005](adr/0005-marker-collection-store.md).
+
 Marker and marker-cluster entering animations follow the same descriptor model. The public API accepts `false`, `system`, or a serializable preset config; the React wrapper normalizes that into native descriptors. Native provider adapters execute the animation when a marker render element appears in the render diff. Updating animation config for an already retained marker does not restart the animation; the new config is used the next time that marker is added again.
 
 Google Maps SDKs are sensitive to marker animation churn. Large viewport refreshes can add many native marker instances on the main thread, so the Google provider limits how many markers animate per refresh and reveals the rest immediately. This keeps gestures responsive, but very large marker sets may still need clustering, disabled entering animations, or a future provider-specific animation strategy.
@@ -113,13 +118,16 @@ Google Maps SDKs are sensitive to marker animation churn. Large viewport refresh
 ```
 User interaction
     ↓
-React component tree (<MapView><Marker /><Geojson /></MapView>)
+React component tree (<MapView><Marker /><Geojson /></MapView>, or markerCollection)
     ↓
 MapView collects overlay descriptors + props
+    ↓                                   ↓
+Nitro HybridView props                  MarkerCollection.applyBatch(ArrayBuffer, strings)
+(shapes, camera, callbacks)             one packed delta batch per change
+    ↓                                   ↓
+Native HybridMapView (Swift / Kotlin) ← MarkerStore (handles, flat arrays, grid index)
     ↓
-Nitro HybridView (JSI, zero-copy structs)
-    ↓
-Native HybridMapView (Swift / Kotlin)
+Viewport pipeline: index query → cluster / LOD → diff by handle → SDK objects
     ↓
 Platform map SDK renders
     ↓

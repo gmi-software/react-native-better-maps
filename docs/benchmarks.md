@@ -115,7 +115,7 @@ informational.
 ### Harness smoke run (not a device baseline)
 
 iPhone 17 Pro simulator, iOS 26.5, release build, MapKit provider, 60 Hz, on an
-Apple Silicon Mac. Recorded 2026-09-08 with the harness from #64, evaluated with the thresholds above. The point
+Apple Silicon Mac. Recorded 2026-09-08 with this harness, evaluated with the thresholds above. The point
 of this table is that the harness produces the numbers; a simulator says nothing
 about a phone's GPU or CPU. The failures it does show are the ones the audit
 predicted: p99 climbs to two frames on the clustered zoom sweep and on rotation,

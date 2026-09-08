@@ -62,6 +62,20 @@ describe('MarkerDeltaCompiler', () => {
     expect(reuse?.upserts[0].descriptor.id).toBe('d');
   });
 
+  test('set reuses the handles of the markers it replaces', () => {
+    const compiler = new MarkerDeltaCompiler();
+    compiler.set([marker('a'), marker('b'), marker('c')]);
+    const replaced = decoded(
+      compiler.set([marker('d'), marker('e'), marker('f')]),
+    );
+
+    expect(replaced?.removes.sort()).toEqual([0, 1, 2]);
+    expect(replaced?.upserts.map((upsert) => upsert.handle).sort()).toEqual([
+      0, 1, 2,
+    ]);
+    expect(compiler.ids()).toEqual(['d', 'e', 'f']);
+  });
+
   test('set keeps the first descriptor when an id repeats', () => {
     const compiler = new MarkerDeltaCompiler();
     const batch = decoded(

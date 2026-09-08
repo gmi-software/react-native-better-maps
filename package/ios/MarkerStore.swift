@@ -45,9 +45,11 @@ final class MarkerStore {
     static let clusterable: UInt8 = 1 << 1
   }
 
-  /// Handles above this are refused; it bounds the dense arrays against a
-  /// corrupt batch.
-  private static let maximumHandle = 1 << 26
+  /// Handles at or above this are refused. Five dense arrays of this length
+  /// are about 140 MB, the most a corrupt batch can make the store allocate.
+  private static let maximumHandle = 1 << 22
+  /// How far past the current arrays one upsert may reach.
+  private static let maximumHandleStep = 1 << 16
 
   private let lock = NSLock()
   private let queue = DispatchQueue(label: "com.nitromaps.markerStore", qos: .userInitiated)
@@ -58,6 +60,8 @@ final class MarkerStore {
   private var flags: [UInt8] = []
   private var descriptors: [MarkerDescriptor?] = []
   private var versions: [Int] = []
+  /// At most one listener notification is queued on the main thread at a time.
+  private var isNotificationPending = false
   private var count = 0
   private var nextVersion = 1
 
@@ -162,7 +166,10 @@ final class MarkerStore {
   }
 
   private func upsertLocked(_ handle: Int, _ descriptor: MarkerDescriptor) {
-    guard handle >= 0, handle < Self.maximumHandle else {
+    // JS hands out handles densely, so a valid batch never asks for more than
+    // a bounded step past the current arrays; a corrupt one is dropped here
+    // instead of growing five arrays to whatever it says.
+    guard handle >= 0, handle < Self.maximumHandle, handle <= flags.count + Self.maximumHandleStep else {
       return
     }
     ensureCapacityLocked(handle)
@@ -229,12 +236,28 @@ final class MarkerStore {
     versions.append(contentsOf: repeatElement(0, count: extra))
   }
 
+  /// Delivers one notification per burst of batches: a stream of position
+  /// updates does not queue one full diff per batch on the main thread.
   private func notifyListeners() {
+    lock.lock()
+    let alreadyPending = isNotificationPending
+    isNotificationPending = true
+    lock.unlock()
+    guard !alreadyPending else {
+      return
+    }
     DispatchQueue.main.async { [weak self] in
       guard let self else {
         return
       }
-      for case let listener as MarkerStoreListener in self.listeners.allObjects {
+      self.lock.lock()
+      self.isNotificationPending = false
+      self.lock.unlock()
+      let listeners = self.listeners.allObjects
+      guard !listeners.isEmpty else {
+        return
+      }
+      for case let listener as MarkerStoreListener in listeners {
         listener.markerStoreDidChange(self)
       }
     }

@@ -22,13 +22,13 @@ that passed with nothing drawn.
 
 Thresholds scale with the display's refresh rate (`budget = 1000 / Hz`):
 
-| Metric                                     | Limit                                                            |
-| ------------------------------------------ | ---------------------------------------------------------------- |
-| p50, p95                                   | ≤ budget + 5 % (display-link jitter around the nominal interval) |
-| p99                                        | ≤ 1.5 × budget                                                   |
-| worst frame                                | ≤ 3 × budget (25 ms at 120 Hz, 50 ms at 60 Hz)                   |
-| jank frames                                | ≤ 1 %                                                            |
-| JS lag p95 (animated-marker scenario only) | ≤ budget                                                         |
+| Metric                                                    | Limit                                                            |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
+| p50, p95                                                  | ≤ budget + 5 % (display-link jitter around the nominal interval) |
+| p99                                                       | ≤ 1.5 × budget                                                   |
+| worst frame                                               | ≤ 3 × budget (25 ms at 120 Hz, 50 ms at 60 Hz)                   |
+| jank frames                                               | ≤ 1 %                                                            |
+| JS lag p95 (scenarios that say "JS lag is checked" below) | ≤ budget                                                         |
 
 They are implemented in `benchmark/thresholds.ts` and unit-tested with
 `cd example && bun test`.

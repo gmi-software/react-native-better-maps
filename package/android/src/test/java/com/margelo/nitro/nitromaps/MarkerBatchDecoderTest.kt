@@ -7,6 +7,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MarkerBatchDecoderTest {
+  @Test
+  fun `a header whose byte count overflows Int is rejected`() {
+    // 44739243 * 96 wraps to 32 in Int arithmetic, which would make a 48-byte
+    // batch pass the length check with 44.7 million declared upserts.
+    val bytes = ByteArray(48)
+    java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+      .putInt(0, MarkerBatchLayout.MAGIC)
+      .putInt(4, 44_739_243)
+      .putInt(8, 0)
+      .putInt(12, 0)
+
+    assertThrows(MalformedMarkerBatchException::class.java) {
+      MarkerBatchDecoder.readHeader(MarkerBatchDecoder.wrap(bytes))
+    }
+  }
+
   private fun decodeAll(builder: MarkerBatchBuilder): List<String> {
     val events = ArrayList<String>()
     MarkerBatchDecoder.decode(

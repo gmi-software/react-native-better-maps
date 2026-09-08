@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -13,8 +14,11 @@ internal interface MarkerStoreListener {
 }
 
 /**
- * Read access to the store's arrays. Only valid inside [MarkerStore.read]: the
- * arrays are the live ones and may be replaced by the next batch.
+ * Read access to the store's arrays. The arrays are the live ones: a batch
+ * applied after [MarkerStore.read] returns may update elements in place, and
+ * the next batch may replace them with longer copies (an array read here keeps
+ * its length). Handles from the index are valid indices into these arrays.
+ * Descriptors and versions should be read inside [MarkerStore.read].
  */
 internal class MarkerStoreAccess(
   val latitudes: DoubleArray,
@@ -62,11 +66,14 @@ class MarkerStore {
   private var flags = ByteArray(0)
   private var descriptors = arrayOfNulls<MarkerDescriptor>(0)
   private var versions = LongArray(0)
-  private var count = 0
+  @Volatile private var count = 0
   private var nextVersion = 1L
+  /** At most one listener notification is posted at a time. */
+  private val notificationPending = AtomicBoolean(false)
 
+  /** Lock-free: the map controllers read it on the main thread while a query runs. */
   val markerCount: Int
-    get() = synchronized(lock) { count }
+    get() = count
 
   /** Rough resident size, reported to the JS garbage collector. */
   val estimatedBytes: Long
@@ -132,9 +139,10 @@ class MarkerStore {
           onUpsert = { handle, descriptor -> upsertLocked(handle, descriptor) },
           onPosition = { handle, latitude, longitude -> moveLocked(handle, latitude, longitude) },
         )
-      } catch (error: MalformedMarkerBatchException) {
-        // The header was validated on the JS thread; the copy rules out a
-        // change underneath us.
+      } catch (error: RuntimeException) {
+        // The header was validated on the JS thread and the bytes are our own
+        // copy; anything that still fails here is a corrupt batch, which is
+        // dropped rather than taking the store thread with it.
         return@synchronized
       }
       index.rebuildIfNeeded(latitudes, longitudes, flags)
@@ -142,7 +150,10 @@ class MarkerStore {
   }
 
   private fun upsertLocked(handle: Int, descriptor: MarkerDescriptor) {
-    if (handle < 0 || handle >= MAX_HANDLE) {
+    // JS hands out handles densely, so a valid batch never asks for more than
+    // a bounded step past the current arrays; a corrupt one is dropped here
+    // instead of growing five arrays to whatever it says.
+    if (handle < 0 || handle >= MAX_HANDLE || handle > flags.size + MAX_HANDLE_STEP) {
       return
     }
     ensureCapacityLocked(handle)
@@ -208,11 +219,16 @@ class MarkerStore {
     versions = versions.copyOf(target)
   }
 
+  /**
+   * Delivers one notification per burst of batches: a stream of position
+   * updates does not queue one full diff per batch on the main thread.
+   */
   private fun notifyListeners() {
-    if (listeners.isEmpty()) {
+    if (listeners.isEmpty() || !notificationPending.compareAndSet(false, true)) {
       return
     }
     mainHandler.post {
+      notificationPending.set(false)
       for (reference in listeners) {
         reference.get()?.onMarkerStoreChanged(this)
       }
@@ -223,8 +239,14 @@ class MarkerStore {
     const val FLAG_ALIVE: Int = 1 shl 0
     const val FLAG_CLUSTERABLE: Int = 1 shl 1
 
-    /** Handles above this are refused; it bounds the dense arrays against a corrupt batch. */
-    private const val MAX_HANDLE = 1 shl 26
+    /**
+     * Handles at or above this are refused. Five dense arrays of this length
+     * are about 140 MB, the most a corrupt batch can make the store allocate.
+     */
+    private const val MAX_HANDLE = 1 shl 22
+
+    /** How far past the current arrays one upsert may reach. */
+    private const val MAX_HANDLE_STEP = 1 shl 16
 
     /** One thread applies every collection's batches, in order per collection. */
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->

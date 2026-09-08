@@ -2,6 +2,7 @@ package com.margelo.nitro.nitromaps
 
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log2
 import kotlin.math.pow
@@ -82,6 +83,20 @@ internal object MarkerClusterEngine {
 
   private const val CELL_DP = 64.0
 
+  /** Padding the spatial index applies around the visible bounds when it selects candidates. */
+  const val CANDIDATE_PADDING = 0.2
+
+  /** Rows and columns of cluster cells, inclusive. */
+  class CellRange(val rowMin: Int, val rowMax: Int, val colMin: Int, val colMax: Int) {
+    fun contains(key: Long): Boolean {
+      val row = (key shr 32).toInt()
+      val column = key.toInt()
+      return row in rowMin..rowMax && column in colMin..colMax
+    }
+  }
+
+  fun cellKey(row: Int, column: Int): Long = (row.toLong() shl 32) or (column.toLong() and 0xFFFF_FFFFL)
+
   private fun wrapsLongitude(sw: LatLng, ne: LatLng): Boolean {
     return ne.longitude < sw.longitude
   }
@@ -133,6 +148,8 @@ internal object MarkerClusterEngine {
     viewWidthPx: Int,
     viewHeightPx: Int,
     density: Float,
+    cache: ClusterOctaveCache? = null,
+    generation: Long = 0L,
   ): List<Element> {
     if (candidates.isEmpty()) {
       return emptyList()
@@ -164,14 +181,21 @@ internal object MarkerClusterEngine {
     val cellLat = quantize((ne.latitude - sw.latitude) / rows)
     val cellLon = quantize(longitudeSpan(sw, ne) / cols)
 
-    val buckets = HashMap<Long, Bucket>()
+    // Cells fully inside the padded candidate region can be kept for the next
+    // refresh; the cache is off across the antimeridian, where cell keys depend
+    // on the viewport's own longitude reference.
+    val activeCache = if (wraps) null else cache?.also { it.begin(cellLat, cellLon, generation) }
+    val buckets = activeCache?.buckets ?: HashMap()
     for (index in 0 until clusterable.size) {
       val handle = clusterable[index]
       val lat = latitudes[handle]
       val lon = if (wraps) normalizeLongitude(longitudes[handle], sw.longitude) else longitudes[handle]
       val row = floor(lat / cellLat).toInt()
       val col = floor(lon / cellLon).toInt()
-      val key = (row.toLong() shl 32) or (col.toLong() and 0xFFFF_FFFFL)
+      val key = cellKey(row, col)
+      if (activeCache != null && activeCache.isComputed(key)) {
+        continue
+      }
       val bucket = buckets.getOrPut(key) { Bucket(row, col) }
       bucket.count += 1
       bucket.sumLat += lat
@@ -183,8 +207,22 @@ internal object MarkerClusterEngine {
       bucket.memberHandles.add(handle)
     }
 
+    val inView = ArrayList(buckets.values)
+    if (activeCache != null) {
+      val latPad = (ne.latitude - sw.latitude) * CANDIDATE_PADDING
+      val lonPad = longitudeSpan(sw, ne) * CANDIDATE_PADDING
+      activeCache.finish(
+        CellRange(
+          rowMin = ceil((sw.latitude - latPad) / cellLat).toInt(),
+          rowMax = floor((ne.latitude + latPad) / cellLat).toInt() - 1,
+          colMin = ceil((sw.longitude - lonPad) / cellLon).toInt(),
+          colMax = floor((ne.longitude + lonPad) / cellLon).toInt() - 1,
+        ),
+      )
+    }
+
     val merged = mergeOverlapping(
-      ArrayList(buckets.values),
+      inView,
       bounds,
       wraps,
       viewWidthPx,
@@ -293,6 +331,8 @@ internal object MarkerClusterEngine {
       }
     }
 
+    // Groups are built on copies: the seeds may live in the octave cache and
+    // must not absorb their neighbours in place.
     val groups = HashMap<Int, Bucket>()
     val order = ArrayList<Int>()
     for (index in (0 until n).sortedByDescending { buckets[it].count }) {
@@ -301,14 +341,14 @@ internal object MarkerClusterEngine {
       if (existing != null) {
         existing.absorb(buckets[index])
       } else {
-        groups[root] = buckets[index]
+        groups[root] = buckets[index].copy()
         order.add(root)
       }
     }
     return order.mapNotNull { groups[it] }
   }
 
-  private class Bucket(val row: Int, val column: Int) {
+  class Bucket(val row: Int, val column: Int) {
     var count = 0
     var sumLat = 0.0
     var sumLon = 0.0
@@ -321,6 +361,19 @@ internal object MarkerClusterEngine {
     /** Stable identity: the grid cell, which is anchored to geography. */
     val id: String
       get() = "$row:$column"
+
+    fun copy(): Bucket {
+      val other = Bucket(row, column)
+      other.count = count
+      other.sumLat = sumLat
+      other.sumLon = sumLon
+      other.minLat = minLat
+      other.maxLat = maxLat
+      other.minLon = minLon
+      other.maxLon = maxLon
+      other.memberHandles.addAll(memberHandles)
+      return other
+    }
 
     /** Folds another bucket's members in; keeps own cell (seed = dominant). */
     fun absorb(other: Bucket) {

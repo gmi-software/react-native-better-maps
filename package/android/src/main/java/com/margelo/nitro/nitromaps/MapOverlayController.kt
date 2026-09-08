@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.WindowManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -42,6 +43,30 @@ class MapOverlayController(
   private var store: MarkerStore? = null
   /** Invalidates in-flight refresh results (viewport diffs). */
   private var refreshGeneration: Int = 0
+  /** Bumped whenever the dataset or the clustering mode changes; keyed into the octave cache. */
+  private var datasetGeneration: Long = 0L
+  private var clusterCache = ClusterOctaveCache()
+  private val applyQueue = MarkerApplyQueue()
+  private val applyScheduler = MarkerApplyScheduler(
+    applyQueue,
+    object : MarkerApplyQueue.Sink {
+      override fun remove(keys: List<MarkerRenderKey>) = applyRemovals(keys)
+
+      override fun add(elements: List<ClusterElement>, pending: PendingMarkerApply) =
+        applyAdds(elements, pending)
+
+      override fun update(element: ClusterElement) = applyRetained(element)
+    },
+    expectedFrameNanos = { expectedFrameNanos },
+  )
+  private val expectedFrameNanos: Long by lazy {
+    val rate = runCatching {
+      @Suppress("DEPRECATION")
+      (context.getSystemService(android.content.Context.WINDOW_SERVICE) as? WindowManager)
+        ?.defaultDisplay?.refreshRate
+    }.getOrNull()?.takeIf { it > 0f } ?: 60f
+    (1_000_000_000.0 / rate).toLong()
+  }
   private val refreshInbox = RefreshInbox()
   private var viewWidthPx: Int = 0
   private var viewHeightPx: Int = 0
@@ -80,6 +105,7 @@ class MapOverlayController(
     }
 
     clusteringEnabled = enabled
+    invalidateClusterCache()
     reapplyMarkers()
   }
 
@@ -104,13 +130,24 @@ class MapOverlayController(
     next?.addListener(this)
     refreshGeneration += 1
     refreshInbox.discardPending()
+    invalidateClusterCache()
     reapplyMarkers()
   }
 
   override fun onMarkerStoreChanged(store: MarkerStore) {
     if (this.store === store) {
+      invalidateClusterCache()
       reapplyMarkers()
     }
+  }
+
+  /**
+   * The compute executor may still be inside a refresh that holds the old
+   * cache, so a fresh object replaces it instead of clearing it in place.
+   */
+  private fun invalidateClusterCache() {
+    datasetGeneration += 1
+    clusterCache = ClusterOctaveCache()
   }
 
   /** Ids of the markers inside a displayed cluster; empty once it is gone. */
@@ -123,6 +160,7 @@ class MapOverlayController(
   fun markerId(marker: Marker): String? = (marker.tag as? MarkerRenderKey.Single)?.id
 
   fun clear() {
+    applyScheduler.cancel()
     markerEnterAnimators.values.toSet().forEach { it.cancel() }
     cancelIdleRefresh()
     cancelLiveRefresh()
@@ -142,6 +180,7 @@ class MapOverlayController(
     circleVersions.clear()
     refreshGeneration += 1
     refreshInbox.discardPending()
+    invalidateClusterCache()
     computeExecutor.shutdown()
     computeExecutor = Executors.newSingleThreadExecutor()
   }
@@ -185,6 +224,8 @@ class MapOverlayController(
     val request = ViewportRefreshRequest(
       generation = refreshGeneration,
       store = store,
+      cache = clusterCache,
+      datasetGeneration = datasetGeneration,
       bounds = bounds,
       latitudeSpan = bounds.northeast.latitude - bounds.southwest.latitude,
       clustering = clusteringEnabled,
@@ -235,6 +276,8 @@ class MapOverlayController(
         request.widthPx,
         request.heightPx,
         density,
+        cache = request.cache,
+        generation = request.datasetGeneration,
       )
     } else {
       MarkerViewportFilter
@@ -286,14 +329,28 @@ class MapOverlayController(
     return result
   }
 
+  /**
+   * Hands a diff to the frame scheduler: removals now, adds spread over frames
+   * nearest to the camera first, retained updates in the remaining budget.
+   */
   private fun applyDiff(
     diff: MarkerRenderDiff,
     animateEntering: Boolean = true,
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
-  ) = traceSection("NitroMaps.applyMarkerDiff") {
-    val map = googleMap ?: return@traceSection
+  ) {
+    val map = googleMap ?: return
+    applyScheduler.schedule(
+      PendingMarkerApply(
+        diff,
+        center = map.cameraPosition?.target,
+        animateEntering = animateEntering,
+        animationBudget = maxAnimatedMarkers.coerceAtLeast(0),
+      ),
+    )
+  }
 
-    for (key in diff.removedKeys) {
+  private fun applyRemovals(keys: List<MarkerRenderKey>) {
+    for (key in keys) {
       cancelEnteringAnimation(key)
       markers.remove(key)?.remove()
       markerVersions.remove(key)
@@ -301,10 +358,14 @@ class MapOverlayController(
         clustersById.remove(key.id)
       }
     }
+  }
 
-    var remainingAnimationBudget = maxAnimatedMarkers.coerceAtLeast(0)
-    val addedMarkers = ArrayList<AddedMarker>(minOf(diff.added.size, remainingAnimationBudget))
-    for (element in diff.added) {
+  private fun applyAdds(elements: List<ClusterElement>, pending: PendingMarkerApply) {
+    val map = googleMap ?: return
+    val animateEntering = pending.animateEntering
+    var remainingAnimationBudget = pending.animationBudget
+    val addedMarkers = ArrayList<AddedMarker>(minOf(elements.size, remainingAnimationBudget))
+    for (element in elements) {
       val key = element.key
       when (element) {
         is ClusterElement.Single -> {
@@ -353,33 +414,33 @@ class MapOverlayController(
         }
       }
     }
-
-    for (element in diff.retained) {
-      val key = element.key
-      val marker = markers[key] ?: continue
-      cancelEnteringAnimation(key)
-      when (element) {
-        is ClusterElement.Single -> {
-          marker.position = LatLng(
-            element.descriptor.coordinate.latitude,
-            element.descriptor.coordinate.longitude,
-          )
-          marker.title = element.descriptor.title
-          marker.snippet = element.descriptor.subtitle
-          marker.isDraggable = element.descriptor.draggable == true
-          markerIconFactory.applyVisualProps(element.descriptor, marker, key)
-        }
-        is ClusterElement.Cluster -> {
-          marker.alpha = 1f
-          marker.position = element.position
-          marker.setIcon(iconFactory.icon(element.count))
-          clustersById[element.id] = element
-        }
-      }
-      markerVersions[key] = element.renderVersion
-    }
-
+    pending.animationBudget = remainingAnimationBudget
     animateEntering(addedMarkers)
+  }
+
+  private fun applyRetained(element: ClusterElement) {
+    val key = element.key
+    val marker = markers[key] ?: return
+    cancelEnteringAnimation(key)
+    when (element) {
+      is ClusterElement.Single -> {
+        marker.position = LatLng(
+          element.descriptor.coordinate.latitude,
+          element.descriptor.coordinate.longitude,
+        )
+        marker.title = element.descriptor.title
+        marker.snippet = element.descriptor.subtitle
+        marker.isDraggable = element.descriptor.draggable == true
+        markerIconFactory.applyVisualProps(element.descriptor, marker, key)
+      }
+      is ClusterElement.Cluster -> {
+        marker.alpha = 1f
+        marker.position = element.position
+        marker.setIcon(iconFactory.icon(element.count))
+        clustersById[element.id] = element
+      }
+    }
+    markerVersions[key] = element.renderVersion
   }
 
   /** Applies entering animations to newly added markers via a single shared animator. */
@@ -661,6 +722,8 @@ class MapOverlayController(
   private data class ViewportRefreshRequest(
     val generation: Int,
     val store: MarkerStore,
+    val cache: ClusterOctaveCache,
+    val datasetGeneration: Long,
     val bounds: LatLngBounds,
     val latitudeSpan: Double,
     val clustering: Boolean,

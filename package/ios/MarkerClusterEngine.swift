@@ -22,6 +22,27 @@ enum MarkerClusterEngine {
   /// Target cluster cell size in points.
   static let defaultCellPoints: Double = 64
 
+  /// Padding the spatial index applies around the visible region when it selects candidates.
+  static let candidatePadding: Double = 0.2
+
+  /// Rows and columns of cluster cells, inclusive.
+  struct CellRange {
+    let rowMin: Int
+    let rowMax: Int
+    let colMin: Int
+    let colMax: Int
+
+    func contains(_ key: Int64) -> Bool {
+      let row = Int(key >> 32)
+      let column = Int(Int32(truncatingIfNeeded: key))
+      return row >= rowMin && row <= rowMax && column >= colMin && column <= colMax
+    }
+  }
+
+  static func cellKey(row: Int, column: Int) -> Int64 {
+    (Int64(row) << 32) | Int64(UInt32(truncatingIfNeeded: column))
+  }
+
   private static func wrapsLongitude(in region: MKCoordinateRegion) -> Bool {
     region.span.longitudeDelta > 180
   }
@@ -66,7 +87,7 @@ enum MarkerClusterEngine {
   /// Extra slack (points) so near-touching badges still merge.
   private static let mergeGap = ClusterBadgeMetrics.mergeGap
 
-  private struct Bucket {
+  struct Bucket {
     let row: Int
     let column: Int
     var count = 0
@@ -122,7 +143,9 @@ enum MarkerClusterEngine {
     flags: [UInt8],
     region: MKCoordinateRegion,
     viewSize: CGSize,
-    cellPoints: Double = defaultCellPoints
+    cellPoints: Double = defaultCellPoints,
+    cache: ClusterOctaveCache? = nil,
+    generation: Int = 0
   ) -> [Element] {
     guard !candidates.isEmpty else {
       return []
@@ -153,7 +176,12 @@ enum MarkerClusterEngine {
     let cellLat = quantize(region.span.latitudeDelta / Double(rows))
     let cellLon = quantize(region.span.longitudeDelta / Double(cols))
 
-    var buckets: [Int64: Bucket] = [:]
+    // Cells fully inside the padded candidate region can be kept for the next
+    // refresh; the cache is off across the antimeridian, where cell keys depend
+    // on the viewport's own longitude reference.
+    let activeCache = wraps ? nil : cache
+    activeCache?.begin(cellLat: cellLat, cellLon: cellLon, generation: generation)
+    var buckets = activeCache?.takeBuckets() ?? [:]
     for handle in clusterableCandidates {
       let index = Int(handle)
       let lat = latitudes[index]
@@ -162,12 +190,34 @@ enum MarkerClusterEngine {
         : longitudes[index]
       let row = Int((lat / cellLat).rounded(.down))
       let col = Int((lon / cellLon).rounded(.down))
-      let key = (Int64(row) << 32) | Int64(UInt32(truncatingIfNeeded: col))
+      let key = cellKey(row: row, column: col)
+      if let activeCache, activeCache.isComputed(key) {
+        continue
+      }
       buckets[key, default: Bucket(row: row, column: col)].include(handle, lat: lat, lon: lon)
     }
 
+    let inView = Array(buckets.values)
+    if let activeCache {
+      let latPad = region.span.latitudeDelta * candidatePadding
+      let lonPad = region.span.longitudeDelta * candidatePadding
+      let minLat = region.center.latitude - region.span.latitudeDelta / 2 - latPad
+      let maxLat = region.center.latitude + region.span.latitudeDelta / 2 + latPad
+      let minLon = region.center.longitude - region.span.longitudeDelta / 2 - lonPad
+      let maxLon = region.center.longitude + region.span.longitudeDelta / 2 + lonPad
+      activeCache.buckets = buckets
+      activeCache.finish(CellRange(
+        rowMin: Int((minLat / cellLat).rounded(.up)),
+        rowMax: Int((maxLat / cellLat).rounded(.down)) - 1,
+        colMin: Int((minLon / cellLon).rounded(.up)),
+        colMax: Int((maxLon / cellLon).rounded(.down)) - 1
+      ))
+    }
+
+    // Groups are built on copies: the seeds may live in the octave cache and
+    // must not absorb their neighbours in place.
     let merged = mergeOverlapping(
-      Array(buckets.values),
+      inView,
       region: region,
       wraps: wraps,
       viewSize: viewSize
@@ -378,6 +428,8 @@ final class MarkerRenderPipeline {
     let generation: Int
     let store: MarkerStore
     let clustering: Bool
+    let cache: ClusterOctaveCache
+    let datasetGeneration: Int
     let parameters: RefreshParameters
   }
 
@@ -426,6 +478,9 @@ final class MarkerRenderPipeline {
   private var viewportRefreshWorkItem: DispatchWorkItem?
   /// Invalidates in-flight refresh results (viewport diffs).
   private var refreshGeneration = 0
+  /// Bumped whenever the dataset or the clustering mode changes; keyed into the octave cache.
+  private var datasetGeneration = 0
+  private var clusterCache = ClusterOctaveCache()
   private var clusteringEnabled = false
   private let refreshInbox = RefreshInbox()
   private let computeQueue = DispatchQueue(
@@ -444,10 +499,12 @@ final class MarkerRenderPipeline {
   func attach(store: MarkerStore?) {
     self.store = store
     invalidate()
+    invalidateClusterCache()
   }
 
   func reset() {
     invalidate()
+    invalidateClusterCache()
     store = nil
     clusteringEnabled = false
   }
@@ -458,7 +515,15 @@ final class MarkerRenderPipeline {
     }
 
     clusteringEnabled = enabled
+    invalidateClusterCache()
     return true
+  }
+
+  /// Forgets cached cluster cells. The compute queue may still be inside a
+  /// refresh that holds the old cache, so a fresh object replaces it.
+  func invalidateClusterCache() {
+    datasetGeneration += 1
+    clusterCache = ClusterOctaveCache()
   }
 
   /// Recomputes what is shown for the current dataset: synchronously for small
@@ -549,6 +614,8 @@ final class MarkerRenderPipeline {
       generation: refreshGeneration,
       store: store,
       clustering: clusteringEnabled,
+      cache: clusterCache,
+      datasetGeneration: datasetGeneration,
       parameters: parameters
     )
     guard refreshInbox.post(request) else {
@@ -591,7 +658,12 @@ final class MarkerRenderPipeline {
     // Snapshot the coordinate arrays under the lock (copy-on-write, O(1)) and
     // run the geometry outside it.
     let (candidates, latitudes, longitudes, flags) = store.read { access in
-      (access.index.candidates(in: parameters.region), access.latitudes, access.longitudes, access.flags)
+      (
+        access.index.candidates(in: parameters.region, padding: MarkerClusterEngine.candidatePadding),
+        access.latitudes,
+        access.longitudes,
+        access.flags
+      )
     }
 
     let elements: [MarkerClusterEngine.Element]
@@ -603,7 +675,9 @@ final class MarkerRenderPipeline {
         flags: flags,
         region: parameters.region,
         viewSize: parameters.viewSize,
-        cellPoints: clusterCellPoints
+        cellPoints: clusterCellPoints,
+        cache: request.cache,
+        generation: request.datasetGeneration
       )
     } else {
       elements = MarkerViewportFilter

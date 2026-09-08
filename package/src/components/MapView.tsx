@@ -84,6 +84,7 @@ export function MapView({
   followsUserLocation,
   showsCompass,
   showsScale,
+  pinStyle,
   customMapStyle,
   clusteringEnabled,
   mapPadding,
@@ -369,6 +370,7 @@ export function MapView({
       followsUserLocation={followsUserLocation}
       showsCompass={showsCompass}
       showsScale={showsScale}
+      pinStyle={pinStyle}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
       mapPadding={stableMapPadding}

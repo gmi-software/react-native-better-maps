@@ -23,6 +23,15 @@ final class MapOverlayController {
   private var displayedAnnotations: [MarkerRenderKey: MKAnnotation] = [:]
   private var displayedAnnotationVersions: [MarkerRenderKey: Int] = [:]
   private let markerPipeline = MarkerRenderPipeline()
+  private lazy var applyScheduler = MarkerApplyScheduler(sink: MarkerApplyScheduler.Sink(
+    remove: { [weak self] keys in self?.applyRemovals(keys) },
+    add: { [weak self] entries, _ in self?.applyAdds(entries) },
+    update: { [weak self] entry in self?.applyRetained(entry) }
+  ))
+  private lazy var liveRefreshClock = FrameClock { [weak self] frame in
+    self?.liveRefreshTick(frame)
+  }
+  private var lastLiveRefreshTime: CFTimeInterval = 0
   private var shapeOverlays: [String: MKOverlay] = [:]
   private var shapeVersions: [String: ShapeRenderVersion] = [:]
   private var overlayStyles: [ObjectIdentifier: OverlayStyle] = [:]
@@ -46,6 +55,8 @@ final class MapOverlayController {
   }
 
   func reset() {
+    applyScheduler.cancel()
+    liveRefreshClock.stop()
     markerPipeline.store?.removeListener(self)
     markerPipeline.reset()
     guard let mapView else {
@@ -97,6 +108,42 @@ final class MapOverlayController {
     )
   }
 
+  /// Starts the vsync-aligned live refresh that runs while the camera moves.
+  func beginLiveRefresh() {
+    guard usesViewportPipeline else {
+      return
+    }
+    lastLiveRefreshTime = 0
+    liveRefreshClock.start()
+  }
+
+  /// Stops the live refresh and settles on the final viewport.
+  func endLiveRefresh() {
+    liveRefreshClock.stop()
+    scheduleViewportRefresh(immediate: true)
+  }
+
+  private func liveRefreshTick(_ frame: FrameClock.Frame) {
+    guard frame.timestamp - lastLiveRefreshTime >= MarkerRenderPipeline.liveRefreshInterval else {
+      return
+    }
+    lastLiveRefreshTime = frame.timestamp
+    refreshNow()
+  }
+
+  /// Re-creates the annotation views of every displayed marker, for a pin style change.
+  func reloadMarkerViews() {
+    guard let mapView else {
+      return
+    }
+    let markers = displayedAnnotations.values.filter { $0 is MapMarkerAnnotation }
+    guard !markers.isEmpty else {
+      return
+    }
+    mapView.removeAnnotations(markers)
+    mapView.addAnnotations(markers)
+  }
+
   /// Immediate (non-debounced) refresh used for live updates during gestures.
   func refreshNow() {
     guard let mapView, usesViewportPipeline else {
@@ -129,66 +176,78 @@ final class MapOverlayController {
     )
   }
 
+  /// Hands a diff to the frame scheduler: removals now, adds spread over
+  /// frames nearest to the viewport centre first, retained updates in the
+  /// remaining budget.
   private func applyDiff(_ diff: MarkerRenderDiff) {
     guard let mapView else {
       return
     }
+    applyScheduler.schedule(PendingMarkerApply(
+      diff: diff,
+      center: mapView.region.center,
+      animateEntering: true,
+      animationBudget: .max
+    ))
+  }
 
-    let signpost = MapTrace.begin("applyMarkerDiff")
-    defer { MapTrace.end("applyMarkerDiff", signpost) }
-
-    if !diff.removedKeys.isEmpty {
-      let removed = diff.removedKeys.compactMap { key in
-        displayedAnnotationVersions.removeValue(forKey: key)
-        return displayedAnnotations.removeValue(forKey: key)
-      }
-      mapView.removeAnnotations(removed)
+  private func applyRemovals(_ keys: [MarkerRenderKey]) {
+    guard let mapView else {
+      return
     }
-
-    if !diff.added.isEmpty {
-      var annotations: [MKAnnotation] = []
-      annotations.reserveCapacity(diff.added.count)
-      for entry in diff.added {
-        let annotation = entry.element.makeAnnotation(
-          markerEnteringAnimation: markerEnteringAnimation,
-          clusterEnteringAnimation: clusterEnteringAnimation
-        )
-        displayedAnnotations[entry.key] = annotation
-        displayedAnnotationVersions[entry.key] = entry.version
-        annotations.append(annotation)
-      }
-      mapView.addAnnotations(annotations)
+    let removed = keys.compactMap { key in
+      displayedAnnotationVersions.removeValue(forKey: key)
+      return displayedAnnotations.removeValue(forKey: key)
     }
+    mapView.removeAnnotations(removed)
+  }
 
-    for entry in diff.retained {
-      guard let existing = displayedAnnotations[entry.key] else {
-        continue
-      }
-
-      switch entry.element {
-      case let .single(descriptor):
-        if let marker = existing as? MapMarkerAnnotation {
-          let visualChanged = marker.update(from: descriptor)
-          if visualChanged {
-            refreshMarkerView(for: marker)
-          }
-        }
-      case let .cluster(id, coordinate, count, memberHandles, region):
-        if let cluster = existing as? MapClusterAnnotation {
-          cluster.update(
-            id: id,
-            coordinate: coordinate,
-            count: count,
-            memberHandles: memberHandles,
-            region: region
-          )
-          if let view = mapView.view(for: cluster) as? NitroClusterAnnotationView {
-            view.configure(count: count)
-          }
-        }
-      }
+  private func applyAdds(_ entries: [MarkerRenderEntry]) {
+    guard let mapView else {
+      return
+    }
+    var annotations: [MKAnnotation] = []
+    annotations.reserveCapacity(entries.count)
+    for entry in entries {
+      let annotation = entry.element.makeAnnotation(
+        markerEnteringAnimation: markerEnteringAnimation,
+        clusterEnteringAnimation: clusterEnteringAnimation
+      )
+      displayedAnnotations[entry.key] = annotation
       displayedAnnotationVersions[entry.key] = entry.version
+      annotations.append(annotation)
     }
+    mapView.addAnnotations(annotations)
+  }
+
+  private func applyRetained(_ entry: MarkerRenderEntry) {
+    guard let mapView, let existing = displayedAnnotations[entry.key] else {
+      return
+    }
+
+    switch entry.element {
+    case let .single(descriptor):
+      if let marker = existing as? MapMarkerAnnotation {
+        let visualChanged = marker.update(from: descriptor)
+        if visualChanged {
+          refreshMarkerView(for: marker)
+        }
+      }
+    case let .cluster(id, coordinate, count, memberHandles, region):
+      if let cluster = existing as? MapClusterAnnotation {
+        cluster.update(
+          id: id,
+          coordinate: coordinate,
+          count: count,
+          memberHandles: memberHandles,
+          region: region
+        )
+        if let view = mapView.view(for: cluster) as? NitroClusterAnnotationView {
+          view.configure(count: count)
+        }
+      }
+    }
+    displayedAnnotationVersions[entry.key] = entry.version
   }
 
   private func refreshMarkerView(for marker: MapMarkerAnnotation) {
@@ -207,6 +266,8 @@ final class MapOverlayController {
 
     if let imageView = view as? NitroImageAnnotationView {
       imageView.configure(for: marker)
+    } else if let flatView = view as? NitroFlatPinAnnotationView {
+      flatView.configure(for: marker)
     } else {
       (view as? NitroPinAnnotationView)?.configure(for: marker)
     }
@@ -413,6 +474,7 @@ extension MapOverlayController: MarkerStoreListener {
     guard markerPipeline.store === store else {
       return
     }
+    markerPipeline.invalidateClusterCache()
     reapplyMarkers()
   }
 }

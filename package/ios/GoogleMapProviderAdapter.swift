@@ -171,6 +171,9 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
+  /// Google Maps draws its own default marker; the Apple pin style does not apply.
+  var pinStyle: MarkerPinStyle?
+
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
   var onMapReady: (() -> Void)? {
@@ -306,6 +309,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil
+    pinStyle = nil
   }
 
   private func applyRegion(_ region: Region, animated: Bool = false) {

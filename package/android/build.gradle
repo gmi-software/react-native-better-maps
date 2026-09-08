@@ -82,6 +82,12 @@ android {
             kotlin.srcDirs = ['src/main/kotlin']
         }
     }
+
+    testOptions {
+        // The marker store wraps its work in android.os.Trace sections, which
+        // the JVM stubs would otherwise throw on.
+        unitTests.returnDefaultValues = true
+    }
 }
 
 dependencies {

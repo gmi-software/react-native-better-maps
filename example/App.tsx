@@ -786,18 +786,18 @@ export default function App() {
   }, []);
 
   const cycleProvider = useCallback(() => {
-    setProviderIndex((current) => {
-      if (SUPPORTED_MAP_PROVIDERS.length <= 1) {
-        setStatus(PROVIDER_LABELS[provider]);
-        return current;
-      }
+    // The updater stays pure: React may run it twice, so the status and the
+    // ready flag are set from the handler with the index it computed.
+    if (SUPPORTED_MAP_PROVIDERS.length <= 1) {
+      setStatus(PROVIDER_LABELS[provider]);
+      return;
+    }
 
-      const next = (current + 1) % SUPPORTED_MAP_PROVIDERS.length;
-      setMapReady(false);
-      setStatus(PROVIDER_LABELS[SUPPORTED_MAP_PROVIDERS[next] ?? provider]);
-      return next;
-    });
-  }, [provider]);
+    const next = (providerIndex + 1) % SUPPORTED_MAP_PROVIDERS.length;
+    setProviderIndex(next);
+    setMapReady(false);
+    setStatus(PROVIDER_LABELS[SUPPORTED_MAP_PROVIDERS[next] ?? provider]);
+  }, [provider, providerIndex]);
 
   const selectScenario = useCallback(
     (index: number) => {

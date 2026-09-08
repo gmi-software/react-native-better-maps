@@ -1,0 +1,18 @@
+# Runs every scripted scenario and waits for the last result line.
+#
+# Build and launch the example with EXPO_PUBLIC_BENCHMARK=1 first, then:
+#   maestro test example/maestro/benchmark-run-all.yaml
+# Results are printed by the app as `[benchmark] {...}` lines (see docs/benchmarks.md).
+appId: com.nitromaps.example
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'benchmark-run-all'
+    timeout: 60000
+- tapOn:
+    id: 'benchmark-run-all'
+- extendedWaitUntil:
+    visible:
+      id: 'benchmark-result-L-idle-after-pan'
+    timeout: 300000

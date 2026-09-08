@@ -51,7 +51,7 @@ function clamp(value: number, min: number, max: number): number {
  * by population) plus a sparse rural scatter. This makes clustering look
  * organic instead of a rigid lattice.
  */
-function generatePolandMarkers(
+export function generatePolandMarkers(
   count: number,
 ): NonNullable<MapScenario['markers']> {
   const rng = mulberry32(0x5eed);

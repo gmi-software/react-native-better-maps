@@ -44,4 +44,10 @@ internal class IntList(initialCapacity: Int = 4) {
   fun isEmpty(): Boolean = size == 0
 
   fun toIntArray(): IntArray = values.copyOf(size)
+
+  fun copy(): IntList {
+    val other = IntList(size.coerceAtLeast(1))
+    other.addAll(this)
+    return other
+  }
 }

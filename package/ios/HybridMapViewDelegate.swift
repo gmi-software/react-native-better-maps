@@ -38,6 +38,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
       return
     }
 
+    if parent.notifySpritePress(at: point) {
+      return
+    }
+
     DispatchQueue.main.async { [weak self, weak parent] in
       guard let self, let parent else {
         return
@@ -198,6 +202,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     if marker.title == nil && marker.subtitle == nil {
       mapView.deselectAnnotation(view.annotation, animated: true)
     }
+  }
+
+  func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+    parent?.handleAnnotationDeselect(view.annotation)
   }
 
   func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {

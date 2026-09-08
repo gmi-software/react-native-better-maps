@@ -30,6 +30,7 @@ export type {
   MarkerImageSource,
   MarkerDescriptor,
   MarkerPinStyle,
+  MarkerRendering,
   MarkerPoint,
   MarkerProps,
   OverlayEnteringAnimation,

@@ -20,6 +20,7 @@ struct MapViewState {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var pinStyle: MarkerPinStyle?
+  var markerRendering: MarkerRendering?
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
   var onCameraMove: ((Camera) -> Void)?
@@ -58,6 +59,7 @@ struct MapViewState {
     adapter.markerEnteringAnimation = markerEnteringAnimation
     adapter.clusterEnteringAnimation = clusterEnteringAnimation
     adapter.pinStyle = pinStyle
+    adapter.markerRendering = markerRendering
     adapter.onRegionChange = onRegionChange
     adapter.onRegionChangeComplete = onRegionChangeComplete
     adapter.cameraMoveThrottleMs = cameraMoveThrottleMs

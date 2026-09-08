@@ -93,7 +93,7 @@ enum MarkerViewportFilter {
   /// The region grown by `padding` on each side, with longitudes wrapped into
   /// [-180, 180]: a region across the antimeridian ends up with `minLon` east
   /// of `maxLon`, and `contains` reads that as the two-piece range it is.
-  private struct PaddedBounds {
+  struct PaddedBounds {
     let minLat: Double
     let maxLat: Double
     let minLon: Double

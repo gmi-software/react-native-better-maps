@@ -54,6 +54,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, circles, and GeoJSON FeatureCollections.
 - **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, and circles.
 - **Delta marker updates** - The marker dataset lives natively. `markers` and `<Marker>` compile to deltas, and `MarkerCollection` updates it directly: one packed batch per change, `updatePositions` for animated markers, nothing re-serialized for markers that did not change.
+- **Frame-budgeted rendering** - Marker changes reach the map SDK over several frames, nearest to the camera first, with a per-frame budget that adapts to the frame rate; a zoom into a dense area no longer costs one long frame.
 - **Native POI taps** - `onPoiPress` reports provider-owned places from Apple Maps and Google Maps without confusing them with app-owned markers.
 - **Camera control** - Declarative region/camera props plus imperative camera helpers.
 - **Marker clustering** - Native marker clustering for large point sets.
@@ -277,7 +278,7 @@ When `provider` is omitted, defaults stay backward-compatible:
 
 Changing `provider` remounts the native map view. Controlled props such as `region`, `camera`, overlays, and callbacks should therefore be supplied again through React props.
 
-Provider-specific TypeScript props are exposed through `MapViewPropsForProvider<P>`. For example, `showsScale` is accepted for `apple` but rejected for `google` because Google Maps SDK has no native scale control.
+Provider-specific TypeScript props are exposed through `MapViewPropsForProvider<P>`. For example, `showsScale` and `pinStyle` are accepted for `apple` but rejected for `google`, because Google Maps SDK has no native scale control and draws its own default marker.
 
 ## Native POI press events
 
@@ -574,6 +575,16 @@ Explicit configs use milliseconds. `duration` defaults to `180`, `delay` default
 
 On Google Maps providers, marker and cluster entering animations can reduce UI-thread frame rate when a large viewport refresh adds many markers at once. The provider caps animated markers per refresh and may show the remaining markers immediately to preserve map gesture performance. For very large marker sets, prefer clustering, shorter durations, or `markerEnteringAnimation={false}` / `clusterEnteringAnimation={false}` when smooth gestures are more important than entrance motion.
 
+## Pin style on Apple Maps
+
+Markers without an `image` are drawn by MapKit. By default they are `flat` pins: one pre-rendered image per pin on a plain `MKAnnotationView`, which MapKit can move by the hundred at 120 Hz. `pinStyle="system"` switches to `MKMarkerAnnotationView`, the balloon marker with its drop and selection animations, at a higher per-marker cost:
+
+```tsx
+<MapView provider="apple" pinStyle="system" />
+```
+
+The prop is accepted for the `apple` provider and the default provider on iOS; Google Maps draws its own default marker. With flat pins the `system` entering animation is a plain appearance; use `fade` or `fade-scale` for motion.
+
 ## Re-renders
 
 Nitro compares view props by reference identity, so a prop rebuilt from unchanged data would still be re-serialized across JSI and re-applied to the native map. `MapView` guards against that on your behalf:
@@ -616,6 +627,7 @@ setMarkers((current) =>
 | Scale control              | Supported                                                   | Unsupported                                | Unsupported                                |
 | Markers / overlays         | Supported                                                   | Supported                                  | Supported                                  |
 | Marker collections (deltas) | Supported                                                  | Supported                                  | Supported                                  |
+| Pin style                  | `flat` (default) or `system`                                | Google default marker                      | Google default marker                      |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |
 | Overlay press events       | Supported                                                   | Supported                                  | Supported                                  |
@@ -658,6 +670,7 @@ setMarkers((current) =>
 | `Camera`                   | Position, zoom, heading, pitch                       |
 | `MapType`                  | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
 | `MapProvider`              | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
+| `MarkerPinStyle`           | `'flat' \| 'system'`, Apple MapKit pin rendering     |
 | `PoiPressEvent`            | Provider-discriminated native POI press payload             |
 | `ApplePoiPressEvent`       | Apple Maps POI payload with category                        |
 | `GooglePoiPressEvent`      | Google Maps POI payload with place ID                       |

@@ -489,7 +489,9 @@ final class MarkerRenderPipeline {
 
   func setMarkers(_ descriptors: [MarkerDescriptor]?) -> Bool {
     let next = descriptors ?? []
+    let signpost = MapTrace.begin("markersFingerprint")
     let fingerprint = next.markersFingerprint()
+    MapTrace.end("markersFingerprint", signpost)
     guard fingerprint != markersFingerprint else {
       return false
     }
@@ -629,7 +631,9 @@ final class MarkerRenderPipeline {
         return
       }
 
+      let signpost = MapTrace.begin("buildSpatialIndex")
       let index = MarkerSpatialIndex(markers: descriptors)
+      MapTrace.end("buildSpatialIndex", signpost)
       DispatchQueue.main.async { [weak self] in
         guard let self, builtForDataset == self.datasetGeneration else {
           return
@@ -653,6 +657,8 @@ final class MarkerRenderPipeline {
     _ request: ViewportRefreshRequest,
     clusterCellPoints: Double
   ) -> MarkerRenderDiff {
+    let signpost = MapTrace.begin("computeViewportDiff")
+    defer { MapTrace.end("computeViewportDiff", signpost) }
     let parameters = request.parameters
     let candidates = request.index.candidates(in: parameters.region)
     let elements: [MarkerClusterEngine.Element]

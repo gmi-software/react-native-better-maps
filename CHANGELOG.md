@@ -55,6 +55,11 @@ frames after the inner ones; no frame waits for all of them.
 
 ### Added
 
+- `onCameraMove` and `cameraMoveThrottleMs`: an opt-in, throttled stream of the camera
+  while it moves, for overlays that follow the map. Nothing runs unless it is set.
+- `react-native-better-maps/reanimated` with `useCameraSharedValue`, which feeds that
+  stream into a Reanimated shared value; `react-native-reanimated` is an optional peer
+  dependency.
 - `pinStyle` prop (`'flat' | 'system'`) for the Apple provider.
 - `MarkerCollection` and `useMarkerCollection`: a native-owned marker dataset updated
   through `set`, `upsert`, `remove` and `updatePositions`, passed to `MapView` with the

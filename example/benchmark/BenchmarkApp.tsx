@@ -283,6 +283,7 @@ export default function BenchmarkApp() {
           key={`apple:${mapKey}`}
           ref={mapRef}
           provider="apple"
+          markerRendering={mapProps.markerRendering}
           {...commonMapProps}
         />
       )}

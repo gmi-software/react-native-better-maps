@@ -12,9 +12,9 @@ appId: com.nitromaps.example
     timeout: 60000
 - tapOn:
     id: 'benchmark-run-all'
-# The summary reads "<passed>/16 passed" once every scenario has a result; the
+# The summary reads "<passed>/20 passed" once every scenario has a result; the
 # last result row can sit below the fold of the results list.
 - extendedWaitUntil:
     visible:
-      text: '.*/16 passed'
+      text: '.*/20 passed'
     timeout: 300000

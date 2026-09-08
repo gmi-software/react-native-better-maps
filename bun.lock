@@ -53,6 +53,8 @@
         "react-native": "0.86.0",
         "react-native-builder-bob": "^0.43.0",
         "react-native-nitro-modules": "^0.35.10",
+        "react-native-reanimated": "4.5.0",
+        "react-native-worklets": "0.10.0",
         "release-it": "^19.0.0",
         "typescript": "^5.8.3",
       },
@@ -60,7 +62,11 @@
         "react": "*",
         "react-native": ">=0.78.0",
         "react-native-nitro-modules": ">=0.35.0",
+        "react-native-reanimated": ">=3.0.0",
       },
+      "optionalPeers": [
+        "react-native-reanimated",
+      ],
     },
   },
   "overrides": {

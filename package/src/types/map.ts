@@ -138,6 +138,24 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Called once when a user-initiated region change ends. */
   onRegionChangeComplete?: (region: Region) => void;
 
+  /**
+   * Called while the camera moves, at most every
+   * {@linkcode cameraMoveThrottleMs} (default 100 ms), and once more when it
+   * stops. Opt-in: the map does no per-frame work unless this is set. Meant
+   * for overlays that follow the camera; keep `onRegionChangeComplete` for
+   * loading data. Each call crosses to the JS thread, so pair a low throttle
+   * with cheap handlers, for example the `useCameraSharedValue` hook from
+   * `react-native-better-maps/reanimated`.
+   */
+  onCameraMove?: (camera: Camera) => void;
+
+  /**
+   * Minimum interval between `onCameraMove` calls, in milliseconds. `16`
+   * follows every frame of a 60 Hz display, `0` every frame on any display.
+   * Default `100`.
+   */
+  cameraMoveThrottleMs?: number;
+
   /** Called when the map is ready to use. */
   onMapReady?: () => void;
 

@@ -46,6 +46,7 @@ import {
   type Coordinate,
   type EdgePadding,
   type MapProvider,
+  type MarkerRendering,
   type MapType,
   type MapViewRef,
   type OverlayEnteringAnimation,
@@ -313,6 +314,8 @@ type ScenarioDockProps = {
   providerLabel: string;
   animationOptionId: AnimationOptionId;
   canCycleProvider: boolean;
+  markerRendering: MarkerRendering | null;
+  onToggleMarkerRendering: () => void;
   onToggleExpanded: () => void;
   onSelect: (index: number) => void;
   onSelectAnimation: (animation: AnimationOptionId) => void;
@@ -335,6 +338,8 @@ const ScenarioDock = memo(function ScenarioDock({
   providerLabel,
   animationOptionId,
   canCycleProvider,
+  markerRendering,
+  onToggleMarkerRendering,
   onToggleExpanded,
   onSelect,
   onSelectAnimation,
@@ -461,6 +466,17 @@ const ScenarioDock = memo(function ScenarioDock({
                 <Text style={styles.actionButtonText}>{providerLabel}</Text>
               </ScalePressable>
             ) : null}
+            {markerRendering != null ? (
+              <ScalePressable
+                onPress={onToggleMarkerRendering}
+                style={styles.actionButton}
+              >
+                <Text style={styles.actionButtonIcon}>▦</Text>
+                <Text style={styles.actionButtonText}>
+                  {markerRendering === 'sprites' ? 'Sprites' : 'Views'}
+                </Text>
+              </ScalePressable>
+            ) : null}
           </View>
 
           {scenario.id === CUSTOM_MARKER_IMAGES_SCENARIO_ID ? (
@@ -528,6 +544,7 @@ type MapSceneProps = {
   mapType: MapType;
   mapPadding?: EdgePadding;
   animationOption: AnimationOption;
+  markerRendering: MarkerRendering;
   onMapReady: () => void;
   onClusterPress: (event: ClusterPressEvent) => void;
   onMarkerPress: (id: string) => void;
@@ -548,6 +565,7 @@ const MapScene = memo(function MapScene({
   mapType,
   mapPadding,
   animationOption,
+  markerRendering,
   onMapReady,
   onClusterPress,
   onMarkerPress,
@@ -601,6 +619,7 @@ const MapScene = memo(function MapScene({
         {...commonMapProps}
         provider="apple"
         showsScale={scenario.advanced?.showsScale}
+        markerRendering={markerRendering}
       />
     );
   }
@@ -692,6 +711,8 @@ export default function App() {
   const [dockExpanded, setDockExpanded] = useState(false);
   const [customMarkerRotation, setCustomMarkerRotation] = useState(45);
   const [customMarkerFlat, setCustomMarkerFlat] = useState(true);
+  const [markerRendering, setMarkerRendering] =
+    useState<MarkerRendering>('views');
 
   const baseScenario = MAP_SCENARIOS[scenarioIndex];
   const scenario = useMemo(() => {
@@ -756,6 +777,12 @@ export default function App() {
 
   const toggleCustomMarkerFlat = useCallback(() => {
     setCustomMarkerFlat((current) => !current);
+  }, []);
+
+  const toggleMarkerRendering = useCallback(() => {
+    setMarkerRendering((current) =>
+      current === 'sprites' ? 'views' : 'sprites',
+    );
   }, []);
 
   const cycleProvider = useCallback(() => {
@@ -907,6 +934,7 @@ export default function App() {
         mapType={MAP_TYPES[mapTypeIndex]}
         mapPadding={mapPadding}
         animationOption={animationOption}
+        markerRendering={markerRendering}
         onMapReady={handleMapReady}
         onClusterPress={handleClusterPress}
         onMarkerPress={handleMarkerPress}
@@ -938,6 +966,8 @@ export default function App() {
         providerLabel={PROVIDER_LABELS[provider]}
         animationOptionId={animationOption.id}
         canCycleProvider={SUPPORTED_MAP_PROVIDERS.length > 1}
+        markerRendering={provider === 'apple' ? markerRendering : null}
+        onToggleMarkerRendering={toggleMarkerRendering}
         onToggleExpanded={toggleDockExpanded}
         onSelect={selectScenario}
         onSelectAnimation={selectAnimation}

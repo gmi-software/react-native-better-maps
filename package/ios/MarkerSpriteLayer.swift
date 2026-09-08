@@ -11,6 +11,9 @@ struct MarkerSprite {
   var image: CGImage?
   /// Drawn size, in points.
   var size: CGSize
+  /// The extent that answers to taps, in points: the pin or image itself, or
+  /// a cluster's circle without the room its bitmap keeps for the shadow.
+  var hitSize: CGSize
   /// Offset of the image centre from the coordinate, in points, y down.
   var centerOffset: CGPoint
   /// Radians, clockwise on screen.
@@ -122,26 +125,33 @@ final class MarkerSpriteRenderer: MKOverlayRenderer {
       let height = sprite.size.height * scale
       let centerX = sprite.mapPoint.x + sprite.centerOffset.x * scale
       let centerY = sprite.mapPoint.y + sprite.centerOffset.y * scale
+      // Cull on the rotated extent; a sprite that touches the tile draws whole.
       let halfDiagonal = (width * width + height * height).squareRoot() / 2
-      let bounds = MKMapRect(
+      let reach = MKMapRect(
         x: centerX - halfDiagonal,
         y: centerY - halfDiagonal,
         width: halfDiagonal * 2,
         height: halfDiagonal * 2
       )
-      guard mapRect.intersects(bounds) else {
+      guard mapRect.intersects(reach) else {
         continue
       }
 
+      // Map points go through the renderer's own conversion into its drawing
+      // space, as every overlay renderer's content should.
+      let drawRect = rect(for: MKMapRect(x: centerX - width / 2, y: centerY - height / 2, width: width, height: height))
       context.saveGState()
-      context.translateBy(x: centerX, y: centerY)
+      context.translateBy(x: drawRect.midX, y: drawRect.midY)
       if sprite.rotation != 0 {
         context.rotate(by: sprite.rotation)
       }
-      // The overlay context is y-down (map points); CGImage drawing is y-up.
+      // The drawing space is y-down; CGImage drawing is y-up.
       context.scaleBy(x: 1, y: -1)
       context.setAlpha(sprite.opacity)
-      context.draw(image, in: CGRect(x: -width / 2, y: -height / 2, width: width, height: height))
+      context.draw(
+        image,
+        in: CGRect(x: -drawRect.width / 2, y: -drawRect.height / 2, width: drawRect.width, height: drawRect.height)
+      )
       context.restoreGState()
     }
   }

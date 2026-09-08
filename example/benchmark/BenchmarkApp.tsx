@@ -42,6 +42,14 @@ type BenchmarkProvider = Extract<MapProvider, 'apple' | 'google'>;
 const PROVIDERS: BenchmarkProvider[] =
   Platform.OS === 'ios' ? ['apple', 'google'] : ['google'];
 
+/** The scenarios that mean something on this platform, in run order. */
+const RUNNABLE_SCENARIOS = SCENARIOS.filter(
+  (scenario) =>
+    scenario.platforms == null ||
+    scenario.platforms.includes(Platform.OS as 'ios' | 'android'),
+);
+const SKIPPED_HERE = SCENARIOS.length - RUNNABLE_SCENARIOS.length;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -68,7 +76,7 @@ export default function BenchmarkApp() {
   const [manualActive, setManualActive] = useState(false);
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [mapProps, setMapProps] = useState<BenchmarkMapProps>(() =>
-    SCENARIOS[0].props(),
+    RUNNABLE_SCENARIOS[0].props(),
   );
   const [mapKey, setMapKey] = useState(0);
   const [results, setResults] = useState<ScenarioResult[]>([]);
@@ -81,7 +89,7 @@ export default function BenchmarkApp() {
     beforeBytes: number;
   } | null>(null);
 
-  const scenario = SCENARIOS[scenarioIndex];
+  const scenario = RUNNABLE_SCENARIOS[scenarioIndex];
 
   useEffect(() => {
     displayRefreshRateHz()
@@ -129,9 +137,9 @@ export default function BenchmarkApp() {
     setRunning(true);
     setResults([]);
     try {
-      for (let index = 0; index < SCENARIOS.length; index += 1) {
+      for (let index = 0; index < RUNNABLE_SCENARIOS.length; index += 1) {
         setScenarioIndex(index);
-        const result = await runScenario(SCENARIOS[index], {
+        const result = await runScenario(RUNNABLE_SCENARIOS[index], {
           provider,
           mount,
           context,
@@ -213,7 +221,7 @@ export default function BenchmarkApp() {
         return;
       }
       setScenarioIndex(index);
-      setMapProps(SCENARIOS[index].props());
+      setMapProps(RUNNABLE_SCENARIOS[index].props());
       setMapKey((key) => key + 1);
     },
     [running],
@@ -282,7 +290,7 @@ export default function BenchmarkApp() {
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.row}>
-              {SCENARIOS.map((item, index) => (
+              {RUNNABLE_SCENARIOS.map((item, index) => (
                 <Pressable
                   key={item.id}
                   testID={`benchmark-scenario-${item.id}`}
@@ -349,7 +357,7 @@ export default function BenchmarkApp() {
           <Text style={styles.resultsTitle} testID="benchmark-summary">
             {results.length > 0
               ? `${passed}/${results.length} passed`
-              : `${SCENARIOS.length} scenarios · ${SKIPPED_SCENARIOS.length} skipped`}
+              : `${RUNNABLE_SCENARIOS.length} scenarios · ${SKIPPED_SCENARIOS.length + SKIPPED_HERE} skipped`}
           </Text>
           <Pressable
             onPress={shareResults}

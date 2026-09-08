@@ -462,19 +462,17 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     overlayController.renderer(for: overlay)
   }
 
-  /// A tap on the sprite layer: marker presses fire here, a marker with a
-  /// callout is promoted to a selected annotation view (its `didSelect` fires
-  /// `onMarkerPress`), cluster presses zoom like a cluster view would.
+  /// A tap on the sprite layer: marker presses fire here, once, whether or not
+  /// the marker is promoted to a selected annotation view for its callout;
+  /// cluster presses zoom like a cluster view would.
   func notifySpritePress(at point: CGPoint) -> Bool {
     guard let press = overlayController.pressSprite(at: point) else {
       return false
     }
 
     switch press {
-    case let .marker(id):
+    case let .marker(id), let .promoted(id):
       onMarkerPress?(id)
-    case .promoted:
-      break
     case let .cluster(id, coordinate, count, region):
       onClusterPress?(NativeClusterPressEvent(
         clusterId: id,
@@ -488,6 +486,10 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   func handleAnnotationDeselect(_ annotation: MKAnnotation?) {
     overlayController.demoteSprite(matching: annotation)
+  }
+
+  func isPromotedSprite(_ annotation: MKAnnotation?) -> Bool {
+    overlayController.isPromotedSprite(annotation)
   }
 
   func prepareForRecycle() {

@@ -21,8 +21,10 @@ final class MapOverlayController {
   /// What a tap on the sprite layer hit, and what the adapter should do about it.
   enum SpritePress {
     case marker(id: String)
-    /// The marker was promoted to a selected annotation view; its `didSelect` fires the press.
-    case promoted
+    /// The marker was promoted to a selected annotation view for its callout.
+    /// The press fires now, like `marker`; the annotation's later `didSelect`
+    /// is not a second press.
+    case promoted(id: String)
     case cluster(id: String, coordinate: CLLocationCoordinate2D, count: Int, region: MKCoordinateRegion)
   }
 
@@ -380,6 +382,7 @@ final class MapOverlayController {
         mapPoint: MKMapPoint(coordinate),
         image: image,
         size: size,
+        hitSize: size,
         centerOffset: MapMarkerAnnotation.centerOffset(
           anchor: descriptor.anchor,
           centerOffset: descriptor.centerOffset,
@@ -390,6 +393,7 @@ final class MapOverlayController {
       )
     case let .cluster(_, coordinate, count, _, _):
       let badge = ClusterBadgeImageRenderer.badge(count: count, scale: scale)
+      let diameter = ClusterBadgeMetrics.diameter(for: count)
       return MarkerSprite(
         key: entry.key,
         element: entry.element,
@@ -397,6 +401,7 @@ final class MapOverlayController {
         mapPoint: MKMapPoint(coordinate),
         image: badge.cgImage,
         size: badge.size,
+        hitSize: CGSize(width: diameter, height: diameter),
         centerOffset: .zero,
         rotation: 0,
         opacity: 1
@@ -428,6 +433,7 @@ final class MapOverlayController {
         }
         sprite.image = loaded.cgImage
         sprite.size = loaded.size
+        sprite.hitSize = loaded.size
         sprite.centerOffset = MapMarkerAnnotation.centerOffset(
           anchor: descriptor.anchor,
           centerOffset: descriptor.centerOffset,
@@ -507,10 +513,10 @@ final class MapOverlayController {
       }
       let center = mapView.convert(sprite.coordinate, toPointTo: mapView)
       let frame = CGRect(
-        x: center.x + sprite.centerOffset.x - sprite.size.width / 2 - slop,
-        y: center.y + sprite.centerOffset.y - sprite.size.height / 2 - slop,
-        width: sprite.size.width + slop * 2,
-        height: sprite.size.height + slop * 2
+        x: center.x + sprite.centerOffset.x - sprite.hitSize.width / 2 - slop,
+        y: center.y + sprite.centerOffset.y - sprite.hitSize.height / 2 - slop,
+        width: sprite.hitSize.width + slop * 2,
+        height: sprite.hitSize.height + slop * 2
       )
       guard frame.contains(point) else {
         continue
@@ -521,7 +527,7 @@ final class MapOverlayController {
           return .marker(id: descriptor.id)
         }
         promoteSprite(sprite)
-        return .promoted
+        return .promoted(id: descriptor.id)
       case let .cluster(id, coordinate, count, _, region):
         return .cluster(id: id, coordinate: coordinate, count: count, region: region)
       }
@@ -555,6 +561,15 @@ final class MapOverlayController {
       }
       mapView.selectAnnotation(annotation, animated: true)
     }
+  }
+
+  /// Whether `annotation` is the view standing in for a tapped sprite, whose
+  /// press has already been reported.
+  func isPromotedSprite(_ annotation: MKAnnotation?) -> Bool {
+    guard let promoted = promotedSprite, let marker = annotation as? MapMarkerAnnotation else {
+      return false
+    }
+    return marker === promoted.annotation
   }
 
   /// Puts the promoted marker's sprite back once its callout is dismissed.

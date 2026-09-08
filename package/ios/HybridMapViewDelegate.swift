@@ -198,7 +198,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
       return
     }
 
-    parent?.onMarkerPress?(marker.id)
+    // A sprite promoted for its callout reported its press when it was tapped.
+    if parent?.isPromotedSprite(marker) != true {
+      parent?.onMarkerPress?(marker.id)
+    }
     if marker.title == nil && marker.subtitle == nil {
       mapView.deselectAnnotation(view.annotation, animated: true)
     }

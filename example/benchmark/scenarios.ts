@@ -67,6 +67,8 @@ export interface BenchmarkScenario {
   settleMs?: number;
   /** Also fail the scenario when the JS thread cannot keep up with the frame budget. */
   checkJsLag?: boolean;
+  /** Platforms the scenario means something on; elsewhere it is skipped. */
+  platforms?: ('ios' | 'android')[];
   run(context: ScenarioContext): Promise<void>;
 }
 
@@ -223,13 +225,14 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'F2-pan-10k-sprites',
     name: 'F2 · Ten-leg pan, sprites',
     description:
-      'F with markerRendering="sprites": the same 10,000 markers drawn into map tiles on Apple Maps.',
+      'F with markerRendering="sprites": the same 10,000 markers drawn into map tiles. Apple Maps only.',
     props: () => ({
       region: WARSAW_REGION,
       markers: markers(10_000),
       markerRendering: 'sprites',
     }),
     settleMs: 2500,
+    platforms: ['ios'],
     run: (context) => pan(context, WARSAW_REGION, 10, 0.02, 500),
   },
   {
@@ -244,13 +247,14 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'G2-zoom-10k-sprites',
     name: 'G2 · Zoom sweep, sprites',
     description:
-      'G with markerRendering="sprites": the same 10,000 markers drawn into map tiles on Apple Maps.',
+      'G with markerRendering="sprites": the same 10,000 markers drawn into map tiles. Apple Maps only.',
     props: () => ({
       region: WARSAW_REGION,
       markers: markers(10_000),
       markerRendering: 'sprites',
     }),
     settleMs: 2500,
+    platforms: ['ios'],
     run: (context) => zoomSweep(context, WARSAW_REGION),
   },
   {
@@ -398,7 +402,7 @@ SCENARIOS.push(
     id: 'P2-clustered-100k-sprites',
     name: 'P2 · 100,000 clustered, sprites',
     description:
-      'P with markerRendering="sprites": cluster badges and pins drawn into map tiles on Apple Maps.',
+      'P with markerRendering="sprites": cluster badges and pins drawn into map tiles. Apple Maps only.',
     props: () => ({
       region: POLAND_REGION,
       markers: markers(100_000),
@@ -406,6 +410,7 @@ SCENARIOS.push(
       markerRendering: 'sprites',
     }),
     settleMs: 6000,
+    platforms: ['ios'],
     async run(context) {
       await zoomSweep(context, POLAND_REGION);
       await pan(context, POLAND_REGION, 4, 0.4);
@@ -427,13 +432,14 @@ SCENARIOS.push({
   id: 'N2-dense-10k-sprites',
   name: 'N2 · Dense 10,000, sprites',
   description:
-    'N with markerRendering="sprites": up to 2,000 pins on screen drawn into map tiles on Apple Maps.',
+    'N with markerRendering="sprites": up to 2,000 pins on screen drawn into map tiles. Apple Maps only.',
   props: () => ({
     region: WARSAW_REGION,
     markers: denseMarkers(10_000),
     markerRendering: 'sprites',
   }),
   settleMs: 2500,
+  platforms: ['ios'],
   run: (context) => zoomSweep(context, WARSAW_REGION, [13, 14, 12, 15, 11]),
 });
 

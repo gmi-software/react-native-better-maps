@@ -165,6 +165,15 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
+  var markerRendering: MarkerRendering? {
+    didSet {
+      guard markerRendering != oldValue else {
+        return
+      }
+      overlayController.setMarkerRendering(markerRendering ?? .views)
+    }
+  }
+
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
   var onCameraMove: ((Camera) -> Void)? {
@@ -453,6 +462,34 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     overlayController.renderer(for: overlay)
   }
 
+  /// A tap on the sprite layer: marker presses fire here, a marker with a
+  /// callout is promoted to a selected annotation view (its `didSelect` fires
+  /// `onMarkerPress`), cluster presses zoom like a cluster view would.
+  func notifySpritePress(at point: CGPoint) -> Bool {
+    guard let press = overlayController.pressSprite(at: point) else {
+      return false
+    }
+
+    switch press {
+    case let .marker(id):
+      onMarkerPress?(id)
+    case .promoted:
+      break
+    case let .cluster(id, coordinate, count, region):
+      onClusterPress?(NativeClusterPressEvent(
+        clusterId: id,
+        count: Double(count),
+        coordinate: Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude)
+      ))
+      animateToClusterRegion(region)
+    }
+    return true
+  }
+
+  func handleAnnotationDeselect(_ annotation: MKAnnotation?) {
+    overlayController.demoteSprite(matching: annotation)
+  }
+
   func prepareForRecycle() {
     cameraStreamClock.stop()
     isUserRegionChange = false
@@ -477,6 +514,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     polygons = nil
     circles = nil
     overlayController.reset()
+    markerRendering = nil
     mapType = .standard
     region = nil
     camera = nil

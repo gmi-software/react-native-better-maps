@@ -1,7 +1,10 @@
 export type { Coordinate } from './coordinate';
 export type { Camera } from './camera';
 export type { Region, EdgePadding, VisibleRegion } from './region';
-export type { ApplePoiCategory } from '../native/specs/MapView.nitro';
+export type {
+  ApplePoiCategory,
+  MarkerPinStyle,
+} from '../native/specs/MapView.nitro';
 export type {
   ApplePoiPressEvent,
   ClusterPressEvent,

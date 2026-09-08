@@ -41,6 +41,9 @@ class HybridMapView(
 
   override val view: FrameLayout = FrameLayout(context)
 
+  /** Apple-only: Google Maps draws its own default marker. Stored so the prop round-trips. */
+  override var pinStyle: MarkerPinStyle? = null
+
   override var provider: MapProvider?
     get() = _provider
     set(value) {
@@ -337,6 +340,7 @@ class HybridMapView(
     _mapPadding = null
     _markerEnteringAnimation = null
     _clusterEnteringAnimation = null
+    pinStyle = null
     onRegionChange = null
     onRegionChangeComplete = null
     onMapReady = null

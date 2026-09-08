@@ -647,6 +647,7 @@ const StatusHeader = memo(function StatusHeader({
 export default function App() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapViewRef>(null);
+  const latestClusterRequest = useRef(0);
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [mapTypeIndex, setMapTypeIndex] = useState(0);
   const [providerIndex, setProviderIndex] = useState(0);
@@ -789,11 +790,13 @@ export default function App() {
     setStatus(
       `Cluster (${event.count}) · ${event.coordinate.latitude.toFixed(4)}, ${event.coordinate.longitude.toFixed(4)}`,
     );
-    // Member ids are fetched on demand instead of travelling with every press.
+    // Member ids are fetched on demand instead of travelling with every press;
+    // a lookup that resolves after a newer press is dropped.
+    const request = ++latestClusterRequest.current;
     mapRef.current
       ?.getClusterMembers(event.clusterId)
       .then((ids) => {
-        if (ids.length > 0) {
+        if (request === latestClusterRequest.current && ids.length > 0) {
           const preview = ids.slice(0, 3).join(', ');
           setStatus(
             `Cluster (${ids.length}) · ${preview}${ids.length > 3 ? ', …' : ''}`,

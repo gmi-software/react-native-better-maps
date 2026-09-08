@@ -154,7 +154,7 @@ final class MarkerSpatialIndex {
     let maxLatQ = region.center.latitude + region.span.latitudeDelta / 2 + latPad
     let minLonQ = region.center.longitude - region.span.longitudeDelta / 2 - lonPad
     let maxLonQ = region.center.longitude + region.span.longitudeDelta / 2 + lonPad
-    guard maxLatQ >= minLat, minLatQ <= maxLat else {
+    guard maxLatQ >= minLat, minLatQ <= maxLat, overlapsLongitude(minLonQ, maxLonQ) else {
       return []
     }
 
@@ -172,6 +172,21 @@ final class MarkerSpatialIndex {
       row += 1
     }
     return result
+  }
+
+  /// Whether a query's longitude range, which may cross the antimeridian,
+  /// meets the grid's. Without this a query east or west of the dataset would
+  /// clamp to the outermost column and return everything in it.
+  private func overlapsLongitude(_ minLonQ: Double, _ maxLonQ: Double) -> Bool {
+    if maxLonQ - minLonQ >= 360 {
+      return true
+    }
+    let wrappedMin = wrapLongitude(minLonQ)
+    let wrappedMax = wrapLongitude(maxLonQ)
+    if wrappedMin <= wrappedMax {
+      return wrappedMax >= minLon && wrappedMin <= maxLon
+    }
+    return maxLon >= wrappedMin || minLon <= wrappedMax
   }
 
   private func ensureCapacity(_ handle: Int) {

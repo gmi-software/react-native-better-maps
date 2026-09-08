@@ -192,9 +192,13 @@ export function MapView({
       ? markerCollectionInternals(activeCollection).native
       : undefined;
 
-  const hasMarkerPress = onMarkerPressProp != null || hasCollectedMarkerPress;
+  // `<Marker>` children are ignored while a collection is passed, so their
+  // callbacks must not fire for a collection marker that shares an id.
+  const hasMarkerPress =
+    onMarkerPressProp != null || (usesMarkerSugar && hasCollectedMarkerPress);
   const hasMarkerDragEnd =
-    onMarkerDragEndProp != null || hasCollectedMarkerDragEnd;
+    onMarkerDragEndProp != null ||
+    (usesMarkerSugar && hasCollectedMarkerDragEnd);
   const hasPolylinePressHandler =
     onPolylinePressProp != null || hasPolylinePress;
   const hasPolygonPressHandler = onPolygonPressProp != null || hasPolygonPress;
@@ -208,22 +212,26 @@ export function MapView({
 
   const handleMarkerPress = useCallback(
     (id: string) => {
-      callbackRegistry.current
-        .get(overlayCallbackKey(OverlayType.Marker, id))
-        ?.onPress?.();
+      if (usesMarkerSugar) {
+        callbackRegistry.current
+          .get(overlayCallbackKey(OverlayType.Marker, id))
+          ?.onPress?.();
+      }
       onMarkerPressProp?.(id);
     },
-    [callbackRegistry, onMarkerPressProp],
+    [callbackRegistry, onMarkerPressProp, usesMarkerSugar],
   );
 
   const handleMarkerDragEnd = useCallback(
     (id: string, coordinate: Coordinate) => {
-      callbackRegistry.current
-        .get(overlayCallbackKey(OverlayType.Marker, id))
-        ?.onDragEnd?.(coordinate);
+      if (usesMarkerSugar) {
+        callbackRegistry.current
+          .get(overlayCallbackKey(OverlayType.Marker, id))
+          ?.onDragEnd?.(coordinate);
+      }
       onMarkerDragEndProp?.(id, coordinate);
     },
-    [callbackRegistry, onMarkerDragEndProp],
+    [callbackRegistry, onMarkerDragEndProp, usesMarkerSugar],
   );
 
   const handlePolylinePress = useCallback(

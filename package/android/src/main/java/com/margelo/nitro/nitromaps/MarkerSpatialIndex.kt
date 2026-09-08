@@ -158,11 +158,14 @@ internal class MarkerSpatialIndex(cellsPerSide: Int = 96) {
       return IntArray(0)
     }
 
-    val rowStart = clampedRow(minLatQ)
-    val rowEnd = clampedRow(maxLatQ)
     val minLonQ = bounds.southwest.longitude - lonPad
     val maxLonQ = bounds.northeast.longitude + lonPad
+    if (!overlapsLongitude(minLonQ, maxLonQ)) {
+      return IntArray(0)
+    }
 
+    val rowStart = clampedRow(minLatQ)
+    val rowEnd = clampedRow(maxLatQ)
     val result = IntList(64)
     val columns = longitudeColumns(minLonQ, maxLonQ)
     var row = rowStart
@@ -183,6 +186,24 @@ internal class MarkerSpatialIndex(cellsPerSide: Int = 96) {
     val previous = cellOf.size
     cellOf = cellOf.copyOf(maxOf(handle + 1, previous * 2, 64))
     cellOf.fill(-1, previous, cellOf.size)
+  }
+
+  /**
+   * Whether a query's longitude range, which may cross the antimeridian, meets
+   * the grid's. Without this a query east or west of the dataset would clamp to
+   * the outermost column and return everything in it.
+   */
+  private fun overlapsLongitude(minLonQ: Double, maxLonQ: Double): Boolean {
+    if (maxLonQ - minLonQ >= 360.0) {
+      return true
+    }
+    val wrappedMin = wrapLongitude(minLonQ)
+    val wrappedMax = wrapLongitude(maxLonQ)
+    return if (wrappedMin <= wrappedMax) {
+      wrappedMax >= minLon && wrappedMin <= maxLon
+    } else {
+      maxLon >= wrappedMin || minLon <= wrappedMax
+    }
   }
 
   private fun contains(latitude: Double, longitude: Double): Boolean {

@@ -11,11 +11,15 @@ class MarkerRenderDiffTest {
   private fun single(id: String, handle: Int, version: Long = 1L) =
     ClusterElement.Single(handle, marker(id = id), version)
 
-  private fun cluster(count: Int, latitude: Double = 52.0) = ClusterElement.Cluster(
+  private fun cluster(
+    count: Int,
+    latitude: Double = 52.0,
+    memberHandles: IntArray = intArrayOf(1, 2, 3),
+  ) = ClusterElement.Cluster(
     id = "3:4",
     position = LatLng(latitude, 21.0),
     count = count,
-    memberHandles = intArrayOf(1, 2, 3),
+    memberHandles = memberHandles,
     bounds = LatLngBounds(LatLng(51.0, 20.0), LatLng(53.0, 22.0)),
   )
 
@@ -97,6 +101,7 @@ class MarkerRenderDiffTest {
     assertEquals(base.renderVersion, cluster(count = 3).renderVersion)
     assertNotEquals(base.renderVersion, cluster(count = 4).renderVersion)
     assertNotEquals(base.renderVersion, cluster(count = 3, latitude = 52.5).renderVersion)
+    assertEquals(base.renderVersion, cluster(count = 3, memberHandles = intArrayOf(7, 8, 9)).renderVersion)
     assertEquals(MarkerRenderKey.Cluster("3:4"), base.key)
   }
 }

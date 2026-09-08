@@ -53,6 +53,21 @@ export class MarkerDeltaCompiler {
    */
   set(descriptors: MarkerDescriptor[]): MarkerBatch | null {
     const writer = new MarkerBatchWriter();
+    const next = new Set<string>();
+    for (const descriptor of descriptors) {
+      next.add(descriptor.id);
+    }
+
+    // Removals first: native applies them before the upserts of the same
+    // batch, so the freed handles are reused instead of growing the arrays.
+    for (const [id, entry] of this.entries) {
+      if (!next.has(id)) {
+        this.entries.delete(id);
+        this.freeHandles.push(entry.handle);
+        writer.remove(entry.handle);
+      }
+    }
+
     const seen = new Set<string>();
     for (const descriptor of descriptors) {
       if (seen.has(descriptor.id)) {
@@ -60,14 +75,6 @@ export class MarkerDeltaCompiler {
       }
       seen.add(descriptor.id);
       this.upsertOne(descriptor, writer);
-    }
-
-    for (const [id, entry] of this.entries) {
-      if (!seen.has(id)) {
-        this.entries.delete(id);
-        this.freeHandles.push(entry.handle);
-        writer.remove(entry.handle);
-      }
     }
 
     return writer.finish();

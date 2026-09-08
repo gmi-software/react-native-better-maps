@@ -215,30 +215,43 @@ class MapOverlayController(
   private fun computeViewportDiff(
     request: ViewportRefreshRequest,
   ): MarkerRenderDiff = traceSection("NitroMaps.computeViewportDiff") {
-    // The geometry runs under the store lock: it is bounded by the viewport,
-    // and it saves copying the coordinate arrays on every refresh.
-    request.store.read { access ->
-      val candidates = access.index.candidates(request.bounds)
-      val elements: List<MarkerClusterEngine.Element> = if (request.clustering) {
-        MarkerClusterEngine.clusters(
-          candidates,
-          access.latitudes,
-          access.longitudes,
-          access.flags,
-          request.bounds,
-          request.widthPx,
-          request.heightPx,
-          density,
-        )
-      } else {
-        MarkerViewportFilter
-          .displaySubset(candidates, access.latitudes, access.longitudes, request.bounds, request.latitudeSpan)
-          .map { MarkerClusterEngine.Element.Single(it) }
-      }
-
-      computeMarkerRenderDiff(materialize(elements, access), request.displayedVersions)
+    // Only the index query holds the store lock. The geometry runs over the
+    // live arrays: a batch applied meanwhile moves a marker to where either
+    // batch put it, and the notification that follows every batch schedules
+    // the refresh that settles it. Holding the lock through the cluster pass
+    // would stall the main thread, which reads the store on every camera move.
+    val snapshot = request.store.read { access ->
+      ViewportSnapshot(access.index.candidates(request.bounds), access.latitudes, access.longitudes, access.flags)
     }
+    val candidates = snapshot.candidates
+    val elements: List<MarkerClusterEngine.Element> = if (request.clustering) {
+      MarkerClusterEngine.clusters(
+        candidates,
+        snapshot.latitudes,
+        snapshot.longitudes,
+        snapshot.flags,
+        request.bounds,
+        request.widthPx,
+        request.heightPx,
+        density,
+      )
+    } else {
+      MarkerViewportFilter
+        .displaySubset(candidates, snapshot.latitudes, snapshot.longitudes, request.bounds, request.latitudeSpan)
+        .map { MarkerClusterEngine.Element.Single(it) }
+    }
+
+    val target = request.store.read { access -> materialize(elements, access) }
+    computeMarkerRenderDiff(target, request.displayedVersions)
   }
+
+  /** What one viewport refresh takes from the store under its lock. */
+  private class ViewportSnapshot(
+    val candidates: IntArray,
+    val latitudes: DoubleArray,
+    val longitudes: DoubleArray,
+    val flags: ByteArray,
+  )
 
   /**
    * Turns handles into render elements with their descriptors and versions.

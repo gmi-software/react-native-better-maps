@@ -16,8 +16,22 @@ class ClusterOctaveCacheTest {
   private fun bounds(centerLat: Double, centerLon: Double, span: Double = 0.1) =
     LatLngBounds(LatLng(centerLat - span / 2, centerLon - span / 2), LatLng(centerLat + span / 2, centerLon + span / 2))
 
-  private fun run(bounds: LatLngBounds, cache: ClusterOctaveCache?, generation: Long = 1L) =
-    MarkerClusterEngine.clusters(candidates, latitudes, longitudes, flags, bounds, 1080, 1920, 3f, cache, generation)
+  private fun run(
+    bounds: LatLngBounds,
+    cache: ClusterOctaveCache?,
+    generation: Long = 1L,
+    candidates: IntArray = this.candidates,
+  ) = MarkerClusterEngine.clusters(candidates, latitudes, longitudes, flags, bounds, 1080, 1920, 3f, cache, generation)
+
+  /** What the spatial index would hand the engine: the handles near the padded bounds. */
+  private fun candidatesNear(bounds: LatLngBounds): IntArray {
+    val latPad = (bounds.northeast.latitude - bounds.southwest.latitude) * 0.25
+    val lonPad = (bounds.northeast.longitude - bounds.southwest.longitude) * 0.25
+    return candidates.filter { handle ->
+      latitudes[handle] in (bounds.southwest.latitude - latPad)..(bounds.northeast.latitude + latPad) &&
+        longitudes[handle] in (bounds.southwest.longitude - lonPad)..(bounds.northeast.longitude + lonPad)
+    }.toIntArray()
+  }
 
   private fun signature(elements: List<MarkerClusterEngine.Element>): List<String> =
     elements.map { element ->
@@ -53,6 +67,28 @@ class ClusterOctaveCacheTest {
 
     assertTrue(cache.reusedCandidates > 0)
     assertEquals(signature(fresh), signature(cached))
+  }
+
+  @Test
+  fun `a pan drops the cells that left the padded region`() {
+    val cache = ClusterOctaveCache()
+    val first = bounds(52.05, 21.05, span = 0.06)
+    run(first, cache, candidates = candidatesNear(first))
+    // Far enough that cells of the first viewport fall outside the padded second one.
+    val panned = bounds(52.15, 21.15, span = 0.06)
+    val nearPanned = candidatesNear(panned)
+
+    val cached = run(panned, cache, candidates = nearPanned)
+    val fresh = run(panned, null, candidates = nearPanned)
+
+    assertEquals(signature(fresh), signature(cached))
+    val members = cached.flatMap { element ->
+      when (element) {
+        is MarkerClusterEngine.Element.Single -> listOf(element.handle)
+        is MarkerClusterEngine.Element.Cluster -> element.memberHandles.toList()
+      }
+    }
+    assertTrue(members.all { it in nearPanned })
   }
 
   @Test

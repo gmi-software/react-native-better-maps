@@ -111,12 +111,11 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.refreshNow(
-      displayedVersions: markerVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
-      apply: { [weak self] diff in
-        self?.applyDiff(
-          diff,
+      apply: { [weak self] target in
+        self?.applyTarget(
+          target,
           animateEntering: animateEntering,
           animationBudget: animationBudget
         )
@@ -134,13 +133,12 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.scheduleViewportRefresh(
-      displayedVersions: markerVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       immediate: immediate,
-      apply: { [weak self] diff in
-        self?.applyDiff(
-          diff,
+      apply: { [weak self] target in
+        self?.applyTarget(
+          target,
           animateEntering: animateEntering,
           animationBudget: animationBudget
         )
@@ -227,12 +225,26 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.reapply(
-      displayedVersions: markerVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
-      apply: { [weak self] diff in
-        self?.applyDiff(diff)
+      apply: { [weak self] target in
+        self?.applyTarget(target)
       }
+    )
+  }
+
+  /// Diffs a computed target against what is on the map now. The scheduler
+  /// may have applied adds from the previous diff while the target was being
+  /// computed, and a diff against an older snapshot would add those twice.
+  private func applyTarget(
+    _ target: [MarkerRenderEntry],
+    animateEntering: Bool = true,
+    animationBudget: Int = maximumAnimatedMarkersPerDiff
+  ) {
+    applyDiff(
+      MarkerRenderPipeline.computeDiff(target: target, displayed: markerVersions),
+      animateEntering: animateEntering,
+      animationBudget: animationBudget
     )
   }
 

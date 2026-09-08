@@ -18,6 +18,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private var myLocationObservation: NSKeyValueObservation?
   private weak var followedLocationMapView: GMSMapView?
   private var _googleMapId: String?
+  private var lastAppliedRegion: Region?
+  private var lastAppliedRegionCamera: GMSCameraPosition?
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -261,6 +263,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     isUserRegionChange = false
     isUserGestureMoving = false
     lastLiveMarkerRefreshTime = 0
+    lastAppliedRegion = nil
+    lastAppliedRegionCamera = nil
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
@@ -301,11 +305,24 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func applyRegion(_ region: Region, animated: Bool = false) {
+    if let lastAppliedRegion,
+       let lastAppliedRegionCamera,
+       region.approximatelyEquals(lastAppliedRegion),
+       view.camera.approximatelyEquals(lastAppliedRegionCamera) {
+      // Same region as last time and the camera has not moved since, so the
+      // fit would land on the camera the map already shows.
+      return
+    }
+
     applyCameraUpdate(
       GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: mapPadding?.toUIEdgeInsets() ?? .zero),
       animated: animated,
       duration: nil
     )
+    self.lastAppliedRegion = region
+    // `moveCamera` updates `camera` synchronously; an animation does not, so
+    // there is nothing reliable to remember until it settles.
+    lastAppliedRegionCamera = animated ? nil : view.camera
   }
 
   private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {

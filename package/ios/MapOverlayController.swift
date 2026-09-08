@@ -24,6 +24,7 @@ final class MapOverlayController {
   private var displayedAnnotationVersions: [String: Int] = [:]
   private let markerPipeline = MarkerRenderPipeline()
   private var shapeOverlays: [String: MKOverlay] = [:]
+  private var shapeVersions: [String: ShapeRenderVersion] = [:]
   private var overlayStyles: [ObjectIdentifier: OverlayStyle] = [:]
 
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
@@ -55,6 +56,7 @@ final class MapOverlayController {
     displayedAnnotations.removeAll()
     displayedAnnotationVersions.removeAll()
     shapeOverlays.removeAll()
+    shapeVersions.removeAll()
     overlayStyles.removeAll()
   }
 
@@ -206,7 +208,8 @@ final class MapOverlayController {
           strokeWidth: CGFloat(descriptor.strokeWidth ?? 4),
           tappable: descriptor.tappable ?? false
         )
-      }
+      },
+      renderVersion: { $0.renderVersion() }
     )
   }
 
@@ -225,7 +228,8 @@ final class MapOverlayController {
           strokeWidth: CGFloat(descriptor.strokeWidth ?? 2),
           tappable: descriptor.tappable ?? false
         )
-      }
+      },
+      renderVersion: { $0.renderVersion() }
     )
   }
 
@@ -244,7 +248,8 @@ final class MapOverlayController {
           strokeWidth: CGFloat(descriptor.strokeWidth ?? 2),
           tappable: descriptor.tappable ?? true
         )
-      }
+      },
+      renderVersion: { $0.renderVersion() }
     )
   }
 
@@ -263,13 +268,17 @@ final class MapOverlayController {
       renderer = MKCircleRenderer(overlay: overlay)
     }
 
+    apply(style, to: renderer)
+
+    return renderer
+  }
+
+  private func apply(_ style: OverlayStyle, to renderer: MKOverlayPathRenderer) {
     renderer.strokeColor = style.strokeColor
     renderer.lineWidth = style.strokeWidth
     if let fillColor = style.fillColor {
       renderer.fillColor = fillColor
     }
-
-    return renderer
   }
 
   func overlayId(at point: CGPoint) -> String? {
@@ -303,50 +312,80 @@ final class MapOverlayController {
     shapeOverlays[id].flatMap { overlayStyles[ObjectIdentifier($0)]?.kind }
   }
 
+  /// Reconciles one overlay kind against its descriptors.
+  ///
+  /// Each shown overlay keeps a render version. A descriptor sent again
+  /// unchanged is skipped; a style-only change restyles the cached renderer in
+  /// place; a geometry change replaces the overlay at its previous z-position,
+  /// because MapKit overlay geometry is immutable.
   private func reconcileShapeOverlays<Descriptor>(
     _ descriptors: [Descriptor],
     kind: OverlayKind,
     makeOverlay: (Descriptor) -> MKOverlay,
-    makeStyle: (Descriptor) -> OverlayStyle
+    makeStyle: (Descriptor) -> OverlayStyle,
+    renderVersion: (Descriptor) -> ShapeRenderVersion
   ) {
     guard let mapView else {
       return
     }
 
-    let nextIds = Set(
-      descriptors.compactMap { descriptor -> String? in
-        let style = makeStyle(descriptor)
-        return style.kind == kind ? style.id : nil
-      }
-    )
-    let existingIds = Set(
-      shapeOverlays.compactMap { id, overlay -> String? in
-        overlayStyles[ObjectIdentifier(overlay)]?.kind == kind ? id : nil
-      }
-    )
-
-    for removedId in existingIds.subtracting(nextIds) {
-      if let overlay = shapeOverlays.removeValue(forKey: removedId) {
-        overlayStyles.removeValue(forKey: ObjectIdentifier(overlay))
-        mapView.removeOverlay(overlay)
-      }
-    }
+    var nextIds = Set<String>()
+    nextIds.reserveCapacity(descriptors.count)
 
     for descriptor in descriptors {
       let style = makeStyle(descriptor)
       guard style.kind == kind else {
         continue
       }
+      nextIds.insert(style.id)
 
-      if let existingOverlay = shapeOverlays[style.id] {
-        overlayStyles.removeValue(forKey: ObjectIdentifier(existingOverlay))
-        mapView.removeOverlay(existingOverlay)
+      let version = renderVersion(descriptor)
+      if let existingOverlay = shapeOverlays[style.id],
+         let existingVersion = shapeVersions[style.id] {
+        if existingVersion == version {
+          continue
+        }
+
+        if existingVersion.geometry == version.geometry {
+          // Style-only change: restyle the cached renderer in place.
+          overlayStyles[ObjectIdentifier(existingOverlay)] = style
+          if let renderer = mapView.renderer(for: existingOverlay) as? MKOverlayPathRenderer {
+            apply(style, to: renderer)
+            renderer.setNeedsDisplay()
+          }
+          shapeVersions[style.id] = version
+          continue
+        }
       }
 
       let overlay = makeOverlay(descriptor)
+      if let existingOverlay = shapeOverlays[style.id] {
+        overlayStyles.removeValue(forKey: ObjectIdentifier(existingOverlay))
+        let previousIndex = mapView.overlays.firstIndex { $0 === existingOverlay }
+        mapView.removeOverlay(existingOverlay)
+        if let previousIndex {
+          mapView.insertOverlay(overlay, at: previousIndex)
+        } else {
+          mapView.addOverlay(overlay)
+        }
+      } else {
+        mapView.addOverlay(overlay)
+      }
       shapeOverlays[style.id] = overlay
       overlayStyles[ObjectIdentifier(overlay)] = style
-      mapView.addOverlay(overlay)
+      shapeVersions[style.id] = version
+    }
+
+    let removedIds = shapeOverlays.compactMap { id, overlay -> String? in
+      overlayStyles[ObjectIdentifier(overlay)]?.kind == kind && !nextIds.contains(id) ? id : nil
+    }
+    for removedId in removedIds {
+      guard let overlay = shapeOverlays.removeValue(forKey: removedId) else {
+        continue
+      }
+      shapeVersions.removeValue(forKey: removedId)
+      overlayStyles.removeValue(forKey: ObjectIdentifier(overlay))
+      mapView.removeOverlay(overlay)
     }
   }
 }

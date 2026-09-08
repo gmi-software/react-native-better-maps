@@ -24,4 +24,10 @@ export interface MapViewRef {
     padding?: EdgePadding,
     animated?: boolean,
   ): Promise<void>;
+
+  /**
+   * Returns the ids of the markers inside a displayed cluster, as identified
+   * by `onClusterPress`. Resolves to an empty array once the cluster is gone.
+   */
+  getClusterMembers(clusterId: string): Promise<string[]>;
 }

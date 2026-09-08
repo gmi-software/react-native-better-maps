@@ -164,9 +164,9 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
   var onLongPress: ((Coordinate) -> Void)?
 
-  var markers: [MarkerDescriptor]? {
+  var markerCollection: HybridMarkerCollection? {
     didSet {
-      overlayController.setMarkers(markers)
+      overlayController.attach(store: markerCollection?.store)
     }
   }
 
@@ -193,7 +193,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   var onPolylinePress: ((String) -> Void)?
   var onPolygonPress: ((String) -> Void)?
   var onCirclePress: ((String) -> Void)?
-  var onClusterPress: (([String], Coordinate) -> Void)?
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)?
 
   func fetchCamera() throws -> Promise<Camera> {
     Promise.resolved(withResult: view.camera.toCamera())
@@ -240,6 +240,10 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       edgePadding: edgePadding,
       animated: shouldAnimate
     )
+  }
+
+  func getClusterMembers(clusterId: String) throws -> Promise<[String]> {
+    Promise.resolved(withResult: overlayController.clusterMembers(id: clusterId))
   }
 
   func applyRegion(_ region: Region, animated: Bool = false) {
@@ -339,7 +343,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
 
     isMapReady = true
-    overlayController.setMarkers(markers)
+    overlayController.reapplyMarkers()
     deliverMapReadyIfPossible()
   }
 
@@ -418,7 +422,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     onPolygonPress = nil
     onCirclePress = nil
     onClusterPress = nil
-    markers = nil
+    markerCollection = nil
     polylines = nil
     polygons = nil
     circles = nil

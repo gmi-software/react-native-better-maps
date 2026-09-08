@@ -1,6 +1,8 @@
 import {
   useCallback,
+  useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   type Ref,
@@ -9,6 +11,10 @@ import {
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
 import { useNitroCallback } from '../hooks/useNitroCallback';
 import { useStableValue } from '../hooks/useStableValue';
+import {
+  MarkerCollection,
+  markerCollectionInternals,
+} from '../markers/MarkerCollection';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
@@ -35,6 +41,19 @@ import {
 } from '../utils/mapValueEquality';
 
 const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
+
+let didWarnAboutIgnoredMarkers = false;
+
+function warnOnceAboutIgnoredMarkers(): void {
+  if (didWarnAboutIgnoredMarkers) {
+    return;
+  }
+  didWarnAboutIgnoredMarkers = true;
+  console.warn(
+    'MapView: `markers` and <Marker> children are ignored while `markerCollection` is set. ' +
+      'Put those markers into the collection instead.',
+  );
+}
 
 function withHybridRef<T>(
   hybridRef: RefObject<NativeMapViewHybrid | null>,
@@ -71,6 +90,7 @@ export function MapView({
   markerEnteringAnimation,
   clusterEnteringAnimation,
   markers: markersProp,
+  markerCollection: markerCollectionProp,
   polylines: polylinesProp,
   polygons: polygonsProp,
   circles: circlesProp,
@@ -143,19 +163,44 @@ export function MapView({
   const stableCamera = useStableValue(camera, camerasEqual);
   const stableMapPadding = useStableValue(mapPadding, edgePaddingsEqual);
 
-  const hasMarkerPress =
-    onMarkerPressProp != null || hasCollectedMarkerPress;
+  // `markers` and `<Marker>` children are sugar over a MarkerCollection owned
+  // here: the stable array above is compiled to a delta batch after commit,
+  // so a new array only ships the markers that changed. A caller-provided
+  // collection replaces the sugar entirely.
+  const usesMarkerSugar = markerCollectionProp == null;
+  const sugarCollection = useMemo(
+    () => (usesMarkerSugar ? new MarkerCollection() : null),
+    [usesMarkerSugar],
+  );
+  useLayoutEffect(() => {
+    if (sugarCollection != null) {
+      markerCollectionInternals(sugarCollection).setNormalized(markers);
+    }
+  }, [markers, sugarCollection]);
+  useEffect(
+    () => () => {
+      sugarCollection?.clear();
+    },
+    [sugarCollection],
+  );
+  if (__DEV__ && markerCollectionProp != null && markers.length > 0) {
+    warnOnceAboutIgnoredMarkers();
+  }
+  const activeCollection = markerCollectionProp ?? sugarCollection;
+  const nativeMarkerCollection =
+    activeCollection != null
+      ? markerCollectionInternals(activeCollection).native
+      : undefined;
+
+  const hasMarkerPress = onMarkerPressProp != null || hasCollectedMarkerPress;
   const hasMarkerDragEnd =
     onMarkerDragEndProp != null || hasCollectedMarkerDragEnd;
   const hasPolylinePressHandler =
     onPolylinePressProp != null || hasPolylinePress;
-  const hasPolygonPressHandler =
-    onPolygonPressProp != null || hasPolygonPress;
-  const hasCirclePressHandler =
-    onCirclePressProp != null || hasCirclePress;
+  const hasPolygonPressHandler = onPolygonPressProp != null || hasPolygonPress;
+  const hasCirclePressHandler = onCirclePressProp != null || hasCirclePress;
   const onPoiPressCallback = onPoiPress as
-    | ((event: PoiPressEvent) => void)
-    | undefined;
+    ((event: PoiPressEvent) => void) | undefined;
 
   const handleHybridRef = useCallback((nativeRef: NativeMapViewHybrid) => {
     hybridRef.current = nativeRef;
@@ -163,7 +208,9 @@ export function MapView({
 
   const handleMarkerPress = useCallback(
     (id: string) => {
-      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Marker, id))?.onPress?.();
+      callbackRegistry.current
+        .get(overlayCallbackKey(OverlayType.Marker, id))
+        ?.onPress?.();
       onMarkerPressProp?.(id);
     },
     [callbackRegistry, onMarkerPressProp],
@@ -171,7 +218,9 @@ export function MapView({
 
   const handleMarkerDragEnd = useCallback(
     (id: string, coordinate: Coordinate) => {
-      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Marker, id))?.onDragEnd?.(coordinate);
+      callbackRegistry.current
+        .get(overlayCallbackKey(OverlayType.Marker, id))
+        ?.onDragEnd?.(coordinate);
       onMarkerDragEndProp?.(id, coordinate);
     },
     [callbackRegistry, onMarkerDragEndProp],
@@ -179,7 +228,9 @@ export function MapView({
 
   const handlePolylinePress = useCallback(
     (id: string) => {
-      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Polyline, id))?.onPress?.();
+      callbackRegistry.current
+        .get(overlayCallbackKey(OverlayType.Polyline, id))
+        ?.onPress?.();
       onPolylinePressProp?.(id);
     },
     [callbackRegistry, onPolylinePressProp],
@@ -187,7 +238,9 @@ export function MapView({
 
   const handlePolygonPress = useCallback(
     (id: string) => {
-      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Polygon, id))?.onPress?.();
+      callbackRegistry.current
+        .get(overlayCallbackKey(OverlayType.Polygon, id))
+        ?.onPress?.();
       onPolygonPressProp?.(id);
     },
     [callbackRegistry, onPolygonPressProp],
@@ -195,7 +248,9 @@ export function MapView({
 
   const handleCirclePress = useCallback(
     (id: string) => {
-      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Circle, id))?.onPress?.();
+      callbackRegistry.current
+        .get(overlayCallbackKey(OverlayType.Circle, id))
+        ?.onPress?.();
       onCirclePressProp?.(id);
     },
     [callbackRegistry, onCirclePressProp],
@@ -215,7 +270,11 @@ export function MapView({
         return;
       }
 
-      if (event.provider === 'google' && event.name != null && event.placeId != null) {
+      if (
+        event.provider === 'google' &&
+        event.name != null &&
+        event.placeId != null
+      ) {
         const poiEvent: PoiPressEvent = {
           provider: 'google',
           coordinate: event.coordinate,
@@ -276,6 +335,10 @@ export function MapView({
         withHybridRef(hybridRef, (hybrid) =>
           hybrid.fitToCoordinates(coordinates, padding, animated),
         ),
+      getClusterMembers: (clusterId) =>
+        withHybridRef(hybridRef, (hybrid) =>
+          hybrid.getClusterMembers(clusterId),
+        ),
     }),
     [],
   );
@@ -303,7 +366,7 @@ export function MapView({
       mapPadding={stableMapPadding}
       markerEnteringAnimation={markerEntering}
       clusterEnteringAnimation={clusterEntering}
-      markers={markers}
+      markerCollection={nativeMarkerCollection}
       polylines={polylines}
       polygons={polygons}
       circles={circles}

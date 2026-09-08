@@ -7,9 +7,9 @@ import type { Camera } from '../../types/camera';
 import type { Coordinate } from '../../types/coordinate';
 import type { MapProvider, MapType } from '../../types/map';
 import type { EdgePadding, Region, VisibleRegion } from '../../types/region';
+import type { MarkerCollection } from './MarkerCollection.nitro';
 import type {
   CircleDescriptor,
-  MarkerDescriptor,
   OverlayEnteringAnimationDescriptor,
   PolygonDescriptor,
   PolylineDescriptor,
@@ -103,6 +103,22 @@ export interface NativePoiPressEvent {
 }
 
 /**
+ * Payload of a marker-cluster press. Member ids are fetched on demand through
+ * `getClusterMembers` so a press on a 100k-marker cluster does not ship
+ * every id across JSI.
+ */
+export interface NativeClusterPressEvent {
+  /** Identity of the pressed cluster while it is displayed. */
+  clusterId: string;
+
+  /** Number of markers in the cluster. */
+  count: number;
+
+  /** Position of the cluster badge. */
+  coordinate: Coordinate;
+}
+
+/**
  * Native props for the {@linkcode MapView} Nitro HybridView.
  *
  * @see {@linkcode MapView}
@@ -184,8 +200,8 @@ export interface MapViewProps extends HybridViewProps {
   /** Called when the user long-presses the map. */
   onLongPress?: (coordinate: Coordinate) => void;
 
-  /** Marker overlays to render on the map. */
-  markers?: MarkerDescriptor[];
+  /** Native marker store rendered by this map. */
+  markerCollection?: MarkerCollection;
 
   /** Polyline overlays to render on the map. */
   polylines?: PolylineDescriptor[];
@@ -212,7 +228,7 @@ export interface MapViewProps extends HybridViewProps {
   onCirclePress?: (id: string) => void;
 
   /** Called when a marker cluster is pressed. */
-  onClusterPress?: (markerIds: string[], coordinate: Coordinate) => void;
+  onClusterPress?: (event: NativeClusterPressEvent) => void;
 }
 
 /**
@@ -250,6 +266,12 @@ export interface MapViewMethods extends HybridViewMethods {
     padding?: EdgePadding,
     animated?: boolean,
   ): Promise<void>;
+
+  /**
+   * Returns the ids of the markers inside a displayed cluster. Resolves to an
+   * empty array when the cluster is no longer displayed.
+   */
+  getClusterMembers(clusterId: string): Promise<string[]>;
 }
 
 /**

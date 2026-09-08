@@ -31,7 +31,7 @@ interface MapProviderAdapter {
   var onPoiPress: ((event: NativePoiPressEvent) -> Unit)?
   var onLongPress: ((coordinate: Coordinate) -> Unit)?
 
-  var markers: Array<MarkerDescriptor>?
+  var markerCollection: HybridMarkerCollection?
   var polylines: Array<PolylineDescriptor>?
   var polygons: Array<PolygonDescriptor>?
   var circles: Array<CircleDescriptor>?
@@ -41,13 +41,14 @@ interface MapProviderAdapter {
   var onPolylinePress: ((id: String) -> Unit)?
   var onPolygonPress: ((id: String) -> Unit)?
   var onCirclePress: ((id: String) -> Unit)?
-  var onClusterPress: ((markerIds: Array<String>, coordinate: Coordinate) -> Unit)?
+  var onClusterPress: ((event: NativeClusterPressEvent) -> Unit)?
 
   fun fetchCamera(): Promise<Camera>
   fun applyCamera(camera: Camera)
   fun animateCamera(camera: Camera, duration: Double?)
   fun getVisibleRegion(): Promise<VisibleRegion>
   fun fitToCoordinates(coordinates: Array<Coordinate>, padding: EdgePadding?, animated: Boolean?)
+  fun getClusterMembers(clusterId: String): Promise<Array<String>>
 
   /**
    * Destroys the underlying native map and unregisters everything the adapter owns.

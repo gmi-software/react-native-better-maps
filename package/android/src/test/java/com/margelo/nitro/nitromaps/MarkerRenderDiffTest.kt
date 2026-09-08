@@ -1,41 +1,56 @@
 package com.margelo.nitro.nitromaps
 
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MarkerRenderDiffTest {
+  private fun single(id: String, handle: Int, version: Long = 1L) =
+    ClusterElement.Single(handle, marker(id = id), version)
+
+  private fun cluster(count: Int, latitude: Double = 52.0) = ClusterElement.Cluster(
+    id = "3:4",
+    position = LatLng(latitude, 21.0),
+    count = count,
+    memberHandles = intArrayOf(1, 2, 3),
+    bounds = LatLngBounds(LatLng(51.0, 20.0), LatLng(53.0, 22.0)),
+  )
+
   @Test
   fun `new keys are added`() {
-    val first = ClusterElement.Single(marker(id = "a"))
-    val second = ClusterElement.Single(marker(id = "b"))
+    val first = single("a", 0)
+    val second = single("b", 1)
     val diff = computeMarkerRenderDiff(listOf(first, second), emptyMap())
 
-    assertEquals(emptySet<String>(), diff.removedKeys)
+    assertEquals(emptySet<MarkerRenderKey>(), diff.removedKeys)
     assertEquals(listOf(first, second), diff.added)
     assertTrue(diff.retained.isEmpty())
   }
 
   @Test
   fun `missing keys are removed`() {
-    val kept = ClusterElement.Single(marker(id = "a"))
+    val kept = single("a", 0)
+    val gone = MarkerRenderKey.Single(1, "gone")
     val diff = computeMarkerRenderDiff(
       listOf(kept),
-      mapOf("s:a" to kept.renderVersion, "s:gone" to 9L),
+      mapOf(kept.key to kept.renderVersion, gone to 9L),
     )
 
-    assertEquals(setOf("s:gone"), diff.removedKeys)
+    assertEquals(setOf<MarkerRenderKey>(gone), diff.removedKeys)
     assertTrue(diff.added.isEmpty())
     assertTrue(diff.retained.isEmpty())
   }
 
   @Test
   fun `version change marks retained`() {
-    val displayed = ClusterElement.Single(marker(id = "a", opacity = 1.0))
-    val next = ClusterElement.Single(marker(id = "a", opacity = 0.2))
+    val displayed = single("a", 0, version = 1L)
+    val next = single("a", 0, version = 2L)
     val diff = computeMarkerRenderDiff(
       listOf(next),
-      mapOf(displayed.diffKey to displayed.renderVersion),
+      mapOf(displayed.key to displayed.renderVersion),
     )
 
     assertTrue(diff.removedKeys.isEmpty())
@@ -45,10 +60,10 @@ class MarkerRenderDiffTest {
 
   @Test
   fun `unchanged version is skipped`() {
-    val element = ClusterElement.Single(marker(id = "a"))
+    val element = single("a", 0)
     val diff = computeMarkerRenderDiff(
       listOf(element),
-      mapOf(element.diffKey to element.renderVersion),
+      mapOf(element.key to element.renderVersion),
     )
 
     assertTrue(diff.removedKeys.isEmpty())
@@ -58,10 +73,30 @@ class MarkerRenderDiffTest {
 
   @Test
   fun `duplicate keys keep the first element`() {
-    val first = ClusterElement.Single(marker(id = "a", opacity = 1.0))
-    val duplicate = ClusterElement.Single(marker(id = "a", opacity = 0.1))
+    val first = single("a", 0, version = 1L)
+    val duplicate = single("a", 0, version = 2L)
     val diff = computeMarkerRenderDiff(listOf(first, duplicate), emptyMap())
 
     assertEquals(listOf(first), diff.added)
+  }
+
+  @Test
+  fun `a reused handle with a new id is a different element`() {
+    val previous = single("a", 0, version = 1L)
+    val next = single("b", 0, version = 2L)
+    val diff = computeMarkerRenderDiff(listOf(next), mapOf(previous.key to previous.renderVersion))
+
+    assertEquals(setOf(previous.key), diff.removedKeys)
+    assertEquals(listOf(next), diff.added)
+    assertTrue(diff.retained.isEmpty())
+  }
+
+  @Test
+  fun `cluster version follows count and position, not members`() {
+    val base = cluster(count = 3)
+    assertEquals(base.renderVersion, cluster(count = 3).renderVersion)
+    assertNotEquals(base.renderVersion, cluster(count = 4).renderVersion)
+    assertNotEquals(base.renderVersion, cluster(count = 3, latitude = 52.5).renderVersion)
+    assertEquals(MarkerRenderKey.Cluster("3:4"), base.key)
   }
 }

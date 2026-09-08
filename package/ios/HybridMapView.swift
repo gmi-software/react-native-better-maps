@@ -196,9 +196,13 @@ final class HybridMapView: HybridMapViewSpec {
     set { setBackedOnMain(newValue, store: \.onLongPress) { $0.onLongPress = $1 } }
   }
 
-  var markers: [MarkerDescriptor]? {
-    get { getBacked(\.markers) }
-    set { setBackedOnMain(newValue, store: \.markers) { $0.markers = $1 } }
+  var markerCollection: (any HybridMarkerCollectionSpec)? {
+    get { getBacked(\.markerCollection) }
+    set {
+      setBackedOnMain(newValue, store: \.markerCollection) {
+        $0.markerCollection = $1 as? HybridMarkerCollection
+      }
+    }
   }
 
   var polylines: [PolylineDescriptor]? {
@@ -243,7 +247,7 @@ final class HybridMapView: HybridMapViewSpec {
     set { setBackedOnMain(newValue, store: \.onCirclePress) { $0.onCirclePress = $1 } }
   }
 
-  var onClusterPress: (([String], Coordinate) -> Void)? {
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)? {
     get { getBacked(\.onClusterPress) }
     set { setBackedOnMain(newValue, store: \.onClusterPress) { $0.onClusterPress = $1 } }
   }
@@ -278,6 +282,10 @@ final class HybridMapView: HybridMapViewSpec {
         animated: animated
       )
     }
+  }
+
+  func getClusterMembers(clusterId: String) throws -> Promise<[String]> {
+    promiseOnMain { try $0.getClusterMembers(clusterId: clusterId) }
   }
 
   func afterUpdate() {

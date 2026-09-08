@@ -7,31 +7,49 @@ import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-/** A single display element: an individual marker or a cluster badge. */
+/**
+ * Identity of a displayed element across refreshes.
+ *
+ * A single carries its id as well as its handle: JS reuses a freed handle for
+ * the next new marker, and a new marker must not be mistaken for an update of
+ * the one that used to own the handle.
+ */
+internal sealed class MarkerRenderKey {
+  data class Single(val handle: Int, val id: String) : MarkerRenderKey()
+
+  data class Cluster(val id: String) : MarkerRenderKey()
+}
+
+/**
+ * A display element with everything the renderer needs, materialized from the
+ * store for the elements that will actually be shown.
+ */
 internal sealed interface ClusterElement {
-  val diffKey: String
+  val key: MarkerRenderKey
   val renderVersion: Long
 
-  data class Single(val descriptor: MarkerDescriptor) : ClusterElement {
-    override val diffKey: String get() = "s:" + descriptor.id
-    override val renderVersion: Long = descriptor.displayedIdentityVersion()
+  class Single(
+    val handle: Int,
+    val descriptor: MarkerDescriptor,
+    override val renderVersion: Long,
+  ) : ClusterElement {
+    override val key: MarkerRenderKey = MarkerRenderKey.Single(handle, descriptor.id)
   }
 
-  data class Cluster(
-    val key: String,
+  class Cluster(
+    val id: String,
     val position: LatLng,
     val count: Int,
-    val memberIds: List<String>,
+    val memberHandles: IntArray,
     val bounds: LatLngBounds,
   ) : ClusterElement {
-    override val diffKey: String get() = "c:$key"
+    override val key: MarkerRenderKey = MarkerRenderKey.Cluster(id)
     override val renderVersion: Long = renderSignature(
       "cluster",
-      key,
+      id,
       position.latitude,
       position.longitude,
       count,
-      memberIds.sorted(),
       bounds.southwest.latitude,
       bounds.southwest.longitude,
       bounds.northeast.latitude,
@@ -43,11 +61,25 @@ internal sealed interface ClusterElement {
 /**
  * Grid-based marker clustering computed in geographic space.
  *
- * Pure function over descriptor data (no map projection), so it is safe to call
- * from a background thread. Output is bounded by the number of grid cells that
- * fit on screen, keeping per-frame Google Maps work small and constant.
+ * Runs over store handles and the store's flat coordinate arrays (no map
+ * projection, no descriptor copies), so it is safe to call from a background
+ * thread. Output is bounded by the number of grid cells that fit on screen,
+ * keeping per-frame Google Maps work small and constant.
  */
 internal object MarkerClusterEngine {
+  /** A display element before its descriptor is looked up. */
+  sealed interface Element {
+    class Single(val handle: Int) : Element
+
+    class Cluster(
+      val id: String,
+      val position: LatLng,
+      val count: Int,
+      val memberHandles: IntArray,
+      val bounds: LatLngBounds,
+    ) : Element
+  }
+
   private const val CELL_DP = 64.0
 
   private fun wrapsLongitude(sw: LatLng, ne: LatLng): Boolean {
@@ -93,27 +125,30 @@ internal object MarkerClusterEngine {
   }
 
   fun clusters(
-    candidates: List<MarkerDescriptor>,
+    candidates: IntArray,
+    latitudes: DoubleArray,
+    longitudes: DoubleArray,
+    flags: ByteArray,
     bounds: LatLngBounds,
     viewWidthPx: Int,
     viewHeightPx: Int,
     density: Float,
-  ): List<ClusterElement> {
+  ): List<Element> {
     if (candidates.isEmpty()) {
       return emptyList()
     }
 
-    val singles = ArrayList<ClusterElement>()
-    val clusterableCandidates = ArrayList<MarkerDescriptor>()
-    for (descriptor in candidates) {
-      if (descriptor.clusterable == false) {
-        singles.add(ClusterElement.Single(descriptor))
+    val singles = ArrayList<Element>()
+    val clusterable = IntList(candidates.size)
+    for (handle in candidates) {
+      if (flags[handle].toInt() and MarkerStore.FLAG_CLUSTERABLE == 0) {
+        singles.add(Element.Single(handle))
       } else {
-        clusterableCandidates.add(descriptor)
+        clusterable.add(handle)
       }
     }
 
-    if (clusterableCandidates.isEmpty()) {
+    if (clusterable.isEmpty()) {
       return singles
     }
 
@@ -129,19 +164,15 @@ internal object MarkerClusterEngine {
     val cellLat = quantize((ne.latitude - sw.latitude) / rows)
     val cellLon = quantize(longitudeSpan(sw, ne) / cols)
 
-    val buckets = HashMap<String, Bucket>()
-    for (descriptor in clusterableCandidates) {
-      val lat = descriptor.coordinate.latitude
-      val lon = if (wraps) {
-        normalizeLongitude(descriptor.coordinate.longitude, sw.longitude)
-      } else {
-        descriptor.coordinate.longitude
-      }
+    val buckets = HashMap<Long, Bucket>()
+    for (index in 0 until clusterable.size) {
+      val handle = clusterable[index]
+      val lat = latitudes[handle]
+      val lon = if (wraps) normalizeLongitude(longitudes[handle], sw.longitude) else longitudes[handle]
       val row = floor(lat / cellLat).toInt()
       val col = floor(lon / cellLon).toInt()
-      val key = "$row:$col"
-      val bucket = buckets.getOrPut(key) { Bucket() }
-      bucket.key = key
+      val key = (row.toLong() shl 32) or (col.toLong() and 0xFFFF_FFFFL)
+      val bucket = buckets.getOrPut(key) { Bucket(row, col) }
       bucket.count += 1
       bucket.sumLat += lat
       bucket.sumLon += lon
@@ -149,10 +180,7 @@ internal object MarkerClusterEngine {
       bucket.maxLat = maxOf(bucket.maxLat, lat)
       bucket.minLon = minOf(bucket.minLon, lon)
       bucket.maxLon = maxOf(bucket.maxLon, lon)
-      if (bucket.first == null) {
-        bucket.first = descriptor
-      }
-      bucket.memberIds.add(descriptor.id)
+      bucket.memberHandles.add(handle)
     }
 
     val merged = mergeOverlapping(
@@ -164,19 +192,18 @@ internal object MarkerClusterEngine {
       density,
     )
 
-    val result = ArrayList<ClusterElement>(merged.size + singles.size)
+    val result = ArrayList<Element>(merged.size + singles.size)
     result.addAll(singles)
     for (bucket in merged) {
-      val first = bucket.first
-      if (bucket.count == 1 && first != null) {
-        result.add(ClusterElement.Single(first))
+      if (bucket.count == 1) {
+        result.add(Element.Single(bucket.memberHandles[0]))
       } else {
         result.add(
-          ClusterElement.Cluster(
-            key = bucket.key,
+          Element.Cluster(
+            id = bucket.id,
             position = LatLng(bucket.sumLat / bucket.count, bucket.sumLon / bucket.count),
             count = bucket.count,
-            memberIds = bucket.memberIds,
+            memberHandles = bucket.memberHandles.toIntArray(),
             bounds = LatLngBounds(
               LatLng(bucket.minLat, wrapTo180(bucket.minLon)),
               LatLng(bucket.maxLat, wrapTo180(bucket.maxLon)),
@@ -198,7 +225,7 @@ internal object MarkerClusterEngine {
    * Merges buckets whose badges would overlap on screen, so a zoomed-out view
    * collapses neighbouring cells into one badge instead of stacking them. Uses
    * union-find on screen-space centroid distance; groups are seeded by the
-   * largest bucket so the resulting cluster key is stable.
+   * largest bucket so the resulting cluster id is stable.
    */
   private fun mergeOverlapping(
     buckets: ArrayList<Bucket>,
@@ -281,8 +308,7 @@ internal object MarkerClusterEngine {
     return order.mapNotNull { groups[it] }
   }
 
-  private class Bucket {
-    var key = ""
+  private class Bucket(val row: Int, val column: Int) {
     var count = 0
     var sumLat = 0.0
     var sumLon = 0.0
@@ -290,10 +316,13 @@ internal object MarkerClusterEngine {
     var maxLat = -Double.MAX_VALUE
     var minLon = Double.MAX_VALUE
     var maxLon = -Double.MAX_VALUE
-    var first: MarkerDescriptor? = null
-    val memberIds = ArrayList<String>()
+    val memberHandles = IntList()
 
-    /** Folds another bucket's members in; keeps own key/first (seed = dominant). */
+    /** Stable identity: the grid cell, which is anchored to geography. */
+    val id: String
+      get() = "$row:$column"
+
+    /** Folds another bucket's members in; keeps own cell (seed = dominant). */
     fun absorb(other: Bucket) {
       count += other.count
       sumLat += other.sumLat
@@ -302,7 +331,7 @@ internal object MarkerClusterEngine {
       maxLat = maxOf(maxLat, other.maxLat)
       minLon = minOf(minLon, other.minLon)
       maxLon = maxOf(maxLon, other.maxLon)
-      memberIds.addAll(other.memberIds)
+      memberHandles.addAll(other.memberHandles)
     }
   }
 }

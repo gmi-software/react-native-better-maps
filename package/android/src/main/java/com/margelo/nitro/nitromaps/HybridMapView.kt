@@ -213,10 +213,10 @@ class HybridMapView(private val context: ThemedReactContext) :
       adapter?.onLongPress = value
     }
 
-  override var markers: Array<MarkerDescriptor>? = null
+  override var markerCollection: HybridMarkerCollectionSpec? = null
     set(value) {
       field = value
-      adapter?.markers = value
+      adapter?.markerCollection = value as? HybridMarkerCollection
     }
 
   override var polylines: Array<PolylineDescriptor>? = null
@@ -267,7 +267,7 @@ class HybridMapView(private val context: ThemedReactContext) :
       adapter?.onCirclePress = value
     }
 
-  override var onClusterPress: ((markerIds: Array<String>, coordinate: Coordinate) -> Unit)? = null
+  override var onClusterPress: ((event: NativeClusterPressEvent) -> Unit)? = null
     set(value) {
       field = value
       adapter?.onClusterPress = value
@@ -305,6 +305,11 @@ class HybridMapView(private val context: ThemedReactContext) :
     return Promise.resolved(Unit)
   }
 
+  override fun getClusterMembers(clusterId: String): Promise<Array<String>> {
+    val mounted = adapter ?: return notMountedRejection()
+    return mounted.getClusterMembers(clusterId)
+  }
+
   override fun onDropView() {
     releaseAdapter()
   }
@@ -335,7 +340,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     onPress = null
     onPoiPress = null
     onLongPress = null
-    markers = null
+    markerCollection = null
     polylines = null
     polygons = null
     circles = null
@@ -415,7 +420,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     adapter.onPress = onPress
     adapter.onPoiPress = onPoiPress
     adapter.onLongPress = onLongPress
-    adapter.markers = markers
+    adapter.markerCollection = markerCollection as? HybridMarkerCollection
     adapter.polylines = polylines
     adapter.polygons = polygons
     adapter.circles = circles

@@ -166,25 +166,33 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   var markers: [MarkerDescriptor]? {
     didSet {
-      overlayController.setMarkers(markers)
+      PerfProbe.measure("markers.set", count: markers?.count ?? 0) {
+        overlayController.setMarkers(markers)
+      }
     }
   }
 
   var polylines: [PolylineDescriptor]? {
     didSet {
-      overlayController.updatePolylines(polylines)
+      PerfProbe.measure("polylines.set", count: polylines.coordinateCount) {
+        overlayController.updatePolylines(polylines)
+      }
     }
   }
 
   var polygons: [PolygonDescriptor]? {
     didSet {
-      overlayController.updatePolygons(polygons)
+      PerfProbe.measure("polygons.set", count: polygons.coordinateCount) {
+        overlayController.updatePolygons(polygons)
+      }
     }
   }
 
   var circles: [CircleDescriptor]? {
     didSet {
-      overlayController.updateCircles(circles)
+      PerfProbe.measure("circles.set", count: circles?.count ?? 0) {
+        overlayController.updateCircles(circles)
+      }
     }
   }
 
@@ -243,6 +251,8 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func applyRegion(_ region: Region, animated: Bool = false) {
+    let probe = PerfProbe.begin("region.apply")
+    defer { PerfProbe.end(probe) }
     let targetRegion = region.toMKCoordinateRegion()
     guard !view.region.approximatelyEquals(targetRegion) else {
       return
@@ -252,6 +262,8 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double = 0) {
+    let probe = PerfProbe.begin("camera.apply")
+    defer { PerfProbe.end(probe) }
     let mapCamera = camera.toMKMapCamera()
     guard !view.camera.approximatelyEquals(mapCamera) else {
       return

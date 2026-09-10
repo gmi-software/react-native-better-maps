@@ -208,6 +208,14 @@ final class GoogleMapOverlayController {
       return
     }
 
+    let probe = PerfProbe.begin("markers.applyDiff")
+    defer {
+      PerfProbe.end(
+        probe,
+        count: diff.removedKeys.count + diff.added.count + diff.retained.count
+      )
+    }
+
     for key in diff.removedKeys {
       markers.removeValue(forKey: key)?.map = nil
       markerVersions.removeValue(forKey: key)

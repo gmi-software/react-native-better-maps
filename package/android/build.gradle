@@ -24,6 +24,14 @@ def getExtOrIntegerDefault(name) {
     return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["NitroMaps_" + name]).toInteger()
 }
 
+// Opt-in timing probes for the performance lab (performance/README.md).
+// `-PNitroMaps_perfProbes=true` compiles the recording variant of PerfProbe.kt;
+// the default keeps BuildConfig.PERF_PROBES false so probes fold away.
+def perfProbesEnabled() {
+    def value = project.findProperty("NitroMaps_perfProbes")
+    return value != null && value.toString() == "true"
+}
+
 apply plugin: 'com.android.library'
 apply plugin: 'org.jetbrains.kotlin.android'
 apply from: '../nitrogen/generated/android/NitroMaps+autolinking.gradle'
@@ -49,6 +57,8 @@ android {
         minSdkVersion getExtOrIntegerDefault("minSdkVersion")
         targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
 
+        buildConfigField "boolean", "PERF_PROBES", perfProbesEnabled() ? "true" : "false"
+
         externalNativeBuild {
             cmake {
                 cppFlags "-frtti -fexceptions -Wall -fstack-protector-all"
@@ -66,6 +76,7 @@ android {
 
     buildFeatures {
         prefab true
+        buildConfig true
     }
 
     compileOptions {

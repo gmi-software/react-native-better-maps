@@ -23,6 +23,12 @@ end
 better_maps_ios_google_provider_enabled =
   better_maps_podfile_properties.call['betterMaps.iosGoogleProvider'] == 'true'
 
+# Opt-in timing probes for the performance lab (performance/README.md). Adds
+# `-DNITROMAPS_PERF_PROBES` so PerfProbe.swift compiles its recording variant;
+# without it every probe call site is an inlined no-op.
+better_maps_perf_probes_enabled =
+  better_maps_podfile_properties.call['betterMaps.perfProbes'] == 'true'
+
 Pod::Spec.new do |s|
   s.name         = 'react-native-better-maps'
   s.version      = package['version']
@@ -56,6 +62,14 @@ Pod::Spec.new do |s|
   add_nitrogen_files(s)
 
   install_modules_dependencies(s)
+
+  if better_maps_perf_probes_enabled
+    xcconfig = s.attributes_hash['pod_target_xcconfig'] || {}
+    swift_flags = xcconfig['OTHER_SWIFT_FLAGS'] || '$(inherited)'
+    s.pod_target_xcconfig = xcconfig.merge(
+      'OTHER_SWIFT_FLAGS' => "#{swift_flags} -DNITROMAPS_PERF_PROBES"
+    )
+  end
 
   s.test_spec 'Tests' do |test_spec|
     test_spec.source_files = 'iosTests/**/*.swift'

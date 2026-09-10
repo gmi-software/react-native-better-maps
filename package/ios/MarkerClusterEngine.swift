@@ -397,7 +397,9 @@ final class MarkerRenderPipeline {
 
   func setMarkers(_ descriptors: [MarkerDescriptor]?) -> Bool {
     let next = descriptors ?? []
-    let fingerprint = next.markersFingerprint()
+    let fingerprint = PerfProbe.measure("markers.fingerprint", count: next.count) {
+      next.markersFingerprint()
+    }
     guard fingerprint != markersFingerprint else {
       return false
     }
@@ -425,10 +427,13 @@ final class MarkerRenderPipeline {
       viewportRefreshWorkItem?.cancel()
       viewportRefreshWorkItem = nil
       refreshGeneration += 1
-      apply(Self.computeDiff(
-        target: allMarkerDescriptors.map { .single($0) },
-        displayed: displayedVersions
-      ))
+      let diff = PerfProbe.measure("markers.diff", count: allMarkerDescriptors.count) {
+        Self.computeDiff(
+          target: allMarkerDescriptors.map { .single($0) },
+          displayed: displayedVersions
+        )
+      }
+      apply(diff)
     }
   }
 
@@ -492,22 +497,32 @@ final class MarkerRenderPipeline {
     let clusterCellPoints = self.clusterCellPoints
 
     computeQueue.async { [weak self] in
-      let candidates = index.candidates(in: region)
+      let viewportProbe = PerfProbe.begin("markers.viewportCompute")
+      let candidates = PerfProbe.measure("markers.candidates", count: index.count) {
+        index.candidates(in: region)
+      }
       let elements: [MarkerClusterEngine.Element]
       if clustering {
-        elements = MarkerClusterEngine.clusters(
-          candidates: candidates,
-          region: region,
-          viewSize: viewSize,
-          cellPoints: clusterCellPoints
-        )
+        elements = PerfProbe.measure("markers.cluster", count: candidates.count) {
+          MarkerClusterEngine.clusters(
+            candidates: candidates,
+            region: region,
+            viewSize: viewSize,
+            cellPoints: clusterCellPoints
+          )
+        }
       } else {
-        elements = MarkerViewportFilter
-          .displaySubset(candidates: candidates, region: region)
-          .map { .single($0) }
+        elements = PerfProbe.measure("markers.viewportFilter", count: candidates.count) {
+          MarkerViewportFilter
+            .displaySubset(candidates: candidates, region: region)
+            .map { .single($0) }
+        }
       }
 
-      let diff = Self.computeDiff(target: elements, displayed: displayedVersions)
+      let diff = PerfProbe.measure("markers.diff", count: elements.count) {
+        Self.computeDiff(target: elements, displayed: displayedVersions)
+      }
+      PerfProbe.end(viewportProbe, count: candidates.count)
       DispatchQueue.main.async {
         guard let self, generation == self.refreshGeneration else {
           return
@@ -528,7 +543,9 @@ final class MarkerRenderPipeline {
     let generation = refreshGeneration
 
     computeQueue.async { [weak self] in
-      let index = MarkerSpatialIndex(markers: descriptors)
+      let index = PerfProbe.measure("markers.indexBuild", count: descriptors.count) {
+        MarkerSpatialIndex(markers: descriptors)
+      }
       DispatchQueue.main.async {
         guard let self, generation == self.refreshGeneration else {
           return

@@ -236,12 +236,14 @@ class GoogleMapProviderAdapter(
   override var markers: Array<MarkerDescriptor>?
     get() = _markers
     set(value) {
-      _markers = value
-      if (googleMap != null) {
-        updateOverlayViewportSize()
-        overlayController.setMarkers(value)
-      } else {
-        pendingMarkers = value
+      PerfProbe.measure("markers.set", value?.size ?: 0) {
+        _markers = value
+        if (googleMap != null) {
+          updateOverlayViewportSize()
+          overlayController.setMarkers(value)
+        } else {
+          pendingMarkers = value
+        }
       }
     }
 
@@ -249,11 +251,13 @@ class GoogleMapProviderAdapter(
   override var polylines: Array<PolylineDescriptor>?
     get() = _polylines
     set(value) {
-      _polylines = value
-      if (googleMap != null) {
-        overlayController.updatePolylines(value)
-      } else {
-        pendingPolylines = value
+      PerfProbe.measure("polylines.set", PerfProbe.coordinateCount(value)) {
+        _polylines = value
+        if (googleMap != null) {
+          overlayController.updatePolylines(value)
+        } else {
+          pendingPolylines = value
+        }
       }
     }
 
@@ -261,11 +265,13 @@ class GoogleMapProviderAdapter(
   override var polygons: Array<PolygonDescriptor>?
     get() = _polygons
     set(value) {
-      _polygons = value
-      if (googleMap != null) {
-        overlayController.updatePolygons(value)
-      } else {
-        pendingPolygons = value
+      PerfProbe.measure("polygons.set", PerfProbe.coordinateCount(value)) {
+        _polygons = value
+        if (googleMap != null) {
+          overlayController.updatePolygons(value)
+        } else {
+          pendingPolygons = value
+        }
       }
     }
 
@@ -273,11 +279,13 @@ class GoogleMapProviderAdapter(
   override var circles: Array<CircleDescriptor>?
     get() = _circles
     set(value) {
-      _circles = value
-      if (googleMap != null) {
-        overlayController.updateCircles(value)
-      } else {
-        pendingCircles = value
+      PerfProbe.measure("circles.set", value?.size ?: 0) {
+        _circles = value
+        if (googleMap != null) {
+          overlayController.updateCircles(value)
+        } else {
+          pendingCircles = value
+        }
       }
     }
 
@@ -573,6 +581,7 @@ class GoogleMapProviderAdapter(
 
   private fun applyRegion(region: Region, animated: Boolean = false) {
     val map = googleMap ?: return
+    val probe = PerfProbe.begin("region.apply")
     val bounds = region.toLatLngBounds()
     val paddingPx = _mapPadding.toPaddingPixels()
 
@@ -586,6 +595,7 @@ class GoogleMapProviderAdapter(
     }
 
     runWhenMapViewLaidOut(runUpdate)
+    PerfProbe.end(probe)
   }
 
   private fun updateMapCamera(
@@ -595,20 +605,25 @@ class GoogleMapProviderAdapter(
   ) {
     runOnMain {
       val map = googleMap ?: return@runOnMain
-      val target = camera.toCameraPosition(map.cameraPosition)
-      if (map.cameraPosition.approximatelyEquals(target)) {
-        return@runOnMain
-      }
-
-      val update = CameraUpdateFactory.newCameraPosition(target)
-      if (animated) {
-        if (durationMs > 0) {
-          map.animateCamera(update, durationMs, null)
-        } else {
-          map.animateCamera(update)
+      val probe = PerfProbe.begin("camera.apply")
+      try {
+        val target = camera.toCameraPosition(map.cameraPosition)
+        if (map.cameraPosition.approximatelyEquals(target)) {
+          return@runOnMain
         }
-      } else {
-        map.moveCamera(update)
+
+        val update = CameraUpdateFactory.newCameraPosition(target)
+        if (animated) {
+          if (durationMs > 0) {
+            map.animateCamera(update, durationMs, null)
+          } else {
+            map.animateCamera(update)
+          }
+        } else {
+          map.moveCamera(update)
+        }
+      } finally {
+        PerfProbe.end(probe)
       }
     }
   }

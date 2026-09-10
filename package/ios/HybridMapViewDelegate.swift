@@ -100,6 +100,8 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   }
 
   func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+    let probe = PerfProbe.begin("annotation.viewFor")
+    defer { PerfProbe.end(probe) }
     if let cluster = annotation as? MapClusterAnnotation {
       let view = mapView.dequeueReusableAnnotationView(
         withIdentifier: NitroClusterAnnotationView.reuseIdentifier
@@ -138,6 +140,8 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   }
 
   func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+    let probe = PerfProbe.begin("annotation.didAdd")
+    defer { PerfProbe.end(probe, count: views.count) }
     for view in views {
       if let marker = view.annotation as? MapMarkerAnnotation,
          marker.enteringAnimation.kind != .system {

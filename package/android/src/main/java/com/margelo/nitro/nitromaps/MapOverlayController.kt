@@ -112,7 +112,9 @@ class MapOverlayController(
 
   fun setMarkers(descriptors: Array<MarkerDescriptor>?) {
     val next = descriptors ?: emptyArray()
-    val fingerprint = next.markersFingerprint()
+    val fingerprint = PerfProbe.measure("markers.fingerprint", next.size) {
+      next.markersFingerprint()
+    }
     if (fingerprint == markersFingerprint) {
       return
     }
@@ -163,15 +165,25 @@ class MapOverlayController(
     val generation = refreshGeneration
 
     computeExecutor.execute {
-      val candidates = index.candidates(bounds)
+      val viewportProbe = PerfProbe.begin("markers.viewportCompute")
+      val candidates = PerfProbe.measure("markers.candidates", index.count) {
+        index.candidates(bounds)
+      }
       val elements: List<ClusterElement> = if (clustering) {
-        MarkerClusterEngine.clusters(candidates, bounds, widthPx, heightPx, density)
+        PerfProbe.measure("markers.cluster", candidates.size) {
+          MarkerClusterEngine.clusters(candidates, bounds, widthPx, heightPx, density)
+        }
       } else {
-        MarkerViewportFilter.displaySubset(candidates, bounds, latitudeSpan)
-          .map { ClusterElement.Single(it) }
+        PerfProbe.measure("markers.viewportFilter", candidates.size) {
+          MarkerViewportFilter.displaySubset(candidates, bounds, latitudeSpan)
+            .map { ClusterElement.Single(it) }
+        }
       }
 
-      val diff = computeMarkerRenderDiff(elements, displayedVersions)
+      val diff = PerfProbe.measure("markers.diff", elements.size) {
+        computeMarkerRenderDiff(elements, displayedVersions)
+      }
+      PerfProbe.end(viewportProbe, candidates.size)
 
       mainHandler.post {
         if (generation != refreshGeneration) {
@@ -188,7 +200,9 @@ class MapOverlayController(
     val generation = refreshGeneration
 
     computeExecutor.execute {
-      val index = MarkerSpatialIndex(descriptors)
+      val index = PerfProbe.measure("markers.indexBuild", descriptors.size) {
+        MarkerSpatialIndex(descriptors)
+      }
       mainHandler.post {
         if (generation != refreshGeneration) {
           return@post
@@ -205,6 +219,7 @@ class MapOverlayController(
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
   ) {
     val map = googleMap ?: return
+    val probe = PerfProbe.begin("markers.applyDiff")
 
     for (key in diff.removedKeys) {
       cancelEnteringAnimation(key)
@@ -293,6 +308,7 @@ class MapOverlayController(
     }
 
     animateEntering(addedMarkers)
+    PerfProbe.end(probe, diff.removedKeys.size + diff.added.size + diff.retained.size)
   }
 
   /** Applies entering animations to newly added markers via a single shared animator. */
@@ -378,6 +394,7 @@ class MapOverlayController(
 
   private fun applyMarkersSync(descriptors: Array<MarkerDescriptor>) {
     val map = googleMap ?: return
+    val probe = PerfProbe.begin("markers.applySync")
     refreshGeneration += 1
     cancelIdleRefresh()
     cancelLiveRefresh()
@@ -424,6 +441,7 @@ class MapOverlayController(
         marker
       },
     )
+    PerfProbe.end(probe, descriptors.size)
   }
 
   fun onCameraIdle() {

@@ -117,6 +117,14 @@ final class MapOverlayController {
       return
     }
 
+    let probe = PerfProbe.begin("markers.applyDiff")
+    defer {
+      PerfProbe.end(
+        probe,
+        count: diff.removedKeys.count + diff.added.count + diff.retained.count
+      )
+    }
+
     if !diff.removedKeys.isEmpty {
       let removed = diff.removedKeys.compactMap { key in
         displayedAnnotationVersions.removeValue(forKey: key)

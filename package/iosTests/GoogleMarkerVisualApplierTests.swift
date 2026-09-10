@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import GoogleMaps
 import UIKit
 import XCTest
@@ -93,3 +94,4 @@ private func markerDescriptor(image: MarkerImage, anchor: MarkerAnchor) -> Marke
 private func makeIcon() -> UIImage {
   UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).image { _ in }
 }
+#endif

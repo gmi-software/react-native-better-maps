@@ -44,6 +44,7 @@ internal class MarkerIconFactory(
     marker: Marker,
     key: String,
   ) {
+    val probe = PerfProbe.begin("marker.visualProps")
     applyAnchor(descriptor, marker)
     marker.rotation = descriptor.rotation?.toFloat() ?: 0f
     marker.isFlat = descriptor.flat == true
@@ -55,6 +56,7 @@ internal class MarkerIconFactory(
       isMarkerActive = { isMarkerCurrent(key, marker) },
       onIconApplied = { applyAnchor(descriptor, marker) },
     )
+    PerfProbe.end(probe)
   }
 
   private fun applyAnchor(descriptor: MarkerDescriptor, marker: Marker) {

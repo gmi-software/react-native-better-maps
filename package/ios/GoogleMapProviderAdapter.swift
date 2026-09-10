@@ -182,25 +182,33 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var markers: [MarkerDescriptor]? {
     didSet {
-      overlayController.setMarkers(markers)
+      PerfProbe.measure("markers.set", count: markers?.count ?? 0) {
+        overlayController.setMarkers(markers)
+      }
     }
   }
 
   var polylines: [PolylineDescriptor]? {
     didSet {
-      overlayController.updatePolylines(polylines)
+      PerfProbe.measure("polylines.set", count: polylines.coordinateCount) {
+        overlayController.updatePolylines(polylines)
+      }
     }
   }
 
   var polygons: [PolygonDescriptor]? {
     didSet {
-      overlayController.updatePolygons(polygons)
+      PerfProbe.measure("polygons.set", count: polygons.coordinateCount) {
+        overlayController.updatePolygons(polygons)
+      }
     }
   }
 
   var circles: [CircleDescriptor]? {
     didSet {
-      overlayController.updateCircles(circles)
+      PerfProbe.measure("circles.set", count: circles?.count ?? 0) {
+        overlayController.updateCircles(circles)
+      }
     }
   }
 
@@ -301,6 +309,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func applyRegion(_ region: Region, animated: Bool = false) {
+    let probe = PerfProbe.begin("region.apply")
+    defer { PerfProbe.end(probe) }
     applyCameraUpdate(
       GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: mapPadding?.toUIEdgeInsets() ?? .zero),
       animated: animated,
@@ -309,6 +319,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
+    let probe = PerfProbe.begin("camera.apply")
+    defer { PerfProbe.end(probe) }
     let target = camera.toGMSCameraPosition(current: view.camera)
     guard !view.camera.approximatelyEquals(target) else {
       return

@@ -1,0 +1,443 @@
+{
+  "suite": "serialization",
+  "runtime": "bun 1.3.14 on darwin/arm64",
+  "recordedAt": "2026-09-10T13:33:09.588Z",
+  "series": [
+    {
+      "name": "fixture generation",
+      "exponent": 0.9700192729033909,
+      "measurements": [
+        {
+          "name": "generateMarkers",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.011583000000030097,
+          "meanMs": 0.019426009999996836,
+          "minMs": 0.0065830000000346445,
+          "p95Ms": 0.06037500000002183
+        },
+        {
+          "name": "generateMarkers",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.07900000000000773,
+          "meanMs": 0.08384266000000054,
+          "minMs": 0.024042000000008557,
+          "p95Ms": 0.1451659999999606
+        },
+        {
+          "name": "generateMarkers",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.8899160000000279,
+          "meanMs": 0.9620414250000028,
+          "minMs": 0.6209169999999631,
+          "p95Ms": 1.7679160000000138
+        },
+        {
+          "name": "generateMarkers",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 8.843917000000033,
+          "meanMs": 9.591666799999995,
+          "minMs": 7.125499999999988,
+          "p95Ms": 13.122666999999979
+        }
+      ]
+    },
+    {
+      "name": "normalizeMarkerDescriptors, fresh array of same objects",
+      "exponent": 0.6134932711432446,
+      "measurements": [
+        {
+          "name": "normalize (new array)",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.005249999999989541,
+          "meanMs": 0.00720618999999914,
+          "minMs": 0.002957999999978256,
+          "p95Ms": 0.015249999999980446
+        },
+        {
+          "name": "normalize (new array)",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.01720799999998235,
+          "meanMs": 0.02153646000000009,
+          "minMs": 0.014750000000049113,
+          "p95Ms": 0.028999999999996362
+        },
+        {
+          "name": "normalize (new array)",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.04345899999998437,
+          "meanMs": 0.050008110000001695,
+          "minMs": 0.025250000000028194,
+          "p95Ms": 0.08716600000002472
+        },
+        {
+          "name": "normalize (new array)",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.4275830000000269,
+          "meanMs": 0.5497353999999973,
+          "minMs": 0.39549999999997,
+          "p95Ms": 0.9091250000000173
+        }
+      ]
+    },
+    {
+      "name": "normalizeMarkerDescriptors, unchanged reference",
+      "exponent": 0.6918410713492776,
+      "measurements": [
+        {
+          "name": "normalize (same objects)",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.003917000000001281,
+          "meanMs": 0.004991255000000479,
+          "minMs": 0.0025409999999510546,
+          "p95Ms": 0.010625000000004547
+        },
+        {
+          "name": "normalize (same objects)",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.0022910000000138098,
+          "meanMs": 0.007419785000000729,
+          "minMs": 0.0020419999999603533,
+          "p95Ms": 0.025708000000008724
+        },
+        {
+          "name": "normalize (same objects)",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.029374999999959073,
+          "meanMs": 0.036107650000005834,
+          "minMs": 0.020541999999977634,
+          "p95Ms": 0.08262499999989359
+        },
+        {
+          "name": "normalize (same objects)",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.33866699999998673,
+          "meanMs": 0.4059708500000056,
+          "minMs": 0.3093750000000455,
+          "p95Ms": 0.8418340000000626
+        }
+      ]
+    },
+    {
+      "name": "normalizeMarkerDescriptors, one marker changed",
+      "exponent": 0.7228230301719446,
+      "measurements": [
+        {
+          "name": "normalize (1 changed)",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.003333999999995285,
+          "meanMs": 0.004253485000001547,
+          "minMs": 0.0027910000000019863,
+          "p95Ms": 0.008500000000026375
+        },
+        {
+          "name": "normalize (1 changed)",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.002124999999978172,
+          "meanMs": 0.0022887350000002017,
+          "minMs": 0.0019580000000019027,
+          "p95Ms": 0.003333999999995285
+        },
+        {
+          "name": "normalize (1 changed)",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.027874999999994543,
+          "meanMs": 0.03761836000000016,
+          "minMs": 0.020792000000028565,
+          "p95Ms": 0.07379099999991467
+        },
+        {
+          "name": "normalize (1 changed)",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.3628750000000309,
+          "meanMs": 0.46552100000001817,
+          "minMs": 0.3268750000000864,
+          "p95Ms": 0.7905420000000731
+        }
+      ]
+    },
+    {
+      "name": "Fabric deepDiffer, first marker changed (early exit)",
+      "exponent": -0.2619900956546722,
+      "measurements": [
+        {
+          "name": "deepDiffer first changed",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.0002499999999940883,
+          "meanMs": 0.0009258399999995958,
+          "minMs": 0.00016599999997879422,
+          "p95Ms": 0.002375000000029104
+        },
+        {
+          "name": "deepDiffer first changed",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.00008300000001781882,
+          "meanMs": 0.00010079500000045982,
+          "minMs": 0.00004100000001017179,
+          "p95Ms": 0.00012499999996862243
+        },
+        {
+          "name": "deepDiffer first changed",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.00004200000000764703,
+          "meanMs": 0.00007000000000061845,
+          "minMs": 0.00004099999989648495,
+          "p95Ms": 0.00008400000001529406
+        },
+        {
+          "name": "deepDiffer first changed",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.00004200000000764703,
+          "meanMs": 0.00008135000000493164,
+          "minMs": 0.00004100000001017179,
+          "p95Ms": 0.00008400000001529406
+        }
+      ]
+    },
+    {
+      "name": "Fabric deepDiffer, last marker changed (walks all, then exits)",
+      "exponent": 0.781218040117454,
+      "measurements": [
+        {
+          "name": "deepDiffer last changed",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.001625000000046839,
+          "meanMs": 0.0019666349999985754,
+          "minMs": 0.0013749999999959073,
+          "p95Ms": 0.002207999999995991
+        },
+        {
+          "name": "deepDiffer last changed",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.0047089999999911925,
+          "meanMs": 0.005078954999999894,
+          "minMs": 0.004083000000036918,
+          "p95Ms": 0.006792000000018561
+        },
+        {
+          "name": "deepDiffer last changed",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.03345900000010715,
+          "meanMs": 0.03730500500000176,
+          "minMs": 0.03274999999996453,
+          "p95Ms": 0.05391700000006949
+        },
+        {
+          "name": "deepDiffer last changed",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.3396659999999656,
+          "meanMs": 0.3503124500000183,
+          "minMs": 0.33358400000008714,
+          "p95Ms": 0.39029199999993125
+        }
+      ]
+    },
+    {
+      "name": "Fabric deepDiffer, new array of the same objects (walks all, no exit)",
+      "exponent": 0.8006380646111241,
+      "measurements": [
+        {
+          "name": "deepDiffer new array, same objects",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.001416000000006079,
+          "meanMs": 0.0016716449999989891,
+          "minMs": 0.000624999999956799,
+          "p95Ms": 0.001833999999973912
+        },
+        {
+          "name": "deepDiffer new array, same objects",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.004416999999989457,
+          "meanMs": 0.005655420000000504,
+          "minMs": 0.004000000000019099,
+          "p95Ms": 0.011625000000037744
+        },
+        {
+          "name": "deepDiffer new array, same objects",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.03337499999997817,
+          "meanMs": 0.03568646999999828,
+          "minMs": 0.032500000000027285,
+          "p95Ms": 0.04949999999996635
+        },
+        {
+          "name": "deepDiffer new array, same objects",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.33658299999990504,
+          "meanMs": 0.38268735000000903,
+          "minMs": 0.33074999999996635,
+          "p95Ms": 0.6707910000000084
+        }
+      ]
+    },
+    {
+      "name": "Fabric deepDiffer, same reference (fast path)",
+      "exponent": -0.13533163503416018,
+      "measurements": [
+        {
+          "name": "deepDiffer same ref",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.00012500000002546585,
+          "meanMs": 0.00026436500000045273,
+          "minMs": 0.00004100000001017179,
+          "p95Ms": 0.00020799999998644125
+        },
+        {
+          "name": "deepDiffer same ref",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.00004200000000764703,
+          "meanMs": 0.000055839999999705016,
+          "minMs": 0,
+          "p95Ms": 0.00004200000000764703
+        },
+        {
+          "name": "deepDiffer same ref",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0,
+          "meanMs": 0.000023520000001440168,
+          "minMs": 0,
+          "p95Ms": 0.00004200000000764703
+        },
+        {
+          "name": "deepDiffer same ref",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.00004200000000764703,
+          "meanMs": 0.000047949999998309065,
+          "minMs": 0,
+          "p95Ms": 0.00004200000000764703
+        }
+      ]
+    },
+    {
+      "name": "immutable 1% mutation (app-side cost)",
+      "exponent": 0.8242836383975568,
+      "measurements": [
+        {
+          "name": "moveMarkerFraction 1%",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.001167000000009466,
+          "meanMs": 0.001887964999999383,
+          "minMs": 0.0005830000000059954,
+          "p95Ms": 0.004583000000025095
+        },
+        {
+          "name": "moveMarkerFraction 1%",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.0034999999999740794,
+          "meanMs": 0.004597530000001768,
+          "minMs": 0.0026659999999765205,
+          "p95Ms": 0.011167000000000371
+        },
+        {
+          "name": "moveMarkerFraction 1%",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.015833000000043285,
+          "meanMs": 0.01997519499999896,
+          "minMs": 0.012249999999994543,
+          "p95Ms": 0.025040999999987434
+        },
+        {
+          "name": "moveMarkerFraction 1%",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.3946250000000191,
+          "meanMs": 0.38562084999999796,
+          "minMs": 0.20974999999998545,
+          "p95Ms": 0.5993750000000091
+        }
+      ]
+    },
+    {
+      "name": "JSON payload size (stringify; bytes = wire-equivalent size)",
+      "exponent": 0.9635287310277506,
+      "measurements": [
+        {
+          "name": "JSON.stringify",
+          "n": 100,
+          "iterations": 3,
+          "medianMs": 0.009332999999969616,
+          "meanMs": 0.009069666666675857,
+          "minMs": 0.008209000000022115,
+          "p95Ms": 0.009667000000035841,
+          "extra": {
+            "bytes": 7167,
+            "bytesPerMarker": 72
+          }
+        },
+        {
+          "name": "JSON.stringify",
+          "n": 1000,
+          "iterations": 3,
+          "medianMs": 0.11516699999998536,
+          "meanMs": 0.12011133333332207,
+          "minMs": 0.100166999999999,
+          "p95Ms": 0.1449999999999818,
+          "extra": {
+            "bytes": 72648,
+            "bytesPerMarker": 73
+          }
+        },
+        {
+          "name": "JSON.stringify",
+          "n": 10000,
+          "iterations": 3,
+          "medianMs": 0.7227090000000089,
+          "meanMs": 0.7443750000000288,
+          "minMs": 0.7089580000000524,
+          "p95Ms": 0.8014580000000251,
+          "extra": {
+            "bytes": 736606,
+            "bytesPerMarker": 74
+          }
+        },
+        {
+          "name": "JSON.stringify",
+          "n": 100000,
+          "iterations": 3,
+          "medianMs": 8.239583000000039,
+          "meanMs": 8.312166333333343,
+          "minMs": 7.685000000000059,
+          "p95Ms": 9.011915999999928,
+          "extra": {
+            "bytes": 7466242,
+            "bytesPerMarker": 75
+          }
+        }
+      ]
+    }
+  ]
+}

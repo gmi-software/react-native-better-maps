@@ -1,0 +1,687 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260910-162544-6m8g",
+  "label": "baseline run 3 (JS-queue probe), Android emulator API 35 arm64, solo",
+  "scenario": "polygon-100",
+  "name": "Polygon, 100 vertices",
+  "group": "geometry",
+  "tags": [
+    "baseline"
+  ],
+  "description": "One 100-vertex polygon: mount, five fill/stroke updates, then a short pan.",
+  "recordedAt": "2026-09-10T14:30:16.986Z",
+  "platform": "android",
+  "provider": "google",
+  "os": "android 15",
+  "device": {
+    "platform": "android",
+    "model": "sdk_gphone64_arm64",
+    "manufacturer": "Google",
+    "deviceName": "emu64a",
+    "osVersion": "15",
+    "apiLevel": 35,
+    "refreshRateHz": 60,
+    "supportedRefreshRatesHz": [
+      60
+    ],
+    "screenScale": 2.625,
+    "screenWidthPx": 1080,
+    "screenHeightPx": 2400,
+    "isDebugBuild": false,
+    "isSimulator": true,
+    "cpuCores": 4,
+    "totalMemoryBytes": 4111405056,
+    "appVersion": "1.0.0 (1)",
+    "activity": "MainActivity"
+  },
+  "build": {
+    "type": "release",
+    "jsDev": false,
+    "hermes": true,
+    "perfProbes": true,
+    "representative": false,
+    "caveats": [
+      "simulator/emulator: desktop CPU and GPU, 60 Hz; not a device measurement"
+    ]
+  },
+  "refreshRateHz": 60.000003814697266,
+  "frameBudgetMs": 16.667,
+  "durationMs": 4977,
+  "load": {
+    "commitMs": 0.84,
+    "readyMs": 765,
+    "timedOut": false,
+    "native": {
+      "available": true,
+      "dropped": 0,
+      "spans": 11,
+      "mainThreadMs": 0.06,
+      "backgroundMs": 0,
+      "byName": {
+        "markers.fingerprint": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0.001,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "markers.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "polylines.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "polygons.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 100
+        },
+        "circles.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "region.apply": {
+          "count": 1,
+          "totalMs": 0.06,
+          "avgMs": 0.062,
+          "p50Ms": 0.062,
+          "p95Ms": 0.062,
+          "maxMs": 0.062,
+          "mainThreadMs": 0.06,
+          "backgroundMs": 0,
+          "items": 0
+        }
+      }
+    },
+    "bridge": {
+      "commitToNativeMs": null,
+      "setterMs": null
+    },
+    "hermes": {
+      "available": true,
+      "gcCount": 0,
+      "gcTimeMs": 0,
+      "allocatedBytes": 56048,
+      "heapSizeAfterBytes": 75497472
+    }
+  },
+  "frames": {
+    "frames": 246,
+    "durationMs": 4114.9,
+    "refreshRateHz": 60.000003814697266,
+    "budgetMs": 16.667,
+    "fps": {
+      "average": 60,
+      "p50": 60,
+      "p95": 60,
+      "p99": 60,
+      "worstWindow": 60,
+      "windows": 4
+    },
+    "frameTimeMs": {
+      "average": 16.67,
+      "p50": 16.67,
+      "p90": 16.67,
+      "p95": 16.67,
+      "p99": 16.67,
+      "worst": 16.67,
+      "histogram": {
+        "edgesMs": [
+          4,
+          8.33,
+          12,
+          16.67,
+          25,
+          33.33,
+          50,
+          100,
+          250,
+          500,
+          1000
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          246,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "jankFrames": 0,
+    "jankRatio": 0,
+    "droppedFrames": 0,
+    "longFrames": 0,
+    "overBudgetFrames": 0,
+    "android": {
+      "frames": 1,
+      "renderTotalMs": {
+        "average": 9.81,
+        "p50": 9.81,
+        "p95": 9.81,
+        "p99": 9.81,
+        "worst": 9.81
+      },
+      "phaseSharePct": {
+        "unknownDelay": 4.3,
+        "inputHandling": 0,
+        "animation": 5.8,
+        "layoutMeasure": 0.3,
+        "draw": 0.5,
+        "sync": 0.3,
+        "commandIssue": 7.9,
+        "swapBuffers": 80.3,
+        "gpu": 79.6
+      },
+      "phaseSumsMs": {
+        "unknownDelay": 0.9,
+        "inputHandling": 0,
+        "animation": 1.1,
+        "layoutMeasure": 0.1,
+        "draw": 0.1,
+        "sync": 0.1,
+        "commandIssue": 1.5,
+        "swapBuffers": 15.8,
+        "gpu": 15.6,
+        "total": 19.6
+      },
+      "missedDeadline": 1
+    }
+  },
+  "js": {
+    "lagSource": "js-queue-ping",
+    "lagMs": {
+      "samples": 480,
+      "p50": 0.08,
+      "p95": 0.32,
+      "p99": 0.88,
+      "max": 2.8
+    },
+    "frameGapMs": {
+      "p50": 16.64,
+      "p95": 17.75,
+      "max": 22.43
+    },
+    "lateFrames": 0,
+    "busyMs": 61.7,
+    "busyRatio": 0.015,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0,
+      "source": "performance-observer"
+    },
+    "durationMs": 4115.9,
+    "commits": {
+      "count": 5,
+      "totalMs": 3.66,
+      "avgMs": 0.731,
+      "p95Ms": 1.029,
+      "maxMs": 1.029
+    }
+  },
+  "bridge": {
+    "commitToNativeMs": {
+      "samples": 5,
+      "avgMs": 13.344,
+      "maxMs": 14.973
+    },
+    "setterMs": {
+      "samples": 5,
+      "avgMs": 0.657,
+      "maxMs": 1.023
+    }
+  },
+  "native": {
+    "available": true,
+    "dropped": 0,
+    "spans": 9,
+    "mainThreadMs": 3.9,
+    "backgroundMs": 0,
+    "byName": {
+      "polygons.set": {
+        "count": 5,
+        "totalMs": 3.28,
+        "avgMs": 0.657,
+        "p50Ms": 0.833,
+        "p95Ms": 1.023,
+        "maxMs": 1.023,
+        "mainThreadMs": 3.28,
+        "backgroundMs": 0,
+        "items": 500
+      },
+      "camera.apply": {
+        "count": 4,
+        "totalMs": 0.62,
+        "avgMs": 0.154,
+        "p50Ms": 0.099,
+        "p95Ms": 0.254,
+        "maxMs": 0.254,
+        "mainThreadMs": 0.62,
+        "backgroundMs": 0,
+        "items": 0
+      }
+    }
+  },
+  "memory": {
+    "beforeMB": 417.9,
+    "afterLoadMB": 365.7,
+    "afterInteractionMB": 414.8,
+    "afterCleanupMB": 410.8,
+    "peakMB": 417.9,
+    "loadDeltaMB": -52.2,
+    "interactionDeltaMB": 49.1,
+    "retainedAfterCleanupMB": -7.1,
+    "points": [
+      {
+        "label": "before",
+        "footprintMB": 417.9,
+        "residentMB": 565.1,
+        "javaHeapMB": 90.1,
+        "nativeHeapMB": 210.7,
+        "mallocBlocks": null,
+        "mallocMB": null
+      },
+      {
+        "label": "afterLoad",
+        "footprintMB": 365.7,
+        "residentMB": 513.3,
+        "javaHeapMB": 77.5,
+        "nativeHeapMB": 171,
+        "mallocBlocks": null,
+        "mallocMB": null
+      },
+      {
+        "label": "afterInteraction",
+        "footprintMB": 414.8,
+        "residentMB": 562.1,
+        "javaHeapMB": 82.4,
+        "nativeHeapMB": 216.5,
+        "mallocBlocks": null,
+        "mallocMB": null
+      },
+      {
+        "label": "afterCleanup",
+        "footprintMB": 410.8,
+        "residentMB": 558.2,
+        "javaHeapMB": 82.5,
+        "nativeHeapMB": 211.9,
+        "mallocBlocks": null,
+        "mallocMB": null
+      }
+    ]
+  },
+  "allocations": {
+    "hermes": {
+      "available": true,
+      "allocatedBytes": 394856,
+      "gcCount": 0,
+      "gcTimeMs": 0,
+      "heapSizeAfterMB": 72
+    },
+    "android": {
+      "javaBytesAllocated": 5185472,
+      "gcCount": 0,
+      "gcTimeMs": 0,
+      "blockingGcCount": 0,
+      "nativeHeapDeltaBytes": 47697680
+    },
+    "ios": null
+  },
+  "cpu": {
+    "processCpuMs": 462,
+    "wallMs": 4119,
+    "percent": 11.2,
+    "threadsBefore": 111,
+    "threadsAfter": 110,
+    "thermalBefore": "none",
+    "thermalAfter": "none",
+    "batteryLevel": 1,
+    "batteryState": "notCharging",
+    "lowPowerMode": false
+  },
+  "transfer": {
+    "updates": {
+      "polygons": 6,
+      "region": 1
+    },
+    "payload": {
+      "polygons": {
+        "items": 6,
+        "coordinates": 600,
+        "estimatedBytes": 27462
+      }
+    },
+    "largestUpdate": {
+      "polygons": {
+        "items": 1,
+        "coordinates": 100,
+        "estimatedBytes": 4577
+      }
+    },
+    "eventsToJs": {}
+  },
+  "steps": [
+    {
+      "index": 0,
+      "label": "restyle",
+      "meta": {
+        "points": 100,
+        "tick": 0
+      },
+      "wallMs": 312.59,
+      "commits": {
+        "count": 1,
+        "totalMs": 0.26,
+        "avgMs": 0.264,
+        "p95Ms": 0.264,
+        "maxMs": 0.264
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 11.844,
+          "maxMs": 11.844
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.251,
+          "maxMs": 0.251
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 0.25,
+        "backgroundMs": 0,
+        "byName": {
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0.25,
+            "avgMs": 0.251,
+            "p50Ms": 0.251,
+            "p95Ms": 0.251,
+            "maxMs": 0.251,
+            "mainThreadMs": 0.25,
+            "backgroundMs": 0,
+            "items": 100
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 37888,
+        "heapSizeAfterBytes": 75497472
+      }
+    },
+    {
+      "index": 1,
+      "label": "restyle",
+      "meta": {
+        "points": 100,
+        "tick": 1
+      },
+      "wallMs": 317.53,
+      "commits": {
+        "count": 1,
+        "totalMs": 1.03,
+        "avgMs": 1.029,
+        "p95Ms": 1.029,
+        "maxMs": 1.029
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 14.973,
+          "maxMs": 14.973
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.833,
+          "maxMs": 0.833
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 0.83,
+        "backgroundMs": 0,
+        "byName": {
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0.83,
+            "avgMs": 0.833,
+            "p50Ms": 0.833,
+            "p95Ms": 0.833,
+            "maxMs": 0.833,
+            "mainThreadMs": 0.83,
+            "backgroundMs": 0,
+            "items": 100
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 37240,
+        "heapSizeAfterBytes": 75497472
+      }
+    },
+    {
+      "index": 2,
+      "label": "restyle",
+      "meta": {
+        "points": 100,
+        "tick": 2
+      },
+      "wallMs": 316.12,
+      "commits": {
+        "count": 1,
+        "totalMs": 0.82,
+        "avgMs": 0.816,
+        "p95Ms": 0.816,
+        "maxMs": 0.816
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 12.756,
+          "maxMs": 12.756
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.86,
+          "maxMs": 0.86
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 0.86,
+        "backgroundMs": 0,
+        "byName": {
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0.86,
+            "avgMs": 0.86,
+            "p50Ms": 0.86,
+            "p95Ms": 0.86,
+            "maxMs": 0.86,
+            "mainThreadMs": 0.86,
+            "backgroundMs": 0,
+            "items": 100
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 36512,
+        "heapSizeAfterBytes": 75497472
+      }
+    },
+    {
+      "index": 3,
+      "label": "restyle",
+      "meta": {
+        "points": 100,
+        "tick": 3
+      },
+      "wallMs": 313.09,
+      "commits": {
+        "count": 1,
+        "totalMs": 0.76,
+        "avgMs": 0.76,
+        "p95Ms": 0.76,
+        "maxMs": 0.76
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 12.282,
+          "maxMs": 12.282
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.316,
+          "maxMs": 0.316
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 0.32,
+        "backgroundMs": 0,
+        "byName": {
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0.32,
+            "avgMs": 0.316,
+            "p50Ms": 0.316,
+            "p95Ms": 0.316,
+            "maxMs": 0.316,
+            "mainThreadMs": 0.32,
+            "backgroundMs": 0,
+            "items": 100
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 37384,
+        "heapSizeAfterBytes": 75497472
+      }
+    },
+    {
+      "index": 4,
+      "label": "restyle",
+      "meta": {
+        "points": 100,
+        "tick": 4
+      },
+      "wallMs": 316.45,
+      "commits": {
+        "count": 1,
+        "totalMs": 0.79,
+        "avgMs": 0.789,
+        "p95Ms": 0.789,
+        "maxMs": 0.789
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 14.864,
+          "maxMs": 14.864
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 1.023,
+          "maxMs": 1.023
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 1.02,
+        "backgroundMs": 0,
+        "byName": {
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 1.02,
+            "avgMs": 1.023,
+            "p50Ms": 1.023,
+            "p95Ms": 1.023,
+            "maxMs": 1.023,
+            "mainThreadMs": 1.02,
+            "backgroundMs": 0,
+            "items": 100
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 36312,
+        "heapSizeAfterBytes": 75497472
+      }
+    }
+  ],
+  "timeline": [],
+  "metrics": {},
+  "notes": [
+    "clock alignment round trip 0.001 ms"
+  ],
+  "errors": []
+}

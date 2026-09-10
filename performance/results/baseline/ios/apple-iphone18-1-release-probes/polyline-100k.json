@@ -1,0 +1,810 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260910-160744-llt0",
+  "label": "baseline run 2 (JS frame sampler), iPhone 17 Pro simulator, concurrent with Android emulator run",
+  "scenario": "polyline-100k",
+  "name": "Polyline, 100k points",
+  "group": "geometry",
+  "tags": [
+    "baseline",
+    "heavy"
+  ],
+  "description": "One 100000-point polyline: mount, five style-only updates, three geometry updates, then a short pan.",
+  "recordedAt": "2026-09-10T14:11:50.309Z",
+  "platform": "ios",
+  "provider": "apple",
+  "os": "ios 26.5",
+  "device": {
+    "platform": "ios",
+    "appVersion": "1.0.0 (1)",
+    "isSimulator": true,
+    "deviceName": "iPhone 17 Pro",
+    "model": "iPhone18,1",
+    "totalMemoryBytes": 25769803776,
+    "osVersion": "26.5",
+    "screenWidthPx": 1206,
+    "isDebugBuild": false,
+    "screenScale": 3,
+    "cpuCores": 15,
+    "manufacturer": "Apple",
+    "screenHeightPx": 2622,
+    "refreshRateHz": 60
+  },
+  "build": {
+    "type": "release",
+    "jsDev": false,
+    "hermes": true,
+    "perfProbes": true,
+    "representative": false,
+    "caveats": [
+      "simulator/emulator: desktop CPU and GPU, 60 Hz; not a device measurement"
+    ]
+  },
+  "refreshRateHz": 60,
+  "frameBudgetMs": 16.667,
+  "durationMs": 6405,
+  "load": {
+    "commitMs": 6.59,
+    "readyMs": 60,
+    "timedOut": false,
+    "native": {
+      "available": true,
+      "dropped": 0,
+      "spans": 12,
+      "mainThreadMs": 2.11,
+      "backgroundMs": 0,
+      "byName": {
+        "markers.fingerprint": {
+          "count": 3,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "markers.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0,
+          "p95Ms": 0.002,
+          "maxMs": 0.002,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "polylines.set": {
+          "count": 2,
+          "totalMs": 2.09,
+          "avgMs": 1.046,
+          "p50Ms": 0.001,
+          "p95Ms": 2.09,
+          "maxMs": 2.09,
+          "mainThreadMs": 2.09,
+          "backgroundMs": 0,
+          "items": 100000
+        },
+        "polygons.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "circles.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "region.apply": {
+          "count": 1,
+          "totalMs": 0.01,
+          "avgMs": 0.008,
+          "p50Ms": 0.008,
+          "p95Ms": 0.008,
+          "maxMs": 0.008,
+          "mainThreadMs": 0.01,
+          "backgroundMs": 0,
+          "items": 0
+        }
+      }
+    },
+    "bridge": {
+      "commitToNativeMs": null,
+      "setterMs": null
+    },
+    "hermes": {
+      "available": true,
+      "gcCount": 9,
+      "gcTimeMs": 0.006792126000000009,
+      "allocatedBytes": 27625312,
+      "heapSizeAfterBytes": 29360128
+    }
+  },
+  "frames": {
+    "frames": 322,
+    "durationMs": 5585.7,
+    "refreshRateHz": 60,
+    "budgetMs": 16.667,
+    "fps": {
+      "average": 57.5,
+      "p50": 60,
+      "p95": 48,
+      "p99": 48,
+      "worstWindow": 48,
+      "windows": 6
+    },
+    "frameTimeMs": {
+      "average": 17.39,
+      "p50": 16.67,
+      "p90": 16.67,
+      "p95": 16.67,
+      "p99": 50.44,
+      "worst": 69.65,
+      "histogram": {
+        "edgesMs": [
+          4,
+          8.33,
+          12,
+          16.67,
+          25,
+          33.33,
+          50,
+          100,
+          250,
+          500,
+          1000
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          313,
+          2,
+          1,
+          2,
+          4,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "jankFrames": 7,
+    "jankRatio": 0.0217,
+    "droppedFrames": 14,
+    "longFrames": 4,
+    "overBudgetFrames": 9
+  },
+  "js": {
+    "lagMs": {
+      "samples": 307,
+      "p50": 0,
+      "p95": 0.65,
+      "p99": 53.62,
+      "max": 100.88
+    },
+    "frameGapMs": {
+      "p50": 16.67,
+      "p95": 17.32,
+      "max": 117.54
+    },
+    "lateFrames": 10,
+    "busyMs": 517.1,
+    "busyRatio": 0.0926,
+    "longTasks": {
+      "count": 8,
+      "totalMs": 479.2,
+      "maxMs": 68.1,
+      "source": "performance-observer"
+    },
+    "durationMs": 5586.1,
+    "commits": {
+      "count": 8,
+      "totalMs": 54.16,
+      "avgMs": 6.77,
+      "p95Ms": 7.363,
+      "maxMs": 7.363
+    }
+  },
+  "bridge": {
+    "commitToNativeMs": {
+      "samples": 8,
+      "avgMs": 0.493,
+      "maxMs": 0.65
+    },
+    "setterMs": {
+      "samples": 8,
+      "avgMs": 3.273,
+      "maxMs": 3.614
+    }
+  },
+  "native": {
+    "available": true,
+    "dropped": 0,
+    "spans": 12,
+    "mainThreadMs": 27.88,
+    "backgroundMs": 0,
+    "byName": {
+      "polylines.set": {
+        "count": 8,
+        "totalMs": 26.19,
+        "avgMs": 3.273,
+        "p50Ms": 3.242,
+        "p95Ms": 3.614,
+        "maxMs": 3.614,
+        "mainThreadMs": 26.19,
+        "backgroundMs": 0,
+        "items": 800000
+      },
+      "camera.apply": {
+        "count": 4,
+        "totalMs": 1.7,
+        "avgMs": 0.424,
+        "p50Ms": 0.349,
+        "p95Ms": 0.656,
+        "maxMs": 0.656,
+        "mainThreadMs": 1.7,
+        "backgroundMs": 0,
+        "items": 0
+      }
+    }
+  },
+  "memory": {
+    "beforeMB": 196.5,
+    "afterLoadMB": 213.5,
+    "afterInteractionMB": 320.7,
+    "afterCleanupMB": 189.5,
+    "peakMB": 320.7,
+    "loadDeltaMB": 17,
+    "interactionDeltaMB": 107.2,
+    "retainedAfterCleanupMB": -7,
+    "points": [
+      {
+        "label": "before",
+        "footprintMB": 196.5,
+        "residentMB": 338.9,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 129316,
+        "mallocMB": 105.7
+      },
+      {
+        "label": "afterLoad",
+        "footprintMB": 213.5,
+        "residentMB": 405.4,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 269839,
+        "mallocMB": 123.9
+      },
+      {
+        "label": "afterInteraction",
+        "footprintMB": 320.7,
+        "residentMB": 389,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 356648,
+        "mallocMB": 151.5
+      },
+      {
+        "label": "afterCleanup",
+        "footprintMB": 189.5,
+        "residentMB": 356.5,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 124245,
+        "mallocMB": 93.1
+      }
+    ]
+  },
+  "allocations": {
+    "hermes": {
+      "available": true,
+      "allocatedBytes": 154969128,
+      "gcCount": 44,
+      "gcTimeMs": 0.010022956999999971,
+      "heapSizeAfterMB": 36
+    },
+    "android": null,
+    "ios": {
+      "mallocBlocksDelta": 86809,
+      "mallocBytesDelta": 28881664
+    }
+  },
+  "cpu": {
+    "processCpuMs": 1533,
+    "wallMs": 5589,
+    "percent": 27.4,
+    "threadsBefore": 21,
+    "threadsAfter": 21,
+    "thermalBefore": "nominal",
+    "thermalAfter": "nominal",
+    "batteryLevel": -1,
+    "batteryState": "unknown",
+    "lowPowerMode": false
+  },
+  "transfer": {
+    "updates": {
+      "polylines": 9,
+      "region": 1
+    },
+    "payload": {
+      "polylines": {
+        "items": 9,
+        "coordinates": 900000,
+        "estimatedBytes": 40300927
+      }
+    },
+    "largestUpdate": {
+      "polylines": {
+        "items": 1,
+        "coordinates": 100000,
+        "estimatedBytes": 4477935
+      }
+    },
+    "eventsToJs": {}
+  },
+  "steps": [
+    {
+      "index": 0,
+      "label": "restyle",
+      "meta": {
+        "points": 100000,
+        "tick": 0
+      },
+      "wallMs": 350.37,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.33,
+        "avgMs": 6.327,
+        "p95Ms": 6.327,
+        "maxMs": 6.327
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.425,
+          "maxMs": 0.425
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 2.91,
+          "maxMs": 2.91
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 2.91,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 2.91,
+            "avgMs": 2.91,
+            "p50Ms": 2.91,
+            "p95Ms": 2.91,
+            "maxMs": 2.91,
+            "mainThreadMs": 2.91,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 6,
+        "gcTimeMs": 0.0008272510000000011,
+        "allocatedBytes": 17485728,
+        "heapSizeAfterBytes": 33554432
+      }
+    },
+    {
+      "index": 1,
+      "label": "restyle",
+      "meta": {
+        "points": 100000,
+        "tick": 1
+      },
+      "wallMs": 382.61,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.8,
+        "avgMs": 6.805,
+        "p95Ms": 6.805,
+        "maxMs": 6.805
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.386,
+          "maxMs": 0.386
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 3.139,
+          "maxMs": 3.139
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 3.14,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 3.14,
+            "avgMs": 3.139,
+            "p50Ms": 3.139,
+            "p95Ms": 3.139,
+            "maxMs": 3.139,
+            "mainThreadMs": 3.14,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 5,
+        "gcTimeMs": 0.0005251669999999931,
+        "allocatedBytes": 17481016,
+        "heapSizeAfterBytes": 33554432
+      }
+    },
+    {
+      "index": 2,
+      "label": "restyle",
+      "meta": {
+        "points": 100000,
+        "tick": 2
+      },
+      "wallMs": 366.02,
+      "commits": {
+        "count": 1,
+        "totalMs": 7.13,
+        "avgMs": 7.129,
+        "p95Ms": 7.129,
+        "maxMs": 7.129
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.456,
+          "maxMs": 0.456
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 3.142,
+          "maxMs": 3.142
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 3.14,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 3.14,
+            "avgMs": 3.142,
+            "p50Ms": 3.142,
+            "p95Ms": 3.142,
+            "maxMs": 3.142,
+            "mainThreadMs": 3.14,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 5,
+        "gcTimeMs": 0.0006080409999999759,
+        "allocatedBytes": 17479088,
+        "heapSizeAfterBytes": 33554432
+      }
+    },
+    {
+      "index": 3,
+      "label": "restyle",
+      "meta": {
+        "points": 100000,
+        "tick": 3
+      },
+      "wallMs": 383.54,
+      "commits": {
+        "count": 1,
+        "totalMs": 7,
+        "avgMs": 7.001,
+        "p95Ms": 7.001,
+        "maxMs": 7.001
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.458,
+          "maxMs": 0.458
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 3.333,
+          "maxMs": 3.333
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 3.33,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 3.33,
+            "avgMs": 3.333,
+            "p50Ms": 3.333,
+            "p95Ms": 3.333,
+            "maxMs": 3.333,
+            "mainThreadMs": 3.33,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 5,
+        "gcTimeMs": 0.0007463329999999879,
+        "allocatedBytes": 17480992,
+        "heapSizeAfterBytes": 33554432
+      }
+    },
+    {
+      "index": 4,
+      "label": "restyle",
+      "meta": {
+        "points": 100000,
+        "tick": 4
+      },
+      "wallMs": 382.06,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.88,
+        "avgMs": 6.881,
+        "p95Ms": 6.881,
+        "maxMs": 6.881
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.65,
+          "maxMs": 0.65
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 3.242,
+          "maxMs": 3.242
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 3.24,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 3.24,
+            "avgMs": 3.242,
+            "p50Ms": 3.242,
+            "p95Ms": 3.242,
+            "maxMs": 3.242,
+            "mainThreadMs": 3.24,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 5,
+        "gcTimeMs": 0.0007079569999999813,
+        "allocatedBytes": 17479032,
+        "heapSizeAfterBytes": 33554432
+      }
+    },
+    {
+      "index": 5,
+      "label": "perturb",
+      "meta": {
+        "points": 100000,
+        "tick": 0
+      },
+      "wallMs": 366.13,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.16,
+        "avgMs": 6.159,
+        "p95Ms": 6.159,
+        "maxMs": 6.159
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.42,
+          "maxMs": 0.42
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 3.335,
+          "maxMs": 3.335
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 3.34,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 3.34,
+            "avgMs": 3.335,
+            "p50Ms": 3.335,
+            "p95Ms": 3.335,
+            "maxMs": 3.335,
+            "mainThreadMs": 3.34,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 6,
+        "gcTimeMs": 0.0011432500000000123,
+        "allocatedBytes": 19084848,
+        "heapSizeAfterBytes": 33554432
+      }
+    },
+    {
+      "index": 6,
+      "label": "perturb",
+      "meta": {
+        "points": 100000,
+        "tick": 1
+      },
+      "wallMs": 366.36,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.49,
+        "avgMs": 6.491,
+        "p95Ms": 6.491,
+        "maxMs": 6.491
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.548,
+          "maxMs": 0.548
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 3.614,
+          "maxMs": 3.614
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 3.61,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 3.61,
+            "avgMs": 3.614,
+            "p50Ms": 3.614,
+            "p95Ms": 3.614,
+            "maxMs": 3.614,
+            "mainThreadMs": 3.61,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 5,
+        "gcTimeMs": 0.00107770900000001,
+        "allocatedBytes": 19083720,
+        "heapSizeAfterBytes": 37748736
+      }
+    },
+    {
+      "index": 7,
+      "label": "perturb",
+      "meta": {
+        "points": 100000,
+        "tick": 2
+      },
+      "wallMs": 382.87,
+      "commits": {
+        "count": 1,
+        "totalMs": 7.36,
+        "avgMs": 7.363,
+        "p95Ms": 7.363,
+        "maxMs": 7.363
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.596,
+          "maxMs": 0.596
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 3.47,
+          "maxMs": 3.47
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 3.47,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 3.47,
+            "avgMs": 3.47,
+            "p50Ms": 3.47,
+            "p95Ms": 3.47,
+            "maxMs": 3.47,
+            "mainThreadMs": 3.47,
+            "backgroundMs": 0,
+            "items": 100000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 5,
+        "gcTimeMs": 0.0011127489999999962,
+        "allocatedBytes": 19078632,
+        "heapSizeAfterBytes": 37748736
+      }
+    }
+  ],
+  "timeline": [],
+  "metrics": {},
+  "notes": [
+    "clock alignment round trip 0.001 ms"
+  ],
+  "errors": []
+}

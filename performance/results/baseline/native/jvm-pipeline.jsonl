@@ -1,0 +1,43 @@
+# Android pipeline micro-benchmark on the JVM (package/android/src/test PipelineBenchmarkTest)
+# host: Apple M5 Pro, macOS 26.6, JBR openjdk version "25.0.2" 2026-01-20, recorded 2026-09-10T13:53:13Z
+# desktop JIT numbers: use for algorithmic scaling only, not device cost
+{"platform":"jvm","op":"fingerprint","n":1000,"items":1000,"medianMs":0.106,"minMs":0.092,"maxMs":0.352,"iterations":30}
+{"platform":"jvm","op":"indexBuild","n":1000,"items":1000,"medianMs":0.092,"minMs":0.067,"maxMs":0.362,"iterations":30}
+{"platform":"jvm","op":"candidates(city)","n":1000,"items":1000,"medianMs":0.004,"minMs":0.004,"maxMs":0.013,"iterations":30}
+{"platform":"jvm","op":"candidates(country)","n":1000,"items":1000,"medianMs":0.198,"minMs":0.131,"maxMs":0.631,"iterations":30}
+{"platform":"jvm","op":"viewportFilter(city)","n":1000,"items":18,"medianMs":0.005,"minMs":0.004,"maxMs":0.024,"iterations":30}
+{"platform":"jvm","op":"clusters(country)","n":1000,"items":1000,"medianMs":0.704,"minMs":0.591,"maxMs":1.446,"iterations":30}
+{"platform":"jvm","op":"clusters(city)","n":1000,"items":18,"medianMs":0.031,"minMs":0.030,"maxMs":0.035,"iterations":30}
+{"platform":"jvm","op":"diff(unchanged)","n":1000,"items":23,"medianMs":0.007,"minMs":0.005,"maxMs":0.014,"iterations":30}
+{"platform":"jvm","op":"diff(empty)","n":1000,"items":23,"medianMs":0.004,"minMs":0.003,"maxMs":0.007,"iterations":30}
+{"platform":"jvm","op":"singles(all)","n":1000,"items":1000,"medianMs":0.066,"minMs":0.055,"maxMs":1.038,"iterations":30}
+{"platform":"jvm","op":"fingerprint","n":10000,"items":10000,"medianMs":0.882,"minMs":0.726,"maxMs":1.243,"iterations":30}
+{"platform":"jvm","op":"indexBuild","n":10000,"items":10000,"medianMs":0.171,"minMs":0.156,"maxMs":0.516,"iterations":30}
+{"platform":"jvm","op":"candidates(city)","n":10000,"items":10000,"medianMs":0.001,"minMs":0.001,"maxMs":0.007,"iterations":30}
+{"platform":"jvm","op":"candidates(country)","n":10000,"items":10000,"medianMs":0.176,"minMs":0.149,"maxMs":1.112,"iterations":30}
+{"platform":"jvm","op":"viewportFilter(city)","n":10000,"items":148,"medianMs":0.014,"minMs":0.014,"maxMs":0.016,"iterations":30}
+{"platform":"jvm","op":"clusters(country)","n":10000,"items":10000,"medianMs":2.857,"minMs":2.455,"maxMs":3.570,"iterations":30}
+{"platform":"jvm","op":"clusters(city)","n":10000,"items":148,"medianMs":0.159,"minMs":0.106,"maxMs":0.474,"iterations":30}
+{"platform":"jvm","op":"diff(unchanged)","n":10000,"items":21,"medianMs":0.004,"minMs":0.004,"maxMs":0.007,"iterations":30}
+{"platform":"jvm","op":"diff(empty)","n":10000,"items":21,"medianMs":0.003,"minMs":0.003,"maxMs":0.046,"iterations":30}
+{"platform":"jvm","op":"singles(all)","n":10000,"items":10000,"medianMs":0.612,"minMs":0.514,"maxMs":1.228,"iterations":30}
+{"platform":"jvm","op":"fingerprint","n":50000,"items":50000,"medianMs":3.825,"minMs":3.718,"maxMs":5.350,"iterations":6}
+{"platform":"jvm","op":"indexBuild","n":50000,"items":50000,"medianMs":0.672,"minMs":0.559,"maxMs":0.730,"iterations":6}
+{"platform":"jvm","op":"candidates(city)","n":50000,"items":50000,"medianMs":0.002,"minMs":0.001,"maxMs":0.003,"iterations":6}
+{"platform":"jvm","op":"candidates(country)","n":50000,"items":50000,"medianMs":0.112,"minMs":0.096,"maxMs":0.162,"iterations":6}
+{"platform":"jvm","op":"viewportFilter(city)","n":50000,"items":791,"medianMs":0.099,"minMs":0.078,"maxMs":0.103,"iterations":6}
+{"platform":"jvm","op":"clusters(country)","n":50000,"items":50000,"medianMs":14.487,"minMs":14.236,"maxMs":15.150,"iterations":6}
+{"platform":"jvm","op":"clusters(city)","n":50000,"items":791,"medianMs":0.369,"minMs":0.342,"maxMs":0.413,"iterations":6}
+{"platform":"jvm","op":"diff(unchanged)","n":50000,"items":16,"medianMs":0.004,"minMs":0.003,"maxMs":0.010,"iterations":6}
+{"platform":"jvm","op":"diff(empty)","n":50000,"items":16,"medianMs":0.003,"minMs":0.002,"maxMs":0.004,"iterations":6}
+{"platform":"jvm","op":"singles(all)","n":50000,"items":50000,"medianMs":2.836,"minMs":2.523,"maxMs":2.873,"iterations":6}
+{"platform":"jvm","op":"fingerprint","n":100000,"items":100000,"medianMs":8.529,"minMs":8.302,"maxMs":11.420,"iterations":3}
+{"platform":"jvm","op":"indexBuild","n":100000,"items":100000,"medianMs":1.458,"minMs":1.325,"maxMs":1.463,"iterations":3}
+{"platform":"jvm","op":"candidates(city)","n":100000,"items":100000,"medianMs":0.002,"minMs":0.002,"maxMs":0.002,"iterations":3}
+{"platform":"jvm","op":"candidates(country)","n":100000,"items":100000,"medianMs":0.128,"minMs":0.119,"maxMs":0.152,"iterations":3}
+{"platform":"jvm","op":"viewportFilter(city)","n":100000,"items":2007,"medianMs":0.457,"minMs":0.433,"maxMs":0.457,"iterations":3}
+{"platform":"jvm","op":"clusters(country)","n":100000,"items":100000,"medianMs":40.888,"minMs":34.050,"maxMs":46.127,"iterations":3}
+{"platform":"jvm","op":"clusters(city)","n":100000,"items":2007,"medianMs":0.386,"minMs":0.373,"maxMs":0.393,"iterations":3}
+{"platform":"jvm","op":"diff(unchanged)","n":100000,"items":15,"medianMs":0.003,"minMs":0.002,"maxMs":0.004,"iterations":3}
+{"platform":"jvm","op":"diff(empty)","n":100000,"items":15,"medianMs":0.002,"minMs":0.002,"maxMs":0.002,"iterations":3}
+{"platform":"jvm","op":"singles(all)","n":100000,"items":100000,"medianMs":3.803,"minMs":3.796,"maxMs":4.742,"iterations":3}

@@ -1,0 +1,701 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260910-160744-llt0",
+  "label": "baseline run 2 (JS frame sampler), iPhone 17 Pro simulator, concurrent with Android emulator run",
+  "scenario": "combined-10k-polyline",
+  "name": "10k markers + 10k-point polyline",
+  "group": "combined",
+  "tags": [
+    "baseline"
+  ],
+  "description": "A 10k-point route over 10k markers: three route updates, then a pan.",
+  "recordedAt": "2026-09-10T14:13:45.975Z",
+  "platform": "ios",
+  "provider": "apple",
+  "os": "ios 26.5",
+  "device": {
+    "platform": "ios",
+    "appVersion": "1.0.0 (1)",
+    "isSimulator": true,
+    "deviceName": "iPhone 17 Pro",
+    "model": "iPhone18,1",
+    "totalMemoryBytes": 25769803776,
+    "osVersion": "26.5",
+    "screenWidthPx": 1206,
+    "isDebugBuild": false,
+    "screenScale": 3,
+    "cpuCores": 15,
+    "manufacturer": "Apple",
+    "screenHeightPx": 2622,
+    "refreshRateHz": 60
+  },
+  "build": {
+    "type": "release",
+    "jsDev": false,
+    "hermes": true,
+    "perfProbes": true,
+    "representative": false,
+    "caveats": [
+      "simulator/emulator: desktop CPU and GPU, 60 Hz; not a device measurement"
+    ]
+  },
+  "refreshRateHz": 60,
+  "frameBudgetMs": 16.667,
+  "durationMs": 5237,
+  "load": {
+    "commitMs": 9.89,
+    "readyMs": 113,
+    "timedOut": false,
+    "native": {
+      "available": true,
+      "dropped": 0,
+      "spans": 82,
+      "mainThreadMs": 16.4,
+      "backgroundMs": 3.67,
+      "byName": {
+        "markers.fingerprint": {
+          "count": 3,
+          "totalMs": 1.31,
+          "avgMs": 0.437,
+          "p50Ms": 0.536,
+          "p95Ms": 0.775,
+          "maxMs": 0.775,
+          "mainThreadMs": 1.31,
+          "backgroundMs": 0,
+          "items": 20000
+        },
+        "markers.set": {
+          "count": 2,
+          "totalMs": 0.56,
+          "avgMs": 0.279,
+          "p50Ms": 0.003,
+          "p95Ms": 0.556,
+          "maxMs": 0.556,
+          "mainThreadMs": 0.56,
+          "backgroundMs": 0,
+          "items": 10000
+        },
+        "polylines.set": {
+          "count": 2,
+          "totalMs": 0.55,
+          "avgMs": 0.277,
+          "p50Ms": 0.001,
+          "p95Ms": 0.553,
+          "maxMs": 0.553,
+          "mainThreadMs": 0.55,
+          "backgroundMs": 0,
+          "items": 10000
+        },
+        "polygons.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "circles.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "region.apply": {
+          "count": 1,
+          "totalMs": 0.01,
+          "avgMs": 0.011,
+          "p50Ms": 0.011,
+          "p95Ms": 0.011,
+          "maxMs": 0.011,
+          "mainThreadMs": 0.01,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "markers.indexBuild": {
+          "count": 3,
+          "totalMs": 3.58,
+          "avgMs": 1.194,
+          "p50Ms": 1.143,
+          "p95Ms": 1.346,
+          "maxMs": 1.346,
+          "mainThreadMs": 0,
+          "backgroundMs": 3.58,
+          "items": 30000
+        },
+        "markers.candidates": {
+          "count": 1,
+          "totalMs": 0.01,
+          "avgMs": 0.011,
+          "p50Ms": 0.011,
+          "p95Ms": 0.011,
+          "maxMs": 0.011,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.01,
+          "items": 10000
+        },
+        "markers.viewportFilter": {
+          "count": 1,
+          "totalMs": 0.01,
+          "avgMs": 0.01,
+          "p50Ms": 0.01,
+          "p95Ms": 0.01,
+          "maxMs": 0.01,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.01,
+          "items": 81
+        },
+        "markers.diff": {
+          "count": 1,
+          "totalMs": 0.02,
+          "avgMs": 0.015,
+          "p50Ms": 0.015,
+          "p95Ms": 0.015,
+          "maxMs": 0.015,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.02,
+          "items": 61
+        },
+        "markers.viewportCompute": {
+          "count": 1,
+          "totalMs": 0.05,
+          "avgMs": 0.046,
+          "p50Ms": 0.046,
+          "p95Ms": 0.046,
+          "maxMs": 0.046,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.05,
+          "items": 81
+        },
+        "markers.applyDiff": {
+          "count": 1,
+          "totalMs": 0.08,
+          "avgMs": 0.085,
+          "p50Ms": 0.085,
+          "p95Ms": 0.085,
+          "maxMs": 0.085,
+          "mainThreadMs": 0.08,
+          "backgroundMs": 0,
+          "items": 61
+        },
+        "annotation.viewFor": {
+          "count": 61,
+          "totalMs": 13.87,
+          "avgMs": 0.227,
+          "p50Ms": 0.01,
+          "p95Ms": 0.013,
+          "maxMs": 13.234,
+          "mainThreadMs": 13.87,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "annotation.didAdd": {
+          "count": 1,
+          "totalMs": 0,
+          "avgMs": 0.004,
+          "p50Ms": 0.004,
+          "p95Ms": 0.004,
+          "maxMs": 0.004,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 61
+        }
+      }
+    },
+    "bridge": {
+      "commitToNativeMs": null,
+      "setterMs": null
+    },
+    "hermes": {
+      "available": true,
+      "gcCount": 2,
+      "gcTimeMs": 0.00166220899999997,
+      "allocatedBytes": 7260472,
+      "heapSizeAfterBytes": 46137344
+    }
+  },
+  "frames": {
+    "frames": 260,
+    "durationMs": 4423.5,
+    "refreshRateHz": 60,
+    "budgetMs": 16.667,
+    "fps": {
+      "average": 58.9,
+      "p50": 59,
+      "p95": 57,
+      "p99": 57,
+      "worstWindow": 57,
+      "windows": 5
+    },
+    "frameTimeMs": {
+      "average": 16.99,
+      "p50": 16.67,
+      "p90": 16.67,
+      "p95": 16.67,
+      "p99": 33.33,
+      "worst": 45.71,
+      "histogram": {
+        "edgesMs": [
+          4,
+          8.33,
+          12,
+          16.67,
+          25,
+          33.33,
+          50,
+          100,
+          250,
+          500,
+          1000
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          255,
+          1,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "jankFrames": 4,
+    "jankRatio": 0.0154,
+    "droppedFrames": 5,
+    "longFrames": 0,
+    "overBudgetFrames": 5
+  },
+  "js": {
+    "lagMs": {
+      "samples": 266,
+      "p50": 0,
+      "p95": 0.53,
+      "p99": 0.73,
+      "max": 0.92
+    },
+    "frameGapMs": {
+      "p50": 16.67,
+      "p95": 17.2,
+      "max": 17.59
+    },
+    "lateFrames": 0,
+    "busyMs": 36.9,
+    "busyRatio": 0.0083,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0,
+      "source": "performance-observer"
+    },
+    "durationMs": 4424,
+    "commits": {
+      "count": 3,
+      "totalMs": 4.66,
+      "avgMs": 1.554,
+      "p95Ms": 1.783,
+      "maxMs": 1.783
+    }
+  },
+  "bridge": {
+    "commitToNativeMs": {
+      "samples": 3,
+      "avgMs": 0.193,
+      "maxMs": 0.3
+    },
+    "setterMs": {
+      "samples": 3,
+      "avgMs": 2.135,
+      "maxMs": 2.934
+    }
+  },
+  "native": {
+    "available": true,
+    "dropped": 0,
+    "spans": 206,
+    "mainThreadMs": 15.55,
+    "backgroundMs": 3.21,
+    "byName": {
+      "polylines.set": {
+        "count": 3,
+        "totalMs": 6.4,
+        "avgMs": 2.135,
+        "p50Ms": 1.853,
+        "p95Ms": 2.934,
+        "maxMs": 2.934,
+        "mainThreadMs": 6.4,
+        "backgroundMs": 0,
+        "items": 30000
+      },
+      "camera.apply": {
+        "count": 5,
+        "totalMs": 2.19,
+        "avgMs": 0.438,
+        "p50Ms": 0.384,
+        "p95Ms": 0.761,
+        "maxMs": 0.761,
+        "mainThreadMs": 2.19,
+        "backgroundMs": 0,
+        "items": 0
+      },
+      "markers.candidates": {
+        "count": 30,
+        "totalMs": 0.78,
+        "avgMs": 0.026,
+        "p50Ms": 0.011,
+        "p95Ms": 0.118,
+        "maxMs": 0.155,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.78,
+        "items": 300000
+      },
+      "markers.viewportFilter": {
+        "count": 30,
+        "totalMs": 0.26,
+        "avgMs": 0.009,
+        "p50Ms": 0.005,
+        "p95Ms": 0.026,
+        "maxMs": 0.084,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.26,
+        "items": 1196
+      },
+      "markers.diff": {
+        "count": 30,
+        "totalMs": 0.43,
+        "avgMs": 0.014,
+        "p50Ms": 0.014,
+        "p95Ms": 0.02,
+        "maxMs": 0.042,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.43,
+        "items": 306
+      },
+      "markers.viewportCompute": {
+        "count": 30,
+        "totalMs": 1.74,
+        "avgMs": 0.058,
+        "p50Ms": 0.039,
+        "p95Ms": 0.183,
+        "maxMs": 0.258,
+        "mainThreadMs": 0,
+        "backgroundMs": 1.74,
+        "items": 1196
+      },
+      "markers.applyDiff": {
+        "count": 30,
+        "totalMs": 6.2,
+        "avgMs": 0.207,
+        "p50Ms": 0.221,
+        "p95Ms": 0.593,
+        "maxMs": 0.843,
+        "mainThreadMs": 6.2,
+        "backgroundMs": 0,
+        "items": 119
+      },
+      "annotation.viewFor": {
+        "count": 34,
+        "totalMs": 0.73,
+        "avgMs": 0.021,
+        "p50Ms": 0.013,
+        "p95Ms": 0.071,
+        "maxMs": 0.104,
+        "mainThreadMs": 0.73,
+        "backgroundMs": 0,
+        "items": 0
+      },
+      "annotation.didAdd": {
+        "count": 14,
+        "totalMs": 0.03,
+        "avgMs": 0.002,
+        "p50Ms": 0.002,
+        "p95Ms": 0.006,
+        "maxMs": 0.006,
+        "mainThreadMs": 0.03,
+        "backgroundMs": 0,
+        "items": 34
+      }
+    }
+  },
+  "memory": {
+    "beforeMB": 238.3,
+    "afterLoadMB": 288.6,
+    "afterInteractionMB": 387.4,
+    "afterCleanupMB": 307.1,
+    "peakMB": 387.4,
+    "loadDeltaMB": 50.3,
+    "interactionDeltaMB": 98.8,
+    "retainedAfterCleanupMB": 68.8,
+    "points": [
+      {
+        "label": "before",
+        "footprintMB": 238.3,
+        "residentMB": 374.3,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 132008,
+        "mallocMB": 129.8
+      },
+      {
+        "label": "afterLoad",
+        "footprintMB": 288.6,
+        "residentMB": 345.6,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 293859,
+        "mallocMB": 171.3
+      },
+      {
+        "label": "afterInteraction",
+        "footprintMB": 387.4,
+        "residentMB": 394,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 396546,
+        "mallocMB": 204.2
+      },
+      {
+        "label": "afterCleanup",
+        "footprintMB": 307.1,
+        "residentMB": 395.8,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 222969,
+        "mallocMB": 154.7
+      }
+    ]
+  },
+  "allocations": {
+    "hermes": {
+      "available": true,
+      "allocatedBytes": 7121448,
+      "gcCount": 2,
+      "gcTimeMs": 0.0011925830000000248,
+      "heapSizeAfterMB": 44
+    },
+    "android": null,
+    "ios": {
+      "mallocBlocksDelta": 102687,
+      "mallocBytesDelta": 34496784
+    }
+  },
+  "cpu": {
+    "processCpuMs": 1179,
+    "wallMs": 4429,
+    "percent": 26.6,
+    "threadsBefore": 21,
+    "threadsAfter": 30,
+    "thermalBefore": "nominal",
+    "thermalAfter": "nominal",
+    "batteryLevel": -1,
+    "batteryState": "unknown",
+    "lowPowerMode": false
+  },
+  "transfer": {
+    "updates": {
+      "markers": 1,
+      "polylines": 4,
+      "region": 1
+    },
+    "payload": {
+      "markers": {
+        "items": 10000,
+        "coordinates": 10000,
+        "estimatedBytes": 715940
+      },
+      "polylines": {
+        "items": 4,
+        "coordinates": 40000,
+        "estimatedBytes": 1791427
+      }
+    },
+    "largestUpdate": {
+      "markers": {
+        "items": 10000,
+        "coordinates": 10000,
+        "estimatedBytes": 715940
+      },
+      "polylines": {
+        "items": 1,
+        "coordinates": 10000,
+        "estimatedBytes": 447862
+      }
+    },
+    "eventsToJs": {}
+  },
+  "steps": [
+    {
+      "index": 0,
+      "label": "route-update",
+      "meta": {},
+      "wallMs": 410.36,
+      "commits": {
+        "count": 1,
+        "totalMs": 1.34,
+        "avgMs": 1.337,
+        "p95Ms": 1.337,
+        "maxMs": 1.337
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.156,
+          "maxMs": 0.156
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 1.853,
+          "maxMs": 1.853
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 1.85,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 1.85,
+            "avgMs": 1.853,
+            "p50Ms": 1.853,
+            "p95Ms": 1.853,
+            "maxMs": 1.853,
+            "mainThreadMs": 1.85,
+            "backgroundMs": 0,
+            "items": 10000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.0008592080000000002,
+        "allocatedBytes": 1944320,
+        "heapSizeAfterBytes": 46137344
+      }
+    },
+    {
+      "index": 1,
+      "label": "route-update",
+      "meta": {},
+      "wallMs": 415.44,
+      "commits": {
+        "count": 1,
+        "totalMs": 1.78,
+        "avgMs": 1.783,
+        "p95Ms": 1.783,
+        "maxMs": 1.783
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.3,
+          "maxMs": 0.3
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 2.934,
+          "maxMs": 2.934
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 2.93,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 2.93,
+            "avgMs": 2.934,
+            "p50Ms": 2.934,
+            "p95Ms": 2.934,
+            "maxMs": 2.934,
+            "mainThreadMs": 2.93,
+            "backgroundMs": 0,
+            "items": 10000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.0003333750000000246,
+        "allocatedBytes": 1943376,
+        "heapSizeAfterBytes": 46137344
+      }
+    },
+    {
+      "index": 2,
+      "label": "route-update",
+      "meta": {},
+      "wallMs": 416.9,
+      "commits": {
+        "count": 1,
+        "totalMs": 1.54,
+        "avgMs": 1.542,
+        "p95Ms": 1.542,
+        "maxMs": 1.542
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.123,
+          "maxMs": 0.123
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 1.617,
+          "maxMs": 1.617
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 1,
+        "mainThreadMs": 1.62,
+        "backgroundMs": 0,
+        "byName": {
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 1.62,
+            "avgMs": 1.617,
+            "p50Ms": 1.617,
+            "p95Ms": 1.617,
+            "maxMs": 1.617,
+            "mainThreadMs": 1.62,
+            "backgroundMs": 0,
+            "items": 10000
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 1944240,
+        "heapSizeAfterBytes": 46137344
+      }
+    }
+  ],
+  "timeline": [],
+  "metrics": {},
+  "notes": [
+    "clock alignment round trip 0.001 ms"
+  ],
+  "errors": []
+}

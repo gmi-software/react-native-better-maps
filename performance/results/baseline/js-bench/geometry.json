@@ -1,0 +1,317 @@
+{
+  "suite": "geometry",
+  "runtime": "bun 1.3.14 on darwin/arm64",
+  "recordedAt": "2026-09-10T13:31:46.864Z",
+  "series": [
+    {
+      "name": "polyline fixture generation",
+      "exponent": 0.889508932370853,
+      "measurements": [
+        {
+          "name": "generatePolylineCoordinates",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.014125000000007049,
+          "meanMs": 0.020153730000001674,
+          "minMs": 0.004958000000016227,
+          "p95Ms": 0.04691599999998175
+        },
+        {
+          "name": "generatePolylineCoordinates",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.054666999999994914,
+          "meanMs": 0.05523977500000129,
+          "minMs": 0.050791000000003805,
+          "p95Ms": 0.060624999999987494
+        },
+        {
+          "name": "generatePolylineCoordinates",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.5349170000000072,
+          "meanMs": 0.5406925250000014,
+          "minMs": 0.48554200000000947,
+          "p95Ms": 0.5864170000000399
+        },
+        {
+          "name": "generatePolylineCoordinates",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 6.093000000000075,
+          "meanMs": 6.20879779999999,
+          "minMs": 5.783374999999978,
+          "p95Ms": 6.946332999999981
+        }
+      ]
+    },
+    {
+      "name": "polygon fixture generation",
+      "exponent": 0.913862233568367,
+      "measurements": [
+        {
+          "name": "generatePolygonCoordinates",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.0059169999999824086,
+          "meanMs": 0.011183550000000366,
+          "minMs": 0.003917000000001281,
+          "p95Ms": 0.02045799999999076
+        },
+        {
+          "name": "generatePolygonCoordinates",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.05570800000000986,
+          "meanMs": 0.05108037999999979,
+          "minMs": 0.033582999999993035,
+          "p95Ms": 0.06295800000000895
+        },
+        {
+          "name": "generatePolygonCoordinates",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.4357919999999922,
+          "meanMs": 0.44941980499999945,
+          "minMs": 0.40091599999999517,
+          "p95Ms": 0.5206250000000523
+        },
+        {
+          "name": "generatePolygonCoordinates",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 3.3152919999999995,
+          "meanMs": 3.5288709000000096,
+          "minMs": 3.1888340000000426,
+          "p95Ms": 4.095624999999927
+        }
+      ]
+    },
+    {
+      "name": "Fabric deepDiffer, polyline with 10% points moved",
+      "exponent": -0.12084057746737904,
+      "measurements": [
+        {
+          "name": "deepDiffer polyline (10% points changed)",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.0002090000000123382,
+          "meanMs": 0.0005796200000006025,
+          "minMs": 0.00016600000000721593,
+          "p95Ms": 0.0017499999999870397
+        },
+        {
+          "name": "deepDiffer polyline (10% points changed)",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.00008400000001529406,
+          "meanMs": 0.00028898499999939985,
+          "minMs": 0.00008299999998939711,
+          "p95Ms": 0.00016600000000721593
+        },
+        {
+          "name": "deepDiffer polyline (10% points changed)",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.00008300000001781882,
+          "meanMs": 0.00010209999999943875,
+          "minMs": 0.00004100000001017179,
+          "p95Ms": 0.00012500000002546585
+        },
+        {
+          "name": "deepDiffer polyline (10% points changed)",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.00008300000001781882,
+          "meanMs": 0.00009989999999788779,
+          "minMs": 0.00004100000001017179,
+          "p95Ms": 0.00012500000002546585
+        }
+      ]
+    },
+    {
+      "name": "app-side immutable polyline update",
+      "exponent": 0.6914122109101433,
+      "measurements": [
+        {
+          "name": "perturbPolyline (app-side immutable update)",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.0024999999999977263,
+          "meanMs": 0.0029454150000002245,
+          "minMs": 0.0007080000000030395,
+          "p95Ms": 0.0037090000000148393
+        },
+        {
+          "name": "perturbPolyline (app-side immutable update)",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.0024999999999977263,
+          "meanMs": 0.0026799350000000287,
+          "minMs": 0.0017499999999870397,
+          "p95Ms": 0.004041999999998325
+        },
+        {
+          "name": "perturbPolyline (app-side immutable update)",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.0202499999999759,
+          "meanMs": 0.02046065000000141,
+          "minMs": 0.015625,
+          "p95Ms": 0.027208000000030097
+        },
+        {
+          "name": "perturbPolyline (app-side immutable update)",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.25108399999999165,
+          "meanMs": 0.24218325000000504,
+          "minMs": 0.18574999999998454,
+          "p95Ms": 0.2822079999999687
+        }
+      ]
+    },
+    {
+      "name": "haversine distance over route (utils/geo)",
+      "exponent": 0.9018293995293057,
+      "measurements": [
+        {
+          "name": "distanceBetween along route",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.0037920000000042364,
+          "meanMs": 0.005552119999999689,
+          "minMs": 0.0036249999999995453,
+          "p95Ms": 0.01937500000002501
+        },
+        {
+          "name": "distanceBetween along route",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.021874999999994316,
+          "meanMs": 0.023637054999998953,
+          "minMs": 0.019957999999974163,
+          "p95Ms": 0.024125000000026375
+        },
+        {
+          "name": "distanceBetween along route",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.19220799999999372,
+          "meanMs": 0.19253458499999937,
+          "minMs": 0.16599999999999682,
+          "p95Ms": 0.21854200000001356
+        },
+        {
+          "name": "distanceBetween along route",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 1.8636249999999563,
+          "meanMs": 1.920800149999991,
+          "minMs": 1.8283749999999372,
+          "p95Ms": 2.0402500000000146
+        }
+      ]
+    },
+    {
+      "name": "flatten to Float64Array (reference point, not a proposal)",
+      "exponent": 0.775687204588857,
+      "measurements": [
+        {
+          "name": "copy to Float64Array (reference: packed representation)",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.0009159999999894808,
+          "meanMs": 0.0014054100000008417,
+          "minMs": 0.0008330000000000837,
+          "p95Ms": 0.002458000000018501
+        },
+        {
+          "name": "copy to Float64Array (reference: packed representation)",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.0029170000000249274,
+          "meanMs": 0.00463538499999828,
+          "minMs": 0.0024579999999900792,
+          "p95Ms": 0.009875000000022283
+        },
+        {
+          "name": "copy to Float64Array (reference: packed representation)",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.018625000000042746,
+          "meanMs": 0.02175771999999938,
+          "minMs": 0.008458000000018728,
+          "p95Ms": 0.031833000000005995
+        },
+        {
+          "name": "copy to Float64Array (reference: packed representation)",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 0.19016599999997652,
+          "meanMs": 0.19759575000001064,
+          "minMs": 0.09820799999999963,
+          "p95Ms": 0.25216599999998834
+        }
+      ]
+    },
+    {
+      "name": "JSON payload size",
+      "exponent": 1.0004498020351926,
+      "measurements": [
+        {
+          "name": "JSON.stringify",
+          "n": 100,
+          "iterations": 3,
+          "medianMs": 0.0047919999999805896,
+          "meanMs": 0.004902999999994033,
+          "minMs": 0.004750000000001364,
+          "p95Ms": 0.005167000000000144,
+          "extra": {
+            "bytes": 4462,
+            "bytesPerPoint": 45
+          }
+        },
+        {
+          "name": "JSON.stringify",
+          "n": 1000,
+          "iterations": 3,
+          "medianMs": 0.058667000000014013,
+          "meanMs": 0.058763999999996486,
+          "minMs": 0.05783299999995961,
+          "p95Ms": 0.05979200000001583,
+          "extra": {
+            "bytes": 44773,
+            "bytesPerPoint": 45
+          }
+        },
+        {
+          "name": "JSON.stringify",
+          "n": 10000,
+          "iterations": 3,
+          "medianMs": 0.5311669999999822,
+          "meanMs": 0.5341943333333271,
+          "minMs": 0.47887500000001637,
+          "p95Ms": 0.5925409999999829,
+          "extra": {
+            "bytes": 447778,
+            "bytesPerPoint": 45
+          }
+        },
+        {
+          "name": "JSON.stringify",
+          "n": 100000,
+          "iterations": 3,
+          "medianMs": 4.970542000000023,
+          "meanMs": 4.969444333333324,
+          "minMs": 4.759415999999987,
+          "p95Ms": 5.17837499999996,
+          "extra": {
+            "bytes": 4477789,
+            "bytesPerPoint": 45
+          }
+        }
+      ]
+    }
+  ]
+}

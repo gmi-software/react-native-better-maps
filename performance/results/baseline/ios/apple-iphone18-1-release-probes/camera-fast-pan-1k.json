@@ -1,0 +1,514 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260910-160744-llt0",
+  "label": "baseline run 2 (JS frame sampler), iPhone 17 Pro simulator, concurrent with Android emulator run",
+  "scenario": "camera-fast-pan-1k",
+  "name": "Camera fast-pan, 1k markers",
+  "group": "camera",
+  "tags": [
+    "baseline"
+  ],
+  "description": "Six fast animated pan legs (400 ms each, larger steps). Scene: 1000 markers.",
+  "recordedAt": "2026-09-10T14:08:42.757Z",
+  "platform": "ios",
+  "provider": "apple",
+  "os": "ios 26.5",
+  "device": {
+    "platform": "ios",
+    "appVersion": "1.0.0 (1)",
+    "isSimulator": true,
+    "deviceName": "iPhone 17 Pro",
+    "model": "iPhone18,1",
+    "totalMemoryBytes": 25769803776,
+    "osVersion": "26.5",
+    "screenWidthPx": 1206,
+    "isDebugBuild": false,
+    "screenScale": 3,
+    "cpuCores": 15,
+    "manufacturer": "Apple",
+    "screenHeightPx": 2622,
+    "refreshRateHz": 60
+  },
+  "build": {
+    "type": "release",
+    "jsDev": false,
+    "hermes": true,
+    "perfProbes": true,
+    "representative": false,
+    "caveats": [
+      "simulator/emulator: desktop CPU and GPU, 60 Hz; not a device measurement"
+    ]
+  },
+  "refreshRateHz": 60,
+  "frameBudgetMs": 16.667,
+  "durationMs": 4542,
+  "load": {
+    "commitMs": 2.97,
+    "readyMs": 94,
+    "timedOut": false,
+    "native": {
+      "available": true,
+      "dropped": 0,
+      "spans": 25,
+      "mainThreadMs": 19.44,
+      "backgroundMs": 0.47,
+      "byName": {
+        "markers.fingerprint": {
+          "count": 3,
+          "totalMs": 0.13,
+          "avgMs": 0.043,
+          "p50Ms": 0.064,
+          "p95Ms": 0.065,
+          "maxMs": 0.065,
+          "mainThreadMs": 0.13,
+          "backgroundMs": 0,
+          "items": 2000
+        },
+        "markers.set": {
+          "count": 2,
+          "totalMs": 0.08,
+          "avgMs": 0.038,
+          "p50Ms": 0.003,
+          "p95Ms": 0.072,
+          "maxMs": 0.072,
+          "mainThreadMs": 0.08,
+          "backgroundMs": 0,
+          "items": 1000
+        },
+        "polylines.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "polygons.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "circles.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "region.apply": {
+          "count": 1,
+          "totalMs": 0.01,
+          "avgMs": 0.01,
+          "p50Ms": 0.01,
+          "p95Ms": 0.01,
+          "maxMs": 0.01,
+          "mainThreadMs": 0.01,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "markers.indexBuild": {
+          "count": 3,
+          "totalMs": 0.45,
+          "avgMs": 0.149,
+          "p50Ms": 0.146,
+          "p95Ms": 0.172,
+          "maxMs": 0.172,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.45,
+          "items": 3000
+        },
+        "markers.candidates": {
+          "count": 1,
+          "totalMs": 0,
+          "avgMs": 0.004,
+          "p50Ms": 0.004,
+          "p95Ms": 0.004,
+          "maxMs": 0.004,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 1000
+        },
+        "markers.viewportFilter": {
+          "count": 1,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0.001,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 7
+        },
+        "markers.diff": {
+          "count": 1,
+          "totalMs": 0.01,
+          "avgMs": 0.006,
+          "p50Ms": 0.006,
+          "p95Ms": 0.006,
+          "maxMs": 0.006,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.01,
+          "items": 4
+        },
+        "markers.viewportCompute": {
+          "count": 1,
+          "totalMs": 0.02,
+          "avgMs": 0.016,
+          "p50Ms": 0.016,
+          "p95Ms": 0.016,
+          "maxMs": 0.016,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.02,
+          "items": 7
+        },
+        "markers.applyDiff": {
+          "count": 1,
+          "totalMs": 0.03,
+          "avgMs": 0.03,
+          "p50Ms": 0.03,
+          "p95Ms": 0.03,
+          "maxMs": 0.03,
+          "mainThreadMs": 0.03,
+          "backgroundMs": 0,
+          "items": 4
+        },
+        "annotation.viewFor": {
+          "count": 4,
+          "totalMs": 19.19,
+          "avgMs": 4.797,
+          "p50Ms": 0.015,
+          "p95Ms": 19.135,
+          "maxMs": 19.135,
+          "mainThreadMs": 19.19,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "annotation.didAdd": {
+          "count": 1,
+          "totalMs": 0,
+          "avgMs": 0.001,
+          "p50Ms": 0.001,
+          "p95Ms": 0.001,
+          "maxMs": 0.001,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 4
+        }
+      }
+    },
+    "bridge": {
+      "commitToNativeMs": null,
+      "setterMs": null
+    },
+    "hermes": {
+      "available": true,
+      "gcCount": 1,
+      "gcTimeMs": 0.005713166999999998,
+      "allocatedBytes": 518888,
+      "heapSizeAfterBytes": 29360128
+    }
+  },
+  "frames": {
+    "frames": 221,
+    "durationMs": 3722.9,
+    "refreshRateHz": 60,
+    "budgetMs": 16.667,
+    "fps": {
+      "average": 59.5,
+      "p50": 60,
+      "p95": 58,
+      "p99": 58,
+      "worstWindow": 58,
+      "windows": 4
+    },
+    "frameTimeMs": {
+      "average": 16.82,
+      "p50": 16.67,
+      "p90": 16.67,
+      "p95": 16.67,
+      "p99": 16.67,
+      "worst": 50.99,
+      "histogram": {
+        "edgesMs": [
+          4,
+          8.33,
+          12,
+          16.67,
+          25,
+          33.33,
+          50,
+          100,
+          250,
+          500,
+          1000
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          220,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "jankFrames": 1,
+    "jankRatio": 0.0045,
+    "droppedFrames": 2,
+    "longFrames": 1,
+    "overBudgetFrames": 1
+  },
+  "js": {
+    "lagMs": {
+      "samples": 224,
+      "p50": 0,
+      "p95": 0.51,
+      "p99": 0.61,
+      "max": 0.7
+    },
+    "frameGapMs": {
+      "p50": 16.67,
+      "p95": 17.17,
+      "max": 17.37
+    },
+    "lateFrames": 0,
+    "busyMs": 21.9,
+    "busyRatio": 0.0059,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0,
+      "source": "performance-observer"
+    },
+    "durationMs": 3723.3,
+    "commits": {
+      "count": 0,
+      "totalMs": 0,
+      "avgMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0
+    }
+  },
+  "bridge": {
+    "commitToNativeMs": null,
+    "setterMs": null
+  },
+  "native": {
+    "available": true,
+    "dropped": 0,
+    "spans": 187,
+    "mainThreadMs": 4.73,
+    "backgroundMs": 1.44,
+    "byName": {
+      "camera.apply": {
+        "count": 7,
+        "totalMs": 3.47,
+        "avgMs": 0.496,
+        "p50Ms": 0.37,
+        "p95Ms": 1.202,
+        "maxMs": 1.202,
+        "mainThreadMs": 3.47,
+        "backgroundMs": 0,
+        "items": 0
+      },
+      "markers.candidates": {
+        "count": 35,
+        "totalMs": 0.29,
+        "avgMs": 0.008,
+        "p50Ms": 0.008,
+        "p95Ms": 0.021,
+        "maxMs": 0.023,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.29,
+        "items": 35000
+      },
+      "markers.viewportFilter": {
+        "count": 35,
+        "totalMs": 0.03,
+        "avgMs": 0.001,
+        "p50Ms": 0,
+        "p95Ms": 0.002,
+        "maxMs": 0.008,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.03,
+        "items": 128
+      },
+      "markers.diff": {
+        "count": 35,
+        "totalMs": 0.3,
+        "avgMs": 0.009,
+        "p50Ms": 0.004,
+        "p95Ms": 0.022,
+        "maxMs": 0.097,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.3,
+        "items": 24
+      },
+      "markers.viewportCompute": {
+        "count": 35,
+        "totalMs": 0.82,
+        "avgMs": 0.024,
+        "p50Ms": 0.019,
+        "p95Ms": 0.039,
+        "maxMs": 0.116,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.82,
+        "items": 128
+      },
+      "markers.applyDiff": {
+        "count": 35,
+        "totalMs": 1.1,
+        "avgMs": 0.031,
+        "p50Ms": 0.001,
+        "p95Ms": 0.21,
+        "maxMs": 0.222,
+        "mainThreadMs": 1.1,
+        "backgroundMs": 0,
+        "items": 8
+      },
+      "annotation.viewFor": {
+        "count": 3,
+        "totalMs": 0.15,
+        "avgMs": 0.051,
+        "p50Ms": 0.056,
+        "p95Ms": 0.087,
+        "maxMs": 0.087,
+        "mainThreadMs": 0.15,
+        "backgroundMs": 0,
+        "items": 0
+      },
+      "annotation.didAdd": {
+        "count": 2,
+        "totalMs": 0,
+        "avgMs": 0.002,
+        "p50Ms": 0.002,
+        "p95Ms": 0.002,
+        "maxMs": 0.002,
+        "mainThreadMs": 0,
+        "backgroundMs": 0,
+        "items": 3
+      }
+    }
+  },
+  "memory": {
+    "beforeMB": 171.7,
+    "afterLoadMB": 189,
+    "afterInteractionMB": 321.9,
+    "afterCleanupMB": 236.8,
+    "peakMB": 321.9,
+    "loadDeltaMB": 17.3,
+    "interactionDeltaMB": 132.9,
+    "retainedAfterCleanupMB": 65.1,
+    "points": [
+      {
+        "label": "before",
+        "footprintMB": 171.7,
+        "residentMB": 363.3,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 131172,
+        "mallocMB": 93.1
+      },
+      {
+        "label": "afterLoad",
+        "footprintMB": 189,
+        "residentMB": 389.3,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 281978,
+        "mallocMB": 120.7
+      },
+      {
+        "label": "afterInteraction",
+        "footprintMB": 321.9,
+        "residentMB": 370,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 429326,
+        "mallocMB": 153.9
+      },
+      {
+        "label": "afterCleanup",
+        "footprintMB": 236.8,
+        "residentMB": 358,
+        "javaHeapMB": null,
+        "nativeHeapMB": null,
+        "mallocBlocks": 218272,
+        "mallocMB": 100.9
+      }
+    ]
+  },
+  "allocations": {
+    "hermes": {
+      "available": true,
+      "allocatedBytes": 182920,
+      "gcCount": 0,
+      "gcTimeMs": 0,
+      "heapSizeAfterMB": 28
+    },
+    "android": null,
+    "ios": {
+      "mallocBlocksDelta": 147348,
+      "mallocBytesDelta": 34757280
+    }
+  },
+  "cpu": {
+    "processCpuMs": 1147,
+    "wallMs": 3726,
+    "percent": 30.8,
+    "threadsBefore": 24,
+    "threadsAfter": 24,
+    "thermalBefore": "nominal",
+    "thermalAfter": "nominal",
+    "batteryLevel": -1,
+    "batteryState": "unknown",
+    "lowPowerMode": false
+  },
+  "transfer": {
+    "updates": {
+      "markers": 1,
+      "region": 1
+    },
+    "payload": {
+      "markers": {
+        "items": 1000,
+        "coordinates": 1000,
+        "estimatedBytes": 71596
+      }
+    },
+    "largestUpdate": {
+      "markers": {
+        "items": 1000,
+        "coordinates": 1000,
+        "estimatedBytes": 71596
+      }
+    },
+    "eventsToJs": {}
+  },
+  "steps": [],
+  "timeline": [],
+  "metrics": {},
+  "notes": [
+    "clock alignment round trip 0.001 ms"
+  ],
+  "errors": []
+}

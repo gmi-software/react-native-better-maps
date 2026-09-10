@@ -1,0 +1,133 @@
+{
+  "suite": "collection",
+  "runtime": "bun 1.3.14 on darwin/arm64",
+  "recordedAt": "2026-09-10T13:31:50.833Z",
+  "series": [
+    {
+      "name": "React.createElement for n <Marker> children (per parent render)",
+      "exponent": 0.9718334896739504,
+      "measurements": [
+        {
+          "name": "createElement × n",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.04487499999993361,
+          "meanMs": 0.047281840000005675,
+          "minMs": 0.032541999999921245,
+          "p95Ms": 0.06937499999992269
+        },
+        {
+          "name": "createElement × n",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.29854100000000017,
+          "meanMs": 0.3127039750000046,
+          "minMs": 0.28216600000007475,
+          "p95Ms": 0.3374579999999696
+        },
+        {
+          "name": "createElement × n",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 3.3688750000001164,
+          "meanMs": 3.4756316299999948,
+          "minMs": 2.7730000000001382,
+          "p95Ms": 4.171290999999883
+        },
+        {
+          "name": "createElement × n",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 34.723417000000154,
+          "meanMs": 35.138837500000044,
+          "minMs": 30.709292000000005,
+          "p95Ms": 41.497041999999965
+        }
+      ]
+    },
+    {
+      "name": "collect descriptors from children (per MapView render)",
+      "exponent": 0.9212990418863362,
+      "measurements": [
+        {
+          "name": "Children.forEach collect",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.007124999999973625,
+          "meanMs": 0.018136659999998982,
+          "minMs": 0.00437499999998181,
+          "p95Ms": 0.024499999999989086
+        },
+        {
+          "name": "Children.forEach collect",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.04066699999998491,
+          "meanMs": 0.04739920999999924,
+          "minMs": 0.033333999999968,
+          "p95Ms": 0.07983300000000781
+        },
+        {
+          "name": "Children.forEach collect",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 0.3571669999998903,
+          "meanMs": 0.378892515,
+          "minMs": 0.3126669999999194,
+          "p95Ms": 0.577541999999994
+        },
+        {
+          "name": "Children.forEach collect",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 4.066667000000052,
+          "meanMs": 4.221058299999958,
+          "minMs": 3.6274170000001504,
+          "p95Ms": 5.079291000000012
+        }
+      ]
+    },
+    {
+      "name": "both (what one re-render of a children-based map costs before Nitro)",
+      "exponent": 1.0241433871637498,
+      "measurements": [
+        {
+          "name": "elements + collect",
+          "n": 100,
+          "iterations": 200,
+          "medianMs": 0.035667000000103144,
+          "meanMs": 0.03689273500000468,
+          "minMs": 0.032709000000068045,
+          "p95Ms": 0.04158400000005713
+        },
+        {
+          "name": "elements + collect",
+          "n": 1000,
+          "iterations": 200,
+          "medianMs": 0.3333339999999225,
+          "meanMs": 0.35790953499999545,
+          "minMs": 0.3066669999999476,
+          "p95Ms": 0.5665830000000369
+        },
+        {
+          "name": "elements + collect",
+          "n": 10000,
+          "iterations": 200,
+          "medianMs": 4.218667000000096,
+          "meanMs": 4.27625268499999,
+          "minMs": 3.197624999999789,
+          "p95Ms": 5.138915999999881
+        },
+        {
+          "name": "elements + collect",
+          "n": 100000,
+          "iterations": 20,
+          "medianMs": 39.68679200000042,
+          "meanMs": 40.73133955000001,
+          "minMs": 34.7299579999999,
+          "p95Ms": 48.851584
+        }
+      ]
+    }
+  ]
+}

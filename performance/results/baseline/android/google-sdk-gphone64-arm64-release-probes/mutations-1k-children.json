@@ -1,0 +1,7371 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260910-162544-6m8g",
+  "label": "baseline run 3 (JS-queue probe), Android emulator API 35 arm64, solo",
+  "scenario": "mutations-1k-children",
+  "name": "Marker update cost at 1k (children)",
+  "group": "mutations",
+  "tags": [
+    "baseline"
+  ],
+  "description": "With 1000 markers mounted, apply add/remove/update of 1, 10, 100, 1 %, 10 % and 100 % of the markers, 5 repeats each.",
+  "recordedAt": "2026-09-10T14:29:14.106Z",
+  "platform": "android",
+  "provider": "google",
+  "os": "android 15",
+  "device": {
+    "platform": "android",
+    "model": "sdk_gphone64_arm64",
+    "manufacturer": "Google",
+    "deviceName": "emu64a",
+    "osVersion": "15",
+    "apiLevel": 35,
+    "refreshRateHz": 60,
+    "supportedRefreshRatesHz": [
+      60
+    ],
+    "screenScale": 2.625,
+    "screenWidthPx": 1080,
+    "screenHeightPx": 2400,
+    "isDebugBuild": false,
+    "isSimulator": true,
+    "cpuCores": 4,
+    "totalMemoryBytes": 4111405056,
+    "appVersion": "1.0.0 (1)",
+    "activity": "MainActivity"
+  },
+  "build": {
+    "type": "release",
+    "jsDev": false,
+    "hermes": true,
+    "perfProbes": true,
+    "representative": false,
+    "caveats": [
+      "simulator/emulator: desktop CPU and GPU, 60 Hz; not a device measurement"
+    ]
+  },
+  "refreshRateHz": 60.000003814697266,
+  "frameBudgetMs": 16.667,
+  "durationMs": 19521,
+  "load": {
+    "commitMs": 5.67,
+    "readyMs": 812,
+    "timedOut": false,
+    "native": {
+      "available": true,
+      "dropped": 0,
+      "spans": 26,
+      "mainThreadMs": 1.91,
+      "backgroundMs": 4.9,
+      "byName": {
+        "markers.fingerprint": {
+          "count": 2,
+          "totalMs": 0.49,
+          "avgMs": 0.243,
+          "p50Ms": 0,
+          "p95Ms": 0.487,
+          "maxMs": 0.487,
+          "mainThreadMs": 0.49,
+          "backgroundMs": 0,
+          "items": 1000
+        },
+        "markers.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 1000
+        },
+        "polylines.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "polygons.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "circles.set": {
+          "count": 2,
+          "totalMs": 0,
+          "avgMs": 0,
+          "p50Ms": 0,
+          "p95Ms": 0,
+          "maxMs": 0,
+          "mainThreadMs": 0,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "region.apply": {
+          "count": 1,
+          "totalMs": 0.72,
+          "avgMs": 0.72,
+          "p50Ms": 0.72,
+          "p95Ms": 0.72,
+          "maxMs": 0.72,
+          "mainThreadMs": 0.72,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "markers.indexBuild": {
+          "count": 1,
+          "totalMs": 4.54,
+          "avgMs": 4.539,
+          "p50Ms": 4.539,
+          "p95Ms": 4.539,
+          "maxMs": 4.539,
+          "mainThreadMs": 0,
+          "backgroundMs": 4.54,
+          "items": 1000
+        },
+        "markers.candidates": {
+          "count": 2,
+          "totalMs": 0.13,
+          "avgMs": 0.066,
+          "p50Ms": 0.02,
+          "p95Ms": 0.111,
+          "maxMs": 0.111,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.13,
+          "items": 2000
+        },
+        "markers.viewportFilter": {
+          "count": 2,
+          "totalMs": 0.01,
+          "avgMs": 0.007,
+          "p50Ms": 0.004,
+          "p95Ms": 0.01,
+          "maxMs": 0.01,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.01,
+          "items": 18
+        },
+        "markers.diff": {
+          "count": 2,
+          "totalMs": 0.03,
+          "avgMs": 0.017,
+          "p50Ms": 0.009,
+          "p95Ms": 0.026,
+          "maxMs": 0.026,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.03,
+          "items": 8
+        },
+        "markers.viewportCompute": {
+          "count": 2,
+          "totalMs": 0.19,
+          "avgMs": 0.093,
+          "p50Ms": 0.034,
+          "p95Ms": 0.151,
+          "maxMs": 0.151,
+          "mainThreadMs": 0,
+          "backgroundMs": 0.19,
+          "items": 18
+        },
+        "marker.visualProps": {
+          "count": 4,
+          "totalMs": 0.16,
+          "avgMs": 0.039,
+          "p50Ms": 0.006,
+          "p95Ms": 0.134,
+          "maxMs": 0.134,
+          "mainThreadMs": 0.16,
+          "backgroundMs": 0,
+          "items": 0
+        },
+        "markers.applyDiff": {
+          "count": 2,
+          "totalMs": 0.55,
+          "avgMs": 0.274,
+          "p50Ms": 0.007,
+          "p95Ms": 0.542,
+          "maxMs": 0.542,
+          "mainThreadMs": 0.55,
+          "backgroundMs": 0,
+          "items": 4
+        }
+      }
+    },
+    "bridge": {
+      "commitToNativeMs": null,
+      "setterMs": null
+    },
+    "hermes": {
+      "available": true,
+      "gcCount": 1,
+      "gcTimeMs": 0.002217582999999995,
+      "allocatedBytes": 887352,
+      "heapSizeAfterBytes": 54525952
+    }
+  },
+  "frames": {
+    "frames": 1120,
+    "durationMs": 18671.7,
+    "refreshRateHz": 60.000003814697266,
+    "budgetMs": 16.667,
+    "fps": {
+      "average": 60,
+      "p50": 60,
+      "p95": 60,
+      "p99": 60,
+      "worstWindow": 60,
+      "windows": 19
+    },
+    "frameTimeMs": {
+      "average": 16.67,
+      "p50": 16.67,
+      "p90": 16.67,
+      "p95": 16.67,
+      "p99": 16.67,
+      "worst": 16.67,
+      "histogram": {
+        "edgesMs": [
+          4,
+          8.33,
+          12,
+          16.67,
+          25,
+          33.33,
+          50,
+          100,
+          250,
+          500,
+          1000
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          1120,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "jankFrames": 0,
+    "jankRatio": 0,
+    "droppedFrames": 0,
+    "longFrames": 0,
+    "overBudgetFrames": 0,
+    "android": {
+      "frames": 1,
+      "renderTotalMs": {
+        "average": 83.01,
+        "p50": 83.01,
+        "p95": 83.01,
+        "p99": 83.01,
+        "worst": 83.01
+      },
+      "phaseSharePct": {
+        "unknownDelay": 0.4,
+        "inputHandling": 0,
+        "animation": 2.1,
+        "layoutMeasure": 0.1,
+        "draw": 0.1,
+        "sync": 0.1,
+        "commandIssue": 1,
+        "swapBuffers": 96.2,
+        "gpu": 95.7
+      },
+      "phaseSumsMs": {
+        "unknownDelay": 0.7,
+        "inputHandling": 0,
+        "animation": 3.5,
+        "layoutMeasure": 0.1,
+        "draw": 0.2,
+        "sync": 0.1,
+        "commandIssue": 1.6,
+        "swapBuffers": 159.6,
+        "gpu": 158.9,
+        "total": 166
+      },
+      "missedDeadline": 1
+    }
+  },
+  "js": {
+    "lagSource": "js-queue-ping",
+    "lagMs": {
+      "samples": 2070,
+      "p50": 0.15,
+      "p95": 0.37,
+      "p99": 1.6,
+      "max": 18.87
+    },
+    "frameGapMs": {
+      "p50": 16.67,
+      "p95": 18.1,
+      "max": 41.59
+    },
+    "lateFrames": 1,
+    "busyMs": 439.7,
+    "busyRatio": 0.0235,
+    "longTasks": {
+      "count": 0,
+      "totalMs": 0,
+      "maxMs": 0,
+      "source": "performance-observer"
+    },
+    "durationMs": 18672.8,
+    "commits": {
+      "count": 40,
+      "totalMs": 195.32,
+      "avgMs": 4.883,
+      "p95Ms": 8.478,
+      "maxMs": 9.762
+    }
+  },
+  "bridge": {
+    "commitToNativeMs": {
+      "samples": 40,
+      "avgMs": 9.236,
+      "maxMs": 13.666
+    },
+    "setterMs": {
+      "samples": 40,
+      "avgMs": 0.309,
+      "maxMs": 0.754
+    }
+  },
+  "native": {
+    "available": true,
+    "dropped": 0,
+    "spans": 474,
+    "mainThreadMs": 25.86,
+    "backgroundMs": 16.45,
+    "byName": {
+      "markers.fingerprint": {
+        "count": 41,
+        "totalMs": 10.63,
+        "avgMs": 0.259,
+        "p50Ms": 0.223,
+        "p95Ms": 0.615,
+        "maxMs": 0.692,
+        "mainThreadMs": 10.63,
+        "backgroundMs": 0,
+        "items": 41025
+      },
+      "markers.set": {
+        "count": 41,
+        "totalMs": 12.51,
+        "avgMs": 0.305,
+        "p50Ms": 0.274,
+        "p95Ms": 0.695,
+        "maxMs": 0.754,
+        "mainThreadMs": 12.51,
+        "backgroundMs": 0,
+        "items": 41025
+      },
+      "polylines.set": {
+        "count": 41,
+        "totalMs": 0.73,
+        "avgMs": 0.018,
+        "p50Ms": 0.014,
+        "p95Ms": 0.035,
+        "maxMs": 0.108,
+        "mainThreadMs": 0.73,
+        "backgroundMs": 0,
+        "items": 0
+      },
+      "polygons.set": {
+        "count": 41,
+        "totalMs": 0.06,
+        "avgMs": 0.001,
+        "p50Ms": 0.001,
+        "p95Ms": 0.005,
+        "maxMs": 0.016,
+        "mainThreadMs": 0.06,
+        "backgroundMs": 0,
+        "items": 0
+      },
+      "circles.set": {
+        "count": 41,
+        "totalMs": 0.05,
+        "avgMs": 0.001,
+        "p50Ms": 0.001,
+        "p95Ms": 0.002,
+        "maxMs": 0.015,
+        "mainThreadMs": 0.05,
+        "backgroundMs": 0,
+        "items": 0
+      },
+      "markers.indexBuild": {
+        "count": 40,
+        "totalMs": 13.79,
+        "avgMs": 0.345,
+        "p50Ms": 0.297,
+        "p95Ms": 0.621,
+        "maxMs": 0.743,
+        "mainThreadMs": 0,
+        "backgroundMs": 13.79,
+        "items": 40025
+      },
+      "markers.candidates": {
+        "count": 40,
+        "totalMs": 0.7,
+        "avgMs": 0.017,
+        "p50Ms": 0.015,
+        "p95Ms": 0.034,
+        "maxMs": 0.037,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.7,
+        "items": 40025
+      },
+      "markers.viewportFilter": {
+        "count": 40,
+        "totalMs": 0.23,
+        "avgMs": 0.006,
+        "p50Ms": 0.005,
+        "p95Ms": 0.011,
+        "maxMs": 0.017,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.23,
+        "items": 360
+      },
+      "markers.diff": {
+        "count": 40,
+        "totalMs": 0.3,
+        "avgMs": 0.008,
+        "p50Ms": 0.006,
+        "p95Ms": 0.01,
+        "maxMs": 0.026,
+        "mainThreadMs": 0,
+        "backgroundMs": 0.3,
+        "items": 162
+      },
+      "markers.viewportCompute": {
+        "count": 40,
+        "totalMs": 1.43,
+        "avgMs": 0.036,
+        "p50Ms": 0.035,
+        "p95Ms": 0.054,
+        "maxMs": 0.065,
+        "mainThreadMs": 0,
+        "backgroundMs": 1.43,
+        "items": 360
+      },
+      "markers.applyDiff": {
+        "count": 40,
+        "totalMs": 1.58,
+        "avgMs": 0.04,
+        "p50Ms": 0.004,
+        "p95Ms": 0.203,
+        "maxMs": 0.302,
+        "mainThreadMs": 1.58,
+        "backgroundMs": 0,
+        "items": 29
+      },
+      "marker.visualProps": {
+        "count": 29,
+        "totalMs": 0.3,
+        "avgMs": 0.01,
+        "p50Ms": 0.005,
+        "p95Ms": 0.034,
+        "maxMs": 0.064,
+        "mainThreadMs": 0.3,
+        "backgroundMs": 0,
+        "items": 0
+      }
+    }
+  },
+  "memory": {
+    "beforeMB": 309.6,
+    "afterLoadMB": 374.1,
+    "afterInteractionMB": 333.9,
+    "afterCleanupMB": 329.8,
+    "peakMB": 374.1,
+    "loadDeltaMB": 64.5,
+    "interactionDeltaMB": -40.2,
+    "retainedAfterCleanupMB": 20.2,
+    "points": [
+      {
+        "label": "before",
+        "footprintMB": 309.6,
+        "residentMB": 456.6,
+        "javaHeapMB": 75.7,
+        "nativeHeapMB": 140.4,
+        "mallocBlocks": null,
+        "mallocMB": null
+      },
+      {
+        "label": "afterLoad",
+        "footprintMB": 374.1,
+        "residentMB": 520.9,
+        "javaHeapMB": 78,
+        "nativeHeapMB": 202.8,
+        "mallocBlocks": null,
+        "mallocMB": null
+      },
+      {
+        "label": "afterInteraction",
+        "footprintMB": 333.9,
+        "residentMB": 480.5,
+        "javaHeapMB": 82.5,
+        "nativeHeapMB": 149.3,
+        "mallocBlocks": null,
+        "mallocMB": null
+      },
+      {
+        "label": "afterCleanup",
+        "footprintMB": 329.8,
+        "residentMB": 476.7,
+        "javaHeapMB": 82.6,
+        "nativeHeapMB": 144.7,
+        "mallocBlocks": null,
+        "mallocMB": null
+      }
+    ]
+  },
+  "allocations": {
+    "hermes": {
+      "available": true,
+      "allocatedBytes": 30116984,
+      "gcCount": 7,
+      "gcTimeMs": 0.03067129199999999,
+      "heapSizeAfterMB": 56
+    },
+    "android": {
+      "javaBytesAllocated": 28604464,
+      "gcCount": 1,
+      "gcTimeMs": 93,
+      "blockingGcCount": 0,
+      "nativeHeapDeltaBytes": -56114560
+    },
+    "ios": null
+  },
+  "cpu": {
+    "processCpuMs": 1272,
+    "wallMs": 18681,
+    "percent": 6.8,
+    "threadsBefore": 100,
+    "threadsAfter": 98,
+    "thermalBefore": "none",
+    "thermalAfter": "none",
+    "batteryLevel": 1,
+    "batteryState": "notCharging",
+    "lowPowerMode": false
+  },
+  "transfer": {
+    "updates": {
+      "markerChildren": 41,
+      "region": 1
+    },
+    "payload": {
+      "markerChildren": {
+        "items": 41025,
+        "coordinates": 41025,
+        "estimatedBytes": 2937158
+      }
+    },
+    "largestUpdate": {
+      "markerChildren": {
+        "items": 1005,
+        "coordinates": 1005,
+        "estimatedBytes": 71954
+      }
+    },
+    "eventsToJs": {}
+  },
+  "steps": [
+    {
+      "index": 0,
+      "label": "add-1",
+      "meta": {
+        "changed": 1,
+        "total": 1000,
+        "repeat": 0
+      },
+      "wallMs": 470.45,
+      "commits": {
+        "count": 1,
+        "totalMs": 2.68,
+        "avgMs": 2.678,
+        "p95Ms": 2.678,
+        "maxMs": 2.678
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 0.863,
+          "maxMs": 0.863
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.217,
+          "maxMs": 0.217
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 16,
+        "mainThreadMs": 0.69,
+        "backgroundMs": 0.39,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 2,
+            "totalMs": 0.32,
+            "avgMs": 0.161,
+            "p50Ms": 0.114,
+            "p95Ms": 0.209,
+            "maxMs": 0.209,
+            "mainThreadMs": 0.32,
+            "backgroundMs": 0,
+            "items": 2001
+          },
+          "markers.set": {
+            "count": 2,
+            "totalMs": 0.35,
+            "avgMs": 0.177,
+            "p50Ms": 0.136,
+            "p95Ms": 0.217,
+            "maxMs": 0.217,
+            "mainThreadMs": 0.35,
+            "backgroundMs": 0,
+            "items": 2001
+          },
+          "polylines.set": {
+            "count": 2,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.003,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 2,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 2,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.29,
+            "avgMs": 0.293,
+            "p50Ms": 0.293,
+            "p95Ms": 0.293,
+            "maxMs": 0.293,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.29,
+            "items": 1001
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.036,
+            "p50Ms": 0.036,
+            "p95Ms": 0.036,
+            "maxMs": 0.036,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 1001
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.051,
+            "p50Ms": 0.051,
+            "p95Ms": 0.051,
+            "maxMs": 0.051,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 718520,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 1,
+      "label": "add-1",
+      "meta": {
+        "changed": 1,
+        "total": 1001,
+        "repeat": 1
+      },
+      "wallMs": 465.42,
+      "commits": {
+        "count": 1,
+        "totalMs": 7.97,
+        "avgMs": 7.968,
+        "p95Ms": 7.968,
+        "maxMs": 7.968
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 5.801,
+          "maxMs": 5.801
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.327,
+          "maxMs": 0.327
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.58,
+        "backgroundMs": 0.42,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.22,
+            "avgMs": 0.223,
+            "p50Ms": 0.223,
+            "p95Ms": 0.223,
+            "maxMs": 0.223,
+            "mainThreadMs": 0.22,
+            "backgroundMs": 0,
+            "items": 1002
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.33,
+            "avgMs": 0.327,
+            "p50Ms": 0.327,
+            "p95Ms": 0.327,
+            "maxMs": 0.327,
+            "mainThreadMs": 0.33,
+            "backgroundMs": 0,
+            "items": 1002
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.021,
+            "p50Ms": 0.021,
+            "p95Ms": 0.021,
+            "maxMs": 0.021,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.3,
+            "avgMs": 0.297,
+            "p50Ms": 0.297,
+            "p95Ms": 0.297,
+            "maxMs": 0.297,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.3,
+            "items": 1002
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.034,
+            "p50Ms": 0.034,
+            "p95Ms": 0.034,
+            "maxMs": 0.034,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 1002
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.017,
+            "p50Ms": 0.017,
+            "p95Ms": 0.017,
+            "maxMs": 0.017,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.07,
+            "avgMs": 0.065,
+            "p50Ms": 0.065,
+            "p95Ms": 0.065,
+            "maxMs": 0.065,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.07,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 718008,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 2,
+      "label": "add-1",
+      "meta": {
+        "changed": 1,
+        "total": 1002,
+        "repeat": 2
+      },
+      "wallMs": 464.6,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.82,
+        "avgMs": 6.82,
+        "p95Ms": 6.82,
+        "maxMs": 6.82
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 7.644,
+          "maxMs": 7.644
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.261,
+          "maxMs": 0.261
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.52,
+        "backgroundMs": 0.43,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.22,
+            "avgMs": 0.217,
+            "p50Ms": 0.217,
+            "p95Ms": 0.217,
+            "maxMs": 0.217,
+            "mainThreadMs": 0.22,
+            "backgroundMs": 0,
+            "items": 1003
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.26,
+            "avgMs": 0.261,
+            "p50Ms": 0.261,
+            "p95Ms": 0.261,
+            "maxMs": 0.261,
+            "mainThreadMs": 0.26,
+            "backgroundMs": 0,
+            "items": 1003
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.022,
+            "p50Ms": 0.022,
+            "p95Ms": 0.022,
+            "maxMs": 0.022,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.016,
+            "p50Ms": 0.016,
+            "p95Ms": 0.016,
+            "maxMs": 0.016,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.35,
+            "avgMs": 0.346,
+            "p50Ms": 0.346,
+            "p95Ms": 0.346,
+            "maxMs": 0.346,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.35,
+            "items": 1003
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.024,
+            "p50Ms": 0.024,
+            "p95Ms": 0.024,
+            "maxMs": 0.024,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1003
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.044,
+            "p50Ms": 0.044,
+            "p95Ms": 0.044,
+            "maxMs": 0.044,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 719520,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 3,
+      "label": "add-1",
+      "meta": {
+        "changed": 1,
+        "total": 1003,
+        "repeat": 3
+      },
+      "wallMs": 465.52,
+      "commits": {
+        "count": 1,
+        "totalMs": 5.67,
+        "avgMs": 5.668,
+        "p95Ms": 5.668,
+        "maxMs": 5.668
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.417,
+          "maxMs": 9.417
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.243,
+          "maxMs": 0.243
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.48,
+        "backgroundMs": 0.53,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.2,
+            "avgMs": 0.199,
+            "p50Ms": 0.199,
+            "p95Ms": 0.199,
+            "maxMs": 0.199,
+            "mainThreadMs": 0.2,
+            "backgroundMs": 0,
+            "items": 1004
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.24,
+            "avgMs": 0.243,
+            "p50Ms": 0.243,
+            "p95Ms": 0.243,
+            "maxMs": 0.243,
+            "mainThreadMs": 0.24,
+            "backgroundMs": 0,
+            "items": 1004
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.017,
+            "p50Ms": 0.017,
+            "p95Ms": 0.017,
+            "maxMs": 0.017,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.44,
+            "avgMs": 0.439,
+            "p50Ms": 0.439,
+            "p95Ms": 0.439,
+            "maxMs": 0.439,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.44,
+            "items": 1004
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.025,
+            "p50Ms": 0.025,
+            "p95Ms": 0.025,
+            "maxMs": 0.025,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 1004
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.052,
+            "p50Ms": 0.052,
+            "p95Ms": 0.052,
+            "maxMs": 0.052,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.018,
+            "p50Ms": 0.018,
+            "p95Ms": 0.018,
+            "maxMs": 0.018,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 718256,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 4,
+      "label": "add-1",
+      "meta": {
+        "changed": 1,
+        "total": 1004,
+        "repeat": 4
+      },
+      "wallMs": 466.74,
+      "commits": {
+        "count": 1,
+        "totalMs": 9.76,
+        "avgMs": 9.762,
+        "p95Ms": 9.762,
+        "maxMs": 9.762
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 4.681,
+          "maxMs": 4.681
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.242,
+          "maxMs": 0.242
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.46,
+        "backgroundMs": 0.3,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.2,
+            "avgMs": 0.198,
+            "p50Ms": 0.198,
+            "p95Ms": 0.198,
+            "maxMs": 0.198,
+            "mainThreadMs": 0.2,
+            "backgroundMs": 0,
+            "items": 1005
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.24,
+            "avgMs": 0.242,
+            "p50Ms": 0.242,
+            "p95Ms": 0.242,
+            "maxMs": 0.242,
+            "mainThreadMs": 0.24,
+            "backgroundMs": 0,
+            "items": 1005
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.24,
+            "avgMs": 0.235,
+            "p50Ms": 0.235,
+            "p95Ms": 0.235,
+            "maxMs": 0.235,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.24,
+            "items": 1005
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.016,
+            "p50Ms": 0.016,
+            "p95Ms": 0.016,
+            "maxMs": 0.016,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1005
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.034,
+            "p50Ms": 0.034,
+            "p95Ms": 0.034,
+            "maxMs": 0.034,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.005094541000000008,
+        "allocatedBytes": 720760,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 5,
+      "label": "remove-1",
+      "meta": {
+        "changed": 1,
+        "total": 1005,
+        "repeat": 0
+      },
+      "wallMs": 463.48,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.39,
+        "avgMs": 4.39,
+        "p95Ms": 4.39,
+        "maxMs": 4.39
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 10.116,
+          "maxMs": 10.116
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.374,
+          "maxMs": 0.374
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.7,
+        "backgroundMs": 0.35,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.29,
+            "avgMs": 0.295,
+            "p50Ms": 0.295,
+            "p95Ms": 0.295,
+            "maxMs": 0.295,
+            "mainThreadMs": 0.29,
+            "backgroundMs": 0,
+            "items": 1004
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.37,
+            "avgMs": 0.374,
+            "p50Ms": 0.374,
+            "p95Ms": 0.374,
+            "maxMs": 0.374,
+            "mainThreadMs": 0.37,
+            "backgroundMs": 0,
+            "items": 1004
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.021,
+            "p50Ms": 0.021,
+            "p95Ms": 0.021,
+            "maxMs": 0.021,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.27,
+            "avgMs": 0.274,
+            "p50Ms": 0.274,
+            "p95Ms": 0.274,
+            "maxMs": 0.274,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.27,
+            "items": 1004
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.02,
+            "p50Ms": 0.02,
+            "p95Ms": 0.02,
+            "maxMs": 0.02,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1004
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.007,
+            "p50Ms": 0.007,
+            "p95Ms": 0.007,
+            "maxMs": 0.007,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.04,
+            "p50Ms": 0.04,
+            "p95Ms": 0.04,
+            "maxMs": 0.04,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 714696,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 6,
+      "label": "remove-1",
+      "meta": {
+        "changed": 1,
+        "total": 1004,
+        "repeat": 1
+      },
+      "wallMs": 463.27,
+      "commits": {
+        "count": 1,
+        "totalMs": 4,
+        "avgMs": 3.998,
+        "p95Ms": 3.998,
+        "maxMs": 3.998
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.39,
+          "maxMs": 9.39
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.18,
+          "maxMs": 0.18
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.35,
+        "backgroundMs": 0.32,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.14,
+            "avgMs": 0.144,
+            "p50Ms": 0.144,
+            "p95Ms": 0.144,
+            "maxMs": 0.144,
+            "mainThreadMs": 0.14,
+            "backgroundMs": 0,
+            "items": 1003
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.18,
+            "avgMs": 0.18,
+            "p50Ms": 0.18,
+            "p95Ms": 0.18,
+            "maxMs": 0.18,
+            "mainThreadMs": 0.18,
+            "backgroundMs": 0,
+            "items": 1003
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.017,
+            "p50Ms": 0.017,
+            "p95Ms": 0.017,
+            "maxMs": 0.017,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.25,
+            "avgMs": 0.25,
+            "p50Ms": 0.25,
+            "p95Ms": 0.25,
+            "maxMs": 0.25,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.25,
+            "items": 1003
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.018,
+            "p50Ms": 0.018,
+            "p95Ms": 0.018,
+            "maxMs": 0.018,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1003
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.036,
+            "p50Ms": 0.036,
+            "p95Ms": 0.036,
+            "maxMs": 0.036,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 712768,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 7,
+      "label": "remove-1",
+      "meta": {
+        "changed": 1,
+        "total": 1003,
+        "repeat": 2
+      },
+      "wallMs": 467.38,
+      "commits": {
+        "count": 1,
+        "totalMs": 2.84,
+        "avgMs": 2.838,
+        "p95Ms": 2.838,
+        "maxMs": 2.838
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 13.223,
+          "maxMs": 13.223
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.266,
+          "maxMs": 0.266
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.52,
+        "backgroundMs": 0.51,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.23,
+            "avgMs": 0.225,
+            "p50Ms": 0.225,
+            "p95Ms": 0.225,
+            "maxMs": 0.225,
+            "mainThreadMs": 0.23,
+            "backgroundMs": 0,
+            "items": 1002
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.27,
+            "avgMs": 0.266,
+            "p50Ms": 0.266,
+            "p95Ms": 0.266,
+            "maxMs": 0.266,
+            "mainThreadMs": 0.27,
+            "backgroundMs": 0,
+            "items": 1002
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.016,
+            "p50Ms": 0.016,
+            "p95Ms": 0.016,
+            "maxMs": 0.016,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.41,
+            "avgMs": 0.415,
+            "p50Ms": 0.415,
+            "p95Ms": 0.415,
+            "maxMs": 0.415,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.41,
+            "items": 1002
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.029,
+            "p50Ms": 0.029,
+            "p95Ms": 0.029,
+            "maxMs": 0.029,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 1002
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.049,
+            "p50Ms": 0.049,
+            "p95Ms": 0.049,
+            "maxMs": 0.049,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 712136,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 8,
+      "label": "remove-1",
+      "meta": {
+        "changed": 1,
+        "total": 1002,
+        "repeat": 3
+      },
+      "wallMs": 463.99,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.59,
+        "avgMs": 4.594,
+        "p95Ms": 4.594,
+        "maxMs": 4.594
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.943,
+          "maxMs": 9.943
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.274,
+          "maxMs": 0.274
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.54,
+        "backgroundMs": 0.23,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.23,
+            "avgMs": 0.226,
+            "p50Ms": 0.226,
+            "p95Ms": 0.226,
+            "maxMs": 0.226,
+            "mainThreadMs": 0.23,
+            "backgroundMs": 0,
+            "items": 1001
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.27,
+            "avgMs": 0.274,
+            "p50Ms": 0.274,
+            "p95Ms": 0.274,
+            "maxMs": 0.274,
+            "mainThreadMs": 0.27,
+            "backgroundMs": 0,
+            "items": 1001
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.036,
+            "p50Ms": 0.036,
+            "p95Ms": 0.036,
+            "maxMs": 0.036,
+            "mainThreadMs": 0.04,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.14,
+            "avgMs": 0.135,
+            "p50Ms": 0.135,
+            "p95Ms": 0.135,
+            "maxMs": 0.135,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.14,
+            "items": 1001
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.026,
+            "p50Ms": 0.026,
+            "p95Ms": 0.026,
+            "maxMs": 0.026,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 1001
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.052,
+            "p50Ms": 0.052,
+            "p95Ms": 0.052,
+            "maxMs": 0.052,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 711408,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 9,
+      "label": "remove-1",
+      "meta": {
+        "changed": 1,
+        "total": 1001,
+        "repeat": 4
+      },
+      "wallMs": 465.7,
+      "commits": {
+        "count": 1,
+        "totalMs": 2.81,
+        "avgMs": 2.815,
+        "p95Ms": 2.815,
+        "maxMs": 2.815
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 12.606,
+          "maxMs": 12.606
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.131,
+          "maxMs": 0.131
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.26,
+        "backgroundMs": 0.24,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.11,
+            "avgMs": 0.109,
+            "p50Ms": 0.109,
+            "p95Ms": 0.109,
+            "maxMs": 0.109,
+            "mainThreadMs": 0.11,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.13,
+            "avgMs": 0.131,
+            "p50Ms": 0.131,
+            "p95Ms": 0.131,
+            "maxMs": 0.131,
+            "mainThreadMs": 0.13,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.012,
+            "p50Ms": 0.012,
+            "p95Ms": 0.012,
+            "maxMs": 0.012,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.2,
+            "avgMs": 0.196,
+            "p50Ms": 0.196,
+            "p95Ms": 0.196,
+            "maxMs": 0.196,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.2,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.012,
+            "p50Ms": 0.012,
+            "p95Ms": 0.012,
+            "maxMs": 0.012,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.025,
+            "p50Ms": 0.025,
+            "p95Ms": 0.025,
+            "maxMs": 0.025,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 714528,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 10,
+      "label": "update-1",
+      "meta": {
+        "changed": 1,
+        "total": 1000,
+        "repeat": 0
+      },
+      "wallMs": 466.7,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.12,
+        "avgMs": 6.12,
+        "p95Ms": 6.12,
+        "maxMs": 6.12
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.264,
+          "maxMs": 9.264
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.082,
+          "maxMs": 0.082
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.16,
+        "backgroundMs": 0.28,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.06,
+            "avgMs": 0.063,
+            "p50Ms": 0.063,
+            "p95Ms": 0.063,
+            "maxMs": 0.063,
+            "mainThreadMs": 0.06,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.08,
+            "avgMs": 0.082,
+            "p50Ms": 0.082,
+            "p95Ms": 0.082,
+            "maxMs": 0.082,
+            "mainThreadMs": 0.08,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.002,
+            "p50Ms": 0.002,
+            "p95Ms": 0.002,
+            "maxMs": 0.002,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.24,
+            "avgMs": 0.244,
+            "p50Ms": 0.244,
+            "p95Ms": 0.244,
+            "maxMs": 0.244,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.24,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.021,
+            "p50Ms": 0.021,
+            "p95Ms": 0.021,
+            "maxMs": 0.021,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.003888499999999989,
+        "allocatedBytes": 710616,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 11,
+      "label": "update-1",
+      "meta": {
+        "changed": 1,
+        "total": 1000,
+        "repeat": 1
+      },
+      "wallMs": 462.82,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.44,
+        "avgMs": 4.444,
+        "p95Ms": 4.444,
+        "maxMs": 4.444
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.368,
+          "maxMs": 9.368
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.695,
+          "maxMs": 0.695
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 1.34,
+        "backgroundMs": 0.32,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.62,
+            "avgMs": 0.615,
+            "p50Ms": 0.615,
+            "p95Ms": 0.615,
+            "maxMs": 0.615,
+            "mainThreadMs": 0.62,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.7,
+            "avgMs": 0.695,
+            "p50Ms": 0.695,
+            "p95Ms": 0.695,
+            "maxMs": 0.695,
+            "mainThreadMs": 0.7,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.023,
+            "p50Ms": 0.023,
+            "p95Ms": 0.023,
+            "maxMs": 0.023,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.23,
+            "avgMs": 0.227,
+            "p50Ms": 0.227,
+            "p95Ms": 0.227,
+            "maxMs": 0.227,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.23,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.023,
+            "p50Ms": 0.023,
+            "p95Ms": 0.023,
+            "maxMs": 0.023,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.014,
+            "p50Ms": 0.014,
+            "p95Ms": 0.014,
+            "maxMs": 0.014,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.052,
+            "p50Ms": 0.052,
+            "p95Ms": 0.052,
+            "maxMs": 0.052,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 712816,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 12,
+      "label": "update-1",
+      "meta": {
+        "changed": 1,
+        "total": 1000,
+        "repeat": 2
+      },
+      "wallMs": 467.2,
+      "commits": {
+        "count": 1,
+        "totalMs": 2.87,
+        "avgMs": 2.866,
+        "p95Ms": 2.866,
+        "maxMs": 2.866
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 13.368,
+          "maxMs": 13.368
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.336,
+          "maxMs": 0.336
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.67,
+        "backgroundMs": 0.33,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.31,
+            "avgMs": 0.311,
+            "p50Ms": 0.311,
+            "p95Ms": 0.311,
+            "maxMs": 0.311,
+            "mainThreadMs": 0.31,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.34,
+            "avgMs": 0.336,
+            "p50Ms": 0.336,
+            "p95Ms": 0.336,
+            "maxMs": 0.336,
+            "mainThreadMs": 0.34,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.02,
+            "p50Ms": 0.02,
+            "p95Ms": 0.02,
+            "maxMs": 0.02,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.27,
+            "avgMs": 0.267,
+            "p50Ms": 0.267,
+            "p95Ms": 0.267,
+            "maxMs": 0.267,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.27,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.037,
+            "p50Ms": 0.037,
+            "p95Ms": 0.037,
+            "maxMs": 0.037,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 710720,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 13,
+      "label": "update-1",
+      "meta": {
+        "changed": 1,
+        "total": 1000,
+        "repeat": 3
+      },
+      "wallMs": 466.33,
+      "commits": {
+        "count": 1,
+        "totalMs": 6.86,
+        "avgMs": 6.856,
+        "p95Ms": 6.856,
+        "maxMs": 6.856
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.307,
+          "maxMs": 9.307
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.493,
+          "maxMs": 0.493
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.94,
+        "backgroundMs": 0.71,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.43,
+            "avgMs": 0.429,
+            "p50Ms": 0.429,
+            "p95Ms": 0.429,
+            "maxMs": 0.429,
+            "mainThreadMs": 0.43,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.49,
+            "avgMs": 0.493,
+            "p50Ms": 0.493,
+            "p95Ms": 0.493,
+            "maxMs": 0.493,
+            "mainThreadMs": 0.49,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.61,
+            "avgMs": 0.61,
+            "p50Ms": 0.61,
+            "p95Ms": 0.61,
+            "maxMs": 0.61,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.61,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.029,
+            "p50Ms": 0.029,
+            "p95Ms": 0.029,
+            "maxMs": 0.029,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.007,
+            "p50Ms": 0.007,
+            "p95Ms": 0.007,
+            "maxMs": 0.007,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.054,
+            "p50Ms": 0.054,
+            "p95Ms": 0.054,
+            "maxMs": 0.054,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 710784,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 14,
+      "label": "update-1",
+      "meta": {
+        "changed": 1,
+        "total": 1000,
+        "repeat": 4
+      },
+      "wallMs": 465.29,
+      "commits": {
+        "count": 1,
+        "totalMs": 3.91,
+        "avgMs": 3.911,
+        "p95Ms": 3.911,
+        "maxMs": 3.911
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 10.418,
+          "maxMs": 10.418
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.177,
+          "maxMs": 0.177
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.34,
+        "backgroundMs": 0.53,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.15,
+            "avgMs": 0.145,
+            "p50Ms": 0.145,
+            "p95Ms": 0.145,
+            "maxMs": 0.145,
+            "mainThreadMs": 0.15,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.18,
+            "avgMs": 0.177,
+            "p50Ms": 0.177,
+            "p95Ms": 0.177,
+            "maxMs": 0.177,
+            "mainThreadMs": 0.18,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.48,
+            "avgMs": 0.476,
+            "p50Ms": 0.476,
+            "p95Ms": 0.476,
+            "maxMs": 0.476,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.48,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.007,
+            "p50Ms": 0.007,
+            "p95Ms": 0.007,
+            "maxMs": 0.007,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.026,
+            "p50Ms": 0.026,
+            "p95Ms": 0.026,
+            "maxMs": 0.026,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 710656,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 15,
+      "label": "update-10",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 0
+      },
+      "wallMs": 466.15,
+      "commits": {
+        "count": 1,
+        "totalMs": 8.48,
+        "avgMs": 8.478,
+        "p95Ms": 8.478,
+        "maxMs": 8.478
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 6.387,
+          "maxMs": 6.387
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.19,
+          "maxMs": 0.19
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.37,
+        "backgroundMs": 0.21,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.17,
+            "avgMs": 0.17,
+            "p50Ms": 0.17,
+            "p95Ms": 0.17,
+            "maxMs": 0.17,
+            "mainThreadMs": 0.17,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.19,
+            "avgMs": 0.19,
+            "p50Ms": 0.19,
+            "p95Ms": 0.19,
+            "maxMs": 0.19,
+            "mainThreadMs": 0.19,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.17,
+            "avgMs": 0.17,
+            "p50Ms": 0.17,
+            "p95Ms": 0.17,
+            "maxMs": 0.17,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.17,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.019,
+            "p50Ms": 0.019,
+            "p95Ms": 0.019,
+            "maxMs": 0.019,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.004374041999999995,
+        "allocatedBytes": 711704,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 16,
+      "label": "update-10",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 1
+      },
+      "wallMs": 463.49,
+      "commits": {
+        "count": 1,
+        "totalMs": 5.3,
+        "avgMs": 5.304,
+        "p95Ms": 5.304,
+        "maxMs": 5.304
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 8.344,
+          "maxMs": 8.344
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.515,
+          "maxMs": 0.515
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.9,
+        "backgroundMs": 0.39,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.36,
+            "avgMs": 0.361,
+            "p50Ms": 0.361,
+            "p95Ms": 0.361,
+            "maxMs": 0.361,
+            "mainThreadMs": 0.36,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.51,
+            "avgMs": 0.515,
+            "p50Ms": 0.515,
+            "p95Ms": 0.515,
+            "maxMs": 0.515,
+            "mainThreadMs": 0.51,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.017,
+            "p50Ms": 0.017,
+            "p95Ms": 0.017,
+            "maxMs": 0.017,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.32,
+            "avgMs": 0.318,
+            "p50Ms": 0.318,
+            "p95Ms": 0.318,
+            "maxMs": 0.318,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.32,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.019,
+            "p50Ms": 0.019,
+            "p95Ms": 0.019,
+            "maxMs": 0.019,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.038,
+            "p50Ms": 0.038,
+            "p95Ms": 0.038,
+            "maxMs": 0.038,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 711936,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 17,
+      "label": "update-10",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 2
+      },
+      "wallMs": 468.42,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.12,
+        "avgMs": 4.125,
+        "p95Ms": 4.125,
+        "maxMs": 4.125
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 11.556,
+          "maxMs": 11.556
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.359,
+          "maxMs": 0.359
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.69,
+        "backgroundMs": 0.38,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.32,
+            "avgMs": 0.316,
+            "p50Ms": 0.316,
+            "p95Ms": 0.316,
+            "maxMs": 0.316,
+            "mainThreadMs": 0.32,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.36,
+            "avgMs": 0.359,
+            "p50Ms": 0.359,
+            "p95Ms": 0.359,
+            "maxMs": 0.359,
+            "mainThreadMs": 0.36,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.012,
+            "p50Ms": 0.012,
+            "p95Ms": 0.012,
+            "maxMs": 0.012,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.31,
+            "avgMs": 0.313,
+            "p50Ms": 0.313,
+            "p95Ms": 0.313,
+            "maxMs": 0.313,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.31,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.015,
+            "p50Ms": 0.015,
+            "p95Ms": 0.015,
+            "maxMs": 0.015,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.007,
+            "p50Ms": 0.007,
+            "p95Ms": 0.007,
+            "maxMs": 0.007,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.039,
+            "p50Ms": 0.039,
+            "p95Ms": 0.039,
+            "maxMs": 0.039,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 711864,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 18,
+      "label": "update-10",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 3
+      },
+      "wallMs": 462.98,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.95,
+        "avgMs": 4.954,
+        "p95Ms": 4.954,
+        "maxMs": 4.954
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 7.454,
+          "maxMs": 7.454
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.187,
+          "maxMs": 0.187
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.36,
+        "backgroundMs": 0.2,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.17,
+            "avgMs": 0.165,
+            "p50Ms": 0.165,
+            "p95Ms": 0.165,
+            "maxMs": 0.165,
+            "mainThreadMs": 0.17,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.19,
+            "avgMs": 0.187,
+            "p50Ms": 0.187,
+            "p95Ms": 0.187,
+            "maxMs": 0.187,
+            "mainThreadMs": 0.19,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.16,
+            "avgMs": 0.164,
+            "p50Ms": 0.164,
+            "p95Ms": 0.164,
+            "maxMs": 0.164,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.16,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.021,
+            "p50Ms": 0.021,
+            "p95Ms": 0.021,
+            "maxMs": 0.021,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 719944,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 19,
+      "label": "update-10",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 4
+      },
+      "wallMs": 465.76,
+      "commits": {
+        "count": 1,
+        "totalMs": 5.3,
+        "avgMs": 5.302,
+        "p95Ms": 5.302,
+        "maxMs": 5.302
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.725,
+          "maxMs": 9.725
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.171,
+          "maxMs": 0.171
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.33,
+        "backgroundMs": 0.21,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.15,
+            "avgMs": 0.151,
+            "p50Ms": 0.151,
+            "p95Ms": 0.151,
+            "maxMs": 0.151,
+            "mainThreadMs": 0.15,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.17,
+            "avgMs": 0.171,
+            "p50Ms": 0.171,
+            "p95Ms": 0.171,
+            "maxMs": 0.171,
+            "mainThreadMs": 0.17,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.16,
+            "avgMs": 0.164,
+            "p50Ms": 0.164,
+            "p95Ms": 0.164,
+            "maxMs": 0.164,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.16,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.026,
+            "p50Ms": 0.026,
+            "p95Ms": 0.026,
+            "maxMs": 0.026,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 711656,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 20,
+      "label": "update-100",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 0
+      },
+      "wallMs": 468.69,
+      "commits": {
+        "count": 1,
+        "totalMs": 1.96,
+        "avgMs": 1.964,
+        "p95Ms": 1.964,
+        "maxMs": 1.964
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 13.666,
+          "maxMs": 13.666
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.298,
+          "maxMs": 0.298
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 12,
+        "mainThreadMs": 0.76,
+        "backgroundMs": 0.26,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.28,
+            "avgMs": 0.276,
+            "p50Ms": 0.276,
+            "p95Ms": 0.276,
+            "maxMs": 0.276,
+            "mainThreadMs": 0.28,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.3,
+            "avgMs": 0.298,
+            "p50Ms": 0.298,
+            "p95Ms": 0.298,
+            "maxMs": 0.298,
+            "mainThreadMs": 0.3,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.22,
+            "avgMs": 0.223,
+            "p50Ms": 0.223,
+            "p95Ms": 0.223,
+            "maxMs": 0.223,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.22,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.018,
+            "p50Ms": 0.018,
+            "p95Ms": 0.018,
+            "maxMs": 0.018,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.016,
+            "p50Ms": 0.016,
+            "p95Ms": 0.016,
+            "maxMs": 0.016,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.16,
+            "avgMs": 0.16,
+            "p50Ms": 0.16,
+            "p95Ms": 0.16,
+            "maxMs": 0.16,
+            "mainThreadMs": 0.16,
+            "backgroundMs": 0,
+            "items": 1
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 723800,
+        "heapSizeAfterBytes": 54525952
+      }
+    },
+    {
+      "index": 21,
+      "label": "update-100",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 1
+      },
+      "wallMs": 463.1,
+      "commits": {
+        "count": 1,
+        "totalMs": 8.94,
+        "avgMs": 8.943,
+        "p95Ms": 8.943,
+        "maxMs": 8.943
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 3.274,
+          "maxMs": 3.274
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.275,
+          "maxMs": 0.275
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 12,
+        "mainThreadMs": 0.58,
+        "backgroundMs": 0.19,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.25,
+            "avgMs": 0.248,
+            "p50Ms": 0.248,
+            "p95Ms": 0.248,
+            "maxMs": 0.248,
+            "mainThreadMs": 0.25,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.28,
+            "avgMs": 0.275,
+            "p50Ms": 0.275,
+            "p95Ms": 0.275,
+            "maxMs": 0.275,
+            "mainThreadMs": 0.28,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.012,
+            "p50Ms": 0.012,
+            "p95Ms": 0.012,
+            "maxMs": 0.012,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.15,
+            "avgMs": 0.154,
+            "p50Ms": 0.154,
+            "p95Ms": 0.154,
+            "maxMs": 0.154,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.15,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.019,
+            "p50Ms": 0.019,
+            "p95Ms": 0.019,
+            "maxMs": 0.019,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.035,
+            "p50Ms": 0.035,
+            "p95Ms": 0.035,
+            "maxMs": 0.035,
+            "mainThreadMs": 0.04,
+            "backgroundMs": 0,
+            "items": 1
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.005491250000000003,
+        "allocatedBytes": 723664,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 22,
+      "label": "update-100",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 2
+      },
+      "wallMs": 465.82,
+      "commits": {
+        "count": 1,
+        "totalMs": 3.57,
+        "avgMs": 3.57,
+        "p95Ms": 3.57,
+        "maxMs": 3.57
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 11.314,
+          "maxMs": 11.314
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.3,
+          "maxMs": 0.3
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 12,
+        "mainThreadMs": 0.64,
+        "backgroundMs": 0.17,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.25,
+            "avgMs": 0.245,
+            "p50Ms": 0.245,
+            "p95Ms": 0.245,
+            "maxMs": 0.245,
+            "mainThreadMs": 0.25,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.3,
+            "avgMs": 0.3,
+            "p50Ms": 0.3,
+            "p95Ms": 0.3,
+            "maxMs": 0.3,
+            "mainThreadMs": 0.3,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.015,
+            "p50Ms": 0.015,
+            "p95Ms": 0.015,
+            "maxMs": 0.015,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.13,
+            "avgMs": 0.133,
+            "p50Ms": 0.133,
+            "p95Ms": 0.133,
+            "maxMs": 0.133,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.13,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.02,
+            "p50Ms": 0.02,
+            "p95Ms": 0.02,
+            "maxMs": 0.02,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.018,
+            "p50Ms": 0.018,
+            "p95Ms": 0.018,
+            "maxMs": 0.018,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.06,
+            "avgMs": 0.057,
+            "p50Ms": 0.057,
+            "p95Ms": 0.057,
+            "maxMs": 0.057,
+            "mainThreadMs": 0.06,
+            "backgroundMs": 0,
+            "items": 1
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 728240,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 23,
+      "label": "update-100",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 3
+      },
+      "wallMs": 465.07,
+      "commits": {
+        "count": 1,
+        "totalMs": 5.02,
+        "avgMs": 5.023,
+        "p95Ms": 5.023,
+        "maxMs": 5.023
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.125,
+          "maxMs": 9.125
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.277,
+          "maxMs": 0.277
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 12,
+        "mainThreadMs": 0.58,
+        "backgroundMs": 0.5,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.23,
+            "avgMs": 0.234,
+            "p50Ms": 0.234,
+            "p95Ms": 0.234,
+            "maxMs": 0.234,
+            "mainThreadMs": 0.23,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.28,
+            "avgMs": 0.277,
+            "p50Ms": 0.277,
+            "p95Ms": 0.277,
+            "maxMs": 0.277,
+            "mainThreadMs": 0.28,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.014,
+            "p50Ms": 0.014,
+            "p95Ms": 0.014,
+            "maxMs": 0.014,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.46,
+            "avgMs": 0.458,
+            "p50Ms": 0.458,
+            "p95Ms": 0.458,
+            "maxMs": 0.458,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.46,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.022,
+            "p50Ms": 0.022,
+            "p95Ms": 0.022,
+            "maxMs": 0.022,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.044,
+            "p50Ms": 0.044,
+            "p95Ms": 0.044,
+            "maxMs": 0.044,
+            "mainThreadMs": 0.04,
+            "backgroundMs": 0,
+            "items": 1
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 724136,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 24,
+      "label": "update-100",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 4
+      },
+      "wallMs": 465.69,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.5,
+        "avgMs": 4.496,
+        "p95Ms": 4.496,
+        "maxMs": 4.496
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.697,
+          "maxMs": 9.697
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.306,
+          "maxMs": 0.306
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 12,
+        "mainThreadMs": 0.63,
+        "backgroundMs": 0.18,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.22,
+            "avgMs": 0.215,
+            "p50Ms": 0.215,
+            "p95Ms": 0.215,
+            "maxMs": 0.215,
+            "mainThreadMs": 0.22,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.31,
+            "avgMs": 0.306,
+            "p50Ms": 0.306,
+            "p95Ms": 0.306,
+            "maxMs": 0.306,
+            "mainThreadMs": 0.31,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.026,
+            "p50Ms": 0.026,
+            "p95Ms": 0.026,
+            "maxMs": 0.026,
+            "mainThreadMs": 0.03,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.002,
+            "p50Ms": 0.002,
+            "p95Ms": 0.002,
+            "maxMs": 0.002,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.12,
+            "avgMs": 0.122,
+            "p50Ms": 0.122,
+            "p95Ms": 0.122,
+            "maxMs": 0.122,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.12,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.032,
+            "p50Ms": 0.032,
+            "p95Ms": 0.032,
+            "maxMs": 0.032,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.014,
+            "p50Ms": 0.014,
+            "p95Ms": 0.014,
+            "maxMs": 0.014,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.06,
+            "avgMs": 0.062,
+            "p50Ms": 0.062,
+            "p95Ms": 0.062,
+            "maxMs": 0.062,
+            "mainThreadMs": 0.06,
+            "backgroundMs": 0,
+            "items": 1
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 723824,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 25,
+      "label": "update-1pct",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 0
+      },
+      "wallMs": 464.17,
+      "commits": {
+        "count": 1,
+        "totalMs": 5.03,
+        "avgMs": 5.029,
+        "p95Ms": 5.029,
+        "maxMs": 5.029
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 10.336,
+          "maxMs": 10.336
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.642,
+          "maxMs": 0.642
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 1.24,
+        "backgroundMs": 0.69,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.58,
+            "avgMs": 0.577,
+            "p50Ms": 0.577,
+            "p95Ms": 0.577,
+            "maxMs": 0.577,
+            "mainThreadMs": 0.58,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.64,
+            "avgMs": 0.642,
+            "p50Ms": 0.642,
+            "p95Ms": 0.642,
+            "maxMs": 0.642,
+            "mainThreadMs": 0.64,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.017,
+            "p50Ms": 0.017,
+            "p95Ms": 0.017,
+            "maxMs": 0.017,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.62,
+            "avgMs": 0.621,
+            "p50Ms": 0.621,
+            "p95Ms": 0.621,
+            "maxMs": 0.621,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.62,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.015,
+            "p50Ms": 0.015,
+            "p95Ms": 0.015,
+            "maxMs": 0.015,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.04,
+            "p50Ms": 0.04,
+            "p95Ms": 0.04,
+            "maxMs": 0.04,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 711968,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 26,
+      "label": "update-1pct",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 1
+      },
+      "wallMs": 465.65,
+      "commits": {
+        "count": 1,
+        "totalMs": 3.34,
+        "avgMs": 3.341,
+        "p95Ms": 3.341,
+        "maxMs": 3.341
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 11.968,
+          "maxMs": 11.968
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.195,
+          "maxMs": 0.195
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.37,
+        "backgroundMs": 0.54,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.16,
+            "avgMs": 0.161,
+            "p50Ms": 0.161,
+            "p95Ms": 0.161,
+            "maxMs": 0.161,
+            "mainThreadMs": 0.16,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.19,
+            "avgMs": 0.195,
+            "p50Ms": 0.195,
+            "p95Ms": 0.195,
+            "maxMs": 0.195,
+            "mainThreadMs": 0.19,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.49,
+            "avgMs": 0.486,
+            "p50Ms": 0.486,
+            "p95Ms": 0.486,
+            "maxMs": 0.486,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.49,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.014,
+            "p50Ms": 0.014,
+            "p95Ms": 0.014,
+            "maxMs": 0.014,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.031,
+            "p50Ms": 0.031,
+            "p95Ms": 0.031,
+            "maxMs": 0.031,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 712240,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 27,
+      "label": "update-1pct",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 2
+      },
+      "wallMs": 465.79,
+      "commits": {
+        "count": 1,
+        "totalMs": 7.52,
+        "avgMs": 7.524,
+        "p95Ms": 7.524,
+        "maxMs": 7.524
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 8.01,
+          "maxMs": 8.01
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.401,
+          "maxMs": 0.401
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.78,
+        "backgroundMs": 0.54,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.36,
+            "avgMs": 0.355,
+            "p50Ms": 0.355,
+            "p95Ms": 0.355,
+            "maxMs": 0.355,
+            "mainThreadMs": 0.36,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.4,
+            "avgMs": 0.401,
+            "p50Ms": 0.401,
+            "p95Ms": 0.401,
+            "maxMs": 0.401,
+            "mainThreadMs": 0.4,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.017,
+            "p50Ms": 0.017,
+            "p95Ms": 0.017,
+            "maxMs": 0.017,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.49,
+            "avgMs": 0.488,
+            "p50Ms": 0.488,
+            "p95Ms": 0.488,
+            "maxMs": 0.488,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.49,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.014,
+            "p50Ms": 0.014,
+            "p95Ms": 0.014,
+            "maxMs": 0.014,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.031,
+            "p50Ms": 0.031,
+            "p95Ms": 0.031,
+            "maxMs": 0.031,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.003923584000000008,
+        "allocatedBytes": 712288,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 28,
+      "label": "update-1pct",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 3
+      },
+      "wallMs": 466.46,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.57,
+        "avgMs": 4.571,
+        "p95Ms": 4.571,
+        "maxMs": 4.571
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 11.17,
+          "maxMs": 11.17
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.732,
+          "maxMs": 0.732
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 1.44,
+        "backgroundMs": 0.33,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.69,
+            "avgMs": 0.692,
+            "p50Ms": 0.692,
+            "p95Ms": 0.692,
+            "maxMs": 0.692,
+            "mainThreadMs": 0.69,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.73,
+            "avgMs": 0.732,
+            "p50Ms": 0.732,
+            "p95Ms": 0.732,
+            "maxMs": 0.732,
+            "mainThreadMs": 0.73,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.24,
+            "avgMs": 0.243,
+            "p50Ms": 0.243,
+            "p95Ms": 0.243,
+            "maxMs": 0.243,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.24,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.021,
+            "p50Ms": 0.021,
+            "p95Ms": 0.021,
+            "maxMs": 0.021,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.044,
+            "p50Ms": 0.044,
+            "p95Ms": 0.044,
+            "maxMs": 0.044,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 712208,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 29,
+      "label": "update-1pct",
+      "meta": {
+        "changed": 10,
+        "total": 1000,
+        "repeat": 4
+      },
+      "wallMs": 465.29,
+      "commits": {
+        "count": 1,
+        "totalMs": 5.15,
+        "avgMs": 5.155,
+        "p95Ms": 5.155,
+        "maxMs": 5.155
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 10.135,
+          "maxMs": 10.135
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.227,
+          "maxMs": 0.227
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.44,
+        "backgroundMs": 0.55,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.19,
+            "avgMs": 0.193,
+            "p50Ms": 0.193,
+            "p95Ms": 0.193,
+            "maxMs": 0.193,
+            "mainThreadMs": 0.19,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.23,
+            "avgMs": 0.227,
+            "p50Ms": 0.227,
+            "p95Ms": 0.227,
+            "maxMs": 0.227,
+            "mainThreadMs": 0.23,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.012,
+            "p50Ms": 0.012,
+            "p95Ms": 0.012,
+            "maxMs": 0.012,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.5,
+            "avgMs": 0.495,
+            "p50Ms": 0.495,
+            "p95Ms": 0.495,
+            "maxMs": 0.495,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.5,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.031,
+            "p50Ms": 0.031,
+            "p95Ms": 0.031,
+            "maxMs": 0.031,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 712128,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 30,
+      "label": "update-10pct",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 0
+      },
+      "wallMs": 464.49,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.32,
+        "avgMs": 4.315,
+        "p95Ms": 4.315,
+        "maxMs": 4.315
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 10.047,
+          "maxMs": 10.047
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.376,
+          "maxMs": 0.376
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 12,
+        "mainThreadMs": 0.92,
+        "backgroundMs": 0.24,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.33,
+            "avgMs": 0.33,
+            "p50Ms": 0.33,
+            "p95Ms": 0.33,
+            "maxMs": 0.33,
+            "mainThreadMs": 0.33,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.38,
+            "avgMs": 0.376,
+            "p50Ms": 0.376,
+            "p95Ms": 0.376,
+            "maxMs": 0.376,
+            "mainThreadMs": 0.38,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.013,
+            "p50Ms": 0.013,
+            "p95Ms": 0.013,
+            "maxMs": 0.013,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.15,
+            "avgMs": 0.15,
+            "p50Ms": 0.15,
+            "p95Ms": 0.15,
+            "maxMs": 0.15,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.15,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.023,
+            "p50Ms": 0.023,
+            "p95Ms": 0.023,
+            "maxMs": 0.023,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.008,
+            "p50Ms": 0.008,
+            "p95Ms": 0.008,
+            "maxMs": 0.008,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.048,
+            "p50Ms": 0.048,
+            "p95Ms": 0.048,
+            "maxMs": 0.048,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.023,
+            "p50Ms": 0.023,
+            "p95Ms": 0.023,
+            "maxMs": 0.023,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.17,
+            "avgMs": 0.175,
+            "p50Ms": 0.175,
+            "p95Ms": 0.175,
+            "maxMs": 0.175,
+            "mainThreadMs": 0.17,
+            "backgroundMs": 0,
+            "items": 1
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 724136,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 31,
+      "label": "update-10pct",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 1
+      },
+      "wallMs": 465.52,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.98,
+        "avgMs": 4.98,
+        "p95Ms": 4.98,
+        "maxMs": 4.98
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 12.104,
+          "maxMs": 12.104
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.162,
+          "maxMs": 0.162
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.31,
+        "backgroundMs": 0.61,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.12,
+            "avgMs": 0.118,
+            "p50Ms": 0.118,
+            "p95Ms": 0.118,
+            "maxMs": 0.118,
+            "mainThreadMs": 0.12,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.16,
+            "avgMs": 0.162,
+            "p50Ms": 0.162,
+            "p95Ms": 0.162,
+            "maxMs": 0.162,
+            "mainThreadMs": 0.16,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.023,
+            "p50Ms": 0.023,
+            "p95Ms": 0.023,
+            "maxMs": 0.023,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.002,
+            "p50Ms": 0.002,
+            "p95Ms": 0.002,
+            "maxMs": 0.002,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.53,
+            "avgMs": 0.534,
+            "p50Ms": 0.534,
+            "p95Ms": 0.534,
+            "maxMs": 0.534,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.53,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.021,
+            "p50Ms": 0.021,
+            "p95Ms": 0.021,
+            "maxMs": 0.021,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.007,
+            "p50Ms": 0.007,
+            "p95Ms": 0.007,
+            "maxMs": 0.007,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.039,
+            "p50Ms": 0.039,
+            "p95Ms": 0.039,
+            "maxMs": 0.039,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 723184,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 32,
+      "label": "update-10pct",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 2
+      },
+      "wallMs": 466.35,
+      "commits": {
+        "count": 1,
+        "totalMs": 7.74,
+        "avgMs": 7.737,
+        "p95Ms": 7.737,
+        "maxMs": 7.737
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 7.411,
+          "maxMs": 7.411
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.164,
+          "maxMs": 0.164
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 12,
+        "mainThreadMs": 0.38,
+        "backgroundMs": 0.51,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.14,
+            "avgMs": 0.143,
+            "p50Ms": 0.143,
+            "p95Ms": 0.143,
+            "maxMs": 0.143,
+            "mainThreadMs": 0.14,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.16,
+            "avgMs": 0.164,
+            "p50Ms": 0.164,
+            "p95Ms": 0.164,
+            "maxMs": 0.164,
+            "mainThreadMs": 0.16,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.47,
+            "avgMs": 0.467,
+            "p50Ms": 0.467,
+            "p95Ms": 0.467,
+            "maxMs": 0.467,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.47,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.024,
+            "p50Ms": 0.024,
+            "p95Ms": 0.024,
+            "maxMs": 0.024,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.048,
+            "p50Ms": 0.048,
+            "p95Ms": 0.048,
+            "maxMs": 0.048,
+            "mainThreadMs": 0.05,
+            "backgroundMs": 0,
+            "items": 1
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.004186791999999995,
+        "allocatedBytes": 724176,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 33,
+      "label": "update-10pct",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 3
+      },
+      "wallMs": 466.66,
+      "commits": {
+        "count": 1,
+        "totalMs": 5.27,
+        "avgMs": 5.268,
+        "p95Ms": 5.268,
+        "maxMs": 5.268
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.274,
+          "maxMs": 9.274
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.754,
+          "maxMs": 0.754
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 1.47,
+        "backgroundMs": 0.71,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.65,
+            "avgMs": 0.653,
+            "p50Ms": 0.653,
+            "p95Ms": 0.653,
+            "maxMs": 0.653,
+            "mainThreadMs": 0.65,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.75,
+            "avgMs": 0.754,
+            "p50Ms": 0.754,
+            "p95Ms": 0.754,
+            "maxMs": 0.754,
+            "mainThreadMs": 0.75,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.035,
+            "p50Ms": 0.035,
+            "p95Ms": 0.035,
+            "maxMs": 0.035,
+            "mainThreadMs": 0.04,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.015,
+            "p50Ms": 0.015,
+            "p95Ms": 0.015,
+            "maxMs": 0.015,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.6,
+            "avgMs": 0.599,
+            "p50Ms": 0.599,
+            "p95Ms": 0.599,
+            "maxMs": 0.599,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.6,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.037,
+            "p50Ms": 0.037,
+            "p95Ms": 0.037,
+            "maxMs": 0.037,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.06,
+            "avgMs": 0.059,
+            "p50Ms": 0.059,
+            "p95Ms": 0.059,
+            "maxMs": 0.059,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.06,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 723128,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 34,
+      "label": "update-10pct",
+      "meta": {
+        "changed": 100,
+        "total": 1000,
+        "repeat": 4
+      },
+      "wallMs": 463.4,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.06,
+        "avgMs": 4.059,
+        "p95Ms": 4.059,
+        "maxMs": 4.059
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.774,
+          "maxMs": 9.774
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.248,
+          "maxMs": 0.248
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 11,
+        "mainThreadMs": 0.58,
+        "backgroundMs": 0.81,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.21,
+            "avgMs": 0.213,
+            "p50Ms": 0.213,
+            "p95Ms": 0.213,
+            "maxMs": 0.213,
+            "mainThreadMs": 0.21,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.25,
+            "avgMs": 0.248,
+            "p50Ms": 0.248,
+            "p95Ms": 0.248,
+            "maxMs": 0.248,
+            "mainThreadMs": 0.25,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.11,
+            "avgMs": 0.108,
+            "p50Ms": 0.108,
+            "p95Ms": 0.108,
+            "maxMs": 0.108,
+            "mainThreadMs": 0.11,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.74,
+            "avgMs": 0.743,
+            "p50Ms": 0.743,
+            "p95Ms": 0.743,
+            "maxMs": 0.743,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.74,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.018,
+            "p50Ms": 0.018,
+            "p95Ms": 0.018,
+            "maxMs": 0.018,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.035,
+            "p50Ms": 0.035,
+            "p95Ms": 0.035,
+            "maxMs": 0.035,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 722968,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 35,
+      "label": "update-100pct",
+      "meta": {
+        "changed": 1000,
+        "total": 1000,
+        "repeat": 0
+      },
+      "wallMs": 466.63,
+      "commits": {
+        "count": 1,
+        "totalMs": 2.15,
+        "avgMs": 2.145,
+        "p95Ms": 2.145,
+        "maxMs": 2.145
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 11.085,
+          "maxMs": 11.085
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.131,
+          "maxMs": 0.131
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 15,
+        "mainThreadMs": 0.53,
+        "backgroundMs": 0.4,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.1,
+            "avgMs": 0.102,
+            "p50Ms": 0.102,
+            "p95Ms": 0.102,
+            "maxMs": 0.102,
+            "mainThreadMs": 0.1,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.13,
+            "avgMs": 0.131,
+            "p50Ms": 0.131,
+            "p95Ms": 0.131,
+            "maxMs": 0.131,
+            "mainThreadMs": 0.13,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.022,
+            "p50Ms": 0.022,
+            "p95Ms": 0.022,
+            "maxMs": 0.022,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.36,
+            "avgMs": 0.363,
+            "p50Ms": 0.363,
+            "p95Ms": 0.363,
+            "maxMs": 0.363,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.36,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.011,
+            "p50Ms": 0.011,
+            "p95Ms": 0.011,
+            "maxMs": 0.011,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.02,
+            "p50Ms": 0.02,
+            "p95Ms": 0.02,
+            "maxMs": 0.02,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 4,
+            "totalMs": 0.07,
+            "avgMs": 0.017,
+            "p50Ms": 0.002,
+            "p95Ms": 0.064,
+            "maxMs": 0.064,
+            "mainThreadMs": 0.07,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.2,
+            "avgMs": 0.203,
+            "p50Ms": 0.203,
+            "p95Ms": 0.203,
+            "maxMs": 0.203,
+            "mainThreadMs": 0.2,
+            "backgroundMs": 0,
+            "items": 4
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 832888,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 36,
+      "label": "update-100pct",
+      "meta": {
+        "changed": 1000,
+        "total": 1000,
+        "repeat": 1
+      },
+      "wallMs": 463.7,
+      "commits": {
+        "count": 1,
+        "totalMs": 3.49,
+        "avgMs": 3.488,
+        "p95Ms": 3.488,
+        "maxMs": 3.488
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 6.995,
+          "maxMs": 6.995
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.281,
+          "maxMs": 0.281
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 15,
+        "mainThreadMs": 0.65,
+        "backgroundMs": 0.46,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.26,
+            "avgMs": 0.261,
+            "p50Ms": 0.261,
+            "p95Ms": 0.261,
+            "maxMs": 0.261,
+            "mainThreadMs": 0.26,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.28,
+            "avgMs": 0.281,
+            "p50Ms": 0.281,
+            "p95Ms": 0.281,
+            "maxMs": 0.281,
+            "mainThreadMs": 0.28,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.015,
+            "p50Ms": 0.015,
+            "p95Ms": 0.015,
+            "maxMs": 0.015,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.41,
+            "avgMs": 0.412,
+            "p50Ms": 0.412,
+            "p95Ms": 0.412,
+            "maxMs": 0.412,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.41,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.022,
+            "p50Ms": 0.022,
+            "p95Ms": 0.022,
+            "maxMs": 0.022,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 4,
+            "totalMs": 0.02,
+            "avgMs": 0.005,
+            "p50Ms": 0.002,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.07,
+            "avgMs": 0.068,
+            "p50Ms": 0.068,
+            "p95Ms": 0.068,
+            "maxMs": 0.068,
+            "mainThreadMs": 0.07,
+            "backgroundMs": 0,
+            "items": 4
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 849232,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 37,
+      "label": "update-100pct",
+      "meta": {
+        "changed": 1000,
+        "total": 1000,
+        "repeat": 2
+      },
+      "wallMs": 464.74,
+      "commits": {
+        "count": 1,
+        "totalMs": 4.22,
+        "avgMs": 4.221,
+        "p95Ms": 4.221,
+        "maxMs": 4.221
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 8.827,
+          "maxMs": 8.827
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.309,
+          "maxMs": 0.309
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 15,
+        "mainThreadMs": 0.7,
+        "backgroundMs": 0.25,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.26,
+            "avgMs": 0.262,
+            "p50Ms": 0.262,
+            "p95Ms": 0.262,
+            "maxMs": 0.262,
+            "mainThreadMs": 0.26,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.31,
+            "avgMs": 0.309,
+            "p50Ms": 0.309,
+            "p95Ms": 0.309,
+            "maxMs": 0.309,
+            "mainThreadMs": 0.31,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maxMs": 0,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.18,
+            "avgMs": 0.176,
+            "p50Ms": 0.176,
+            "p95Ms": 0.176,
+            "maxMs": 0.176,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.18,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.022,
+            "p50Ms": 0.022,
+            "p95Ms": 0.022,
+            "maxMs": 0.022,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.006,
+            "p50Ms": 0.006,
+            "p95Ms": 0.006,
+            "maxMs": 0.006,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.007,
+            "p50Ms": 0.007,
+            "p95Ms": 0.007,
+            "maxMs": 0.007,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 4
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.04,
+            "avgMs": 0.038,
+            "p50Ms": 0.038,
+            "p95Ms": 0.038,
+            "maxMs": 0.038,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.04,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 4,
+            "totalMs": 0.02,
+            "avgMs": 0.005,
+            "p50Ms": 0.002,
+            "p95Ms": 0.014,
+            "maxMs": 0.014,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.1,
+            "avgMs": 0.102,
+            "p50Ms": 0.102,
+            "p95Ms": 0.102,
+            "maxMs": 0.102,
+            "mainThreadMs": 0.1,
+            "backgroundMs": 0,
+            "items": 4
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 832856,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 38,
+      "label": "update-100pct",
+      "meta": {
+        "changed": 1000,
+        "total": 1000,
+        "repeat": 3
+      },
+      "wallMs": 465.27,
+      "commits": {
+        "count": 1,
+        "totalMs": 1.73,
+        "avgMs": 1.73,
+        "p95Ms": 1.73,
+        "maxMs": 1.73
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 7.006,
+          "maxMs": 7.006
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.315,
+          "maxMs": 0.315
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 16,
+        "mainThreadMs": 0.86,
+        "backgroundMs": 0.4,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.29,
+            "avgMs": 0.293,
+            "p50Ms": 0.293,
+            "p95Ms": 0.293,
+            "maxMs": 0.293,
+            "mainThreadMs": 0.29,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.31,
+            "avgMs": 0.315,
+            "p50Ms": 0.315,
+            "p95Ms": 0.315,
+            "maxMs": 0.315,
+            "mainThreadMs": 0.31,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.009,
+            "p50Ms": 0.009,
+            "p95Ms": 0.009,
+            "maxMs": 0.009,
+            "mainThreadMs": 0.01,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.36,
+            "avgMs": 0.363,
+            "p50Ms": 0.363,
+            "p95Ms": 0.363,
+            "maxMs": 0.363,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.36,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.01,
+            "p50Ms": 0.01,
+            "p95Ms": 0.01,
+            "maxMs": 0.01,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.003,
+            "p50Ms": 0.003,
+            "p95Ms": 0.003,
+            "maxMs": 0.003,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.004,
+            "p50Ms": 0.004,
+            "p95Ms": 0.004,
+            "maxMs": 0.004,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 5
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.018,
+            "p50Ms": 0.018,
+            "p95Ms": 0.018,
+            "maxMs": 0.018,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 5,
+            "totalMs": 0.04,
+            "avgMs": 0.007,
+            "p50Ms": 0.002,
+            "p95Ms": 0.03,
+            "maxMs": 0.03,
+            "mainThreadMs": 0.04,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.21,
+            "avgMs": 0.209,
+            "p50Ms": 0.209,
+            "p95Ms": 0.209,
+            "maxMs": 0.209,
+            "mainThreadMs": 0.21,
+            "backgroundMs": 0,
+            "items": 5
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 1,
+        "gcTimeMs": 0.0037125829999999915,
+        "allocatedBytes": 833424,
+        "heapSizeAfterBytes": 58720256
+      }
+    },
+    {
+      "index": 39,
+      "label": "update-100pct",
+      "meta": {
+        "changed": 1000,
+        "total": 1000,
+        "repeat": 4
+      },
+      "wallMs": 464.22,
+      "commits": {
+        "count": 1,
+        "totalMs": 3.87,
+        "avgMs": 3.868,
+        "p95Ms": 3.868,
+        "maxMs": 3.868
+      },
+      "bridge": {
+        "commitToNativeMs": {
+          "samples": 1,
+          "avgMs": 9.325,
+          "maxMs": 9.325
+        },
+        "setterMs": {
+          "samples": 1,
+          "avgMs": 0.259,
+          "maxMs": 0.259
+        }
+      },
+      "native": {
+        "available": true,
+        "dropped": 0,
+        "spans": 16,
+        "mainThreadMs": 0.81,
+        "backgroundMs": 0.83,
+        "byName": {
+          "markers.fingerprint": {
+            "count": 1,
+            "totalMs": 0.17,
+            "avgMs": 0.174,
+            "p50Ms": 0.174,
+            "p95Ms": 0.174,
+            "maxMs": 0.174,
+            "mainThreadMs": 0.17,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "markers.set": {
+            "count": 1,
+            "totalMs": 0.26,
+            "avgMs": 0.259,
+            "p50Ms": 0.259,
+            "p95Ms": 0.259,
+            "maxMs": 0.259,
+            "mainThreadMs": 0.26,
+            "backgroundMs": 0,
+            "items": 1000
+          },
+          "polylines.set": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.022,
+            "p50Ms": 0.022,
+            "p95Ms": 0.022,
+            "maxMs": 0.022,
+            "mainThreadMs": 0.02,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "polygons.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "circles.set": {
+            "count": 1,
+            "totalMs": 0,
+            "avgMs": 0.001,
+            "p50Ms": 0.001,
+            "p95Ms": 0.001,
+            "maxMs": 0.001,
+            "mainThreadMs": 0,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.indexBuild": {
+            "count": 1,
+            "totalMs": 0.72,
+            "avgMs": 0.723,
+            "p50Ms": 0.723,
+            "p95Ms": 0.723,
+            "maxMs": 0.723,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.72,
+            "items": 1000
+          },
+          "markers.candidates": {
+            "count": 1,
+            "totalMs": 0.02,
+            "avgMs": 0.02,
+            "p50Ms": 0.02,
+            "p95Ms": 0.02,
+            "maxMs": 0.02,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.02,
+            "items": 1000
+          },
+          "markers.viewportFilter": {
+            "count": 1,
+            "totalMs": 0.01,
+            "avgMs": 0.005,
+            "p50Ms": 0.005,
+            "p95Ms": 0.005,
+            "maxMs": 0.005,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.01,
+            "items": 9
+          },
+          "markers.diff": {
+            "count": 1,
+            "totalMs": 0.03,
+            "avgMs": 0.026,
+            "p50Ms": 0.026,
+            "p95Ms": 0.026,
+            "maxMs": 0.026,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.03,
+            "items": 5
+          },
+          "markers.viewportCompute": {
+            "count": 1,
+            "totalMs": 0.05,
+            "avgMs": 0.054,
+            "p50Ms": 0.054,
+            "p95Ms": 0.054,
+            "maxMs": 0.054,
+            "mainThreadMs": 0,
+            "backgroundMs": 0.05,
+            "items": 9
+          },
+          "marker.visualProps": {
+            "count": 5,
+            "totalMs": 0.05,
+            "avgMs": 0.011,
+            "p50Ms": 0.005,
+            "p95Ms": 0.034,
+            "maxMs": 0.034,
+            "mainThreadMs": 0.05,
+            "backgroundMs": 0,
+            "items": 0
+          },
+          "markers.applyDiff": {
+            "count": 1,
+            "totalMs": 0.3,
+            "avgMs": 0.302,
+            "p50Ms": 0.302,
+            "p95Ms": 0.302,
+            "maxMs": 0.302,
+            "mainThreadMs": 0.3,
+            "backgroundMs": 0,
+            "items": 5
+          }
+        }
+      },
+      "hermes": {
+        "available": true,
+        "gcCount": 0,
+        "gcTimeMs": 0,
+        "allocatedBytes": 833304,
+        "heapSizeAfterBytes": 58720256
+      }
+    }
+  ],
+  "timeline": [],
+  "metrics": {},
+  "notes": [
+    "clock alignment round trip 0.001 ms"
+  ],
+  "errors": []
+}

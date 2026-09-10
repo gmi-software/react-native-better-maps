@@ -55,3 +55,7 @@ performance/results/runs/*
 !performance/results/runs/.gitkeep
 performance/results/bench/*
 !performance/results/bench/.gitkeep
+
+# The performance lab keeps helper modules in lib/ directories; only build output is ignored.
+!performance/scripts/lib/
+!performance/benchmarks/lib/

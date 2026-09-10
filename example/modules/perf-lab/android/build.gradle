@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.perflab'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.perflab"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // ReactContext.runOnJSQueueThread for the JS message-queue probe.
+  implementation 'com.facebook.react:react-android'
+}

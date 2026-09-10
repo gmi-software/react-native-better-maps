@@ -33,6 +33,7 @@ Thank you for your interest in contributing!
 | `bun run nitrogen` | Run Nitrogen codegen (when specs are ready) |
 | `bun run format` | Format all files with Prettier |
 | `bun run doctor` | Run React Doctor locally |
+| `bun perf …` | Performance lab: run scenarios on a device, record baselines, compare (see [performance/README.md](performance/README.md)) |
 
 ## React Doctor
 

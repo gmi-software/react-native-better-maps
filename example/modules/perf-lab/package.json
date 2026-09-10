@@ -1,0 +1,10 @@
+{
+  "name": "perf-lab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native measurement module for the react-native-better-maps performance lab",
+  "main": "index.ts",
+  "license": "MIT",
+  "author": "gmi.software",
+  "homepage": "https://github.com/gmi-software/react-native-better-maps"
+}

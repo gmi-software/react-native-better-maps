@@ -6,3 +6,5 @@ coverage/
 android/
 ios/
 nitrogen/
+performance/results/
+performance/PERFORMANCE.md

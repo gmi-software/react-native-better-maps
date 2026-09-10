@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["PerfLabModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.perflab.PerfLabModule"]
+  }
+}

@@ -73,7 +73,7 @@ Delivered incrementally during Phases 3–5; polished for platform consistency i
 - [x] Public README and package metadata
 - [x] Expo setup documentation
 - [x] CI quality checks
-- [ ] Release performance benchmark pass
+- [ ] Release performance benchmark pass — the [performance lab](../performance/README.md) records baselines; a physical-device baseline is still pending
 - [ ] Migration guide from react-native-maps
 - [ ] npm publish (v1.0.0)
 - [ ] GitHub release with changelog

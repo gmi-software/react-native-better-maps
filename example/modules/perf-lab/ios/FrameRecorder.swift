@@ -1,0 +1,69 @@
+import QuartzCore
+import UIKit
+
+/// Records main-thread frame intervals with a `CADisplayLink`.
+///
+/// The link fires once per display refresh while the main thread is free, so
+/// the gap between two callbacks is the frame interval the user experienced:
+/// a blocked main thread shows up as one long interval. The interval the
+/// display was running at is captured per frame, because ProMotion displays
+/// change refresh rate on their own.
+final class FrameRecorder {
+  private var displayLink: CADisplayLink?
+  private var lastTimestamp: CFTimeInterval = 0
+  private var startedAt: CFTimeInterval = 0
+  private var startNs: UInt64 = 0
+  private var intervalsMs: [Double] = []
+  private var expectedMs: [Double] = []
+
+  func start() {
+    intervalsMs.reserveCapacity(8192)
+    expectedMs.reserveCapacity(8192)
+
+    let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+    let maximum = Float(UIScreen.main.maximumFramesPerSecond)
+    // Ask for the display's full rate so a 120 Hz device is measured at 120 Hz.
+    // On iPhone this also needs `CADisableMinimumFrameDurationOnPhone` in
+    // Info.plist, which the example app sets.
+    link.preferredFrameRateRange = CAFrameRateRange(
+      minimum: 30,
+      maximum: maximum,
+      preferred: maximum
+    )
+    link.add(to: .main, forMode: .common)
+    displayLink = link
+    startedAt = CACurrentMediaTime()
+    startNs = DispatchTime.now().uptimeNanoseconds
+    lastTimestamp = 0
+  }
+
+  @objc private func step(_ link: CADisplayLink) {
+    if lastTimestamp > 0 {
+      intervalsMs.append((link.timestamp - lastTimestamp) * 1000)
+      expectedMs.append((link.targetTimestamp - link.timestamp) * 1000)
+    }
+    lastTimestamp = link.timestamp
+  }
+
+  func stop() -> [String: Any] {
+    displayLink?.invalidate()
+    displayLink = nil
+    return [
+      "intervalsMs": intervalsMs,
+      "expectedMs": expectedMs,
+      "durationMs": (CACurrentMediaTime() - startedAt) * 1000,
+      "refreshRateHz": Double(UIScreen.main.maximumFramesPerSecond),
+      "startNs": Double(startNs),
+    ]
+  }
+
+  static func emptyRecording() -> [String: Any] {
+    [
+      "intervalsMs": [Double](),
+      "expectedMs": [Double](),
+      "durationMs": 0.0,
+      "refreshRateHz": Double(UIScreen.main.maximumFramesPerSecond),
+      "startNs": Double(DispatchTime.now().uptimeNanoseconds),
+    ]
+  }
+}

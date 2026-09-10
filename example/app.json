@@ -7,10 +7,16 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nitromaps.example"
+      "bundleIdentifier": "com.nitromaps.example",
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true,
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      }
     },
     "android": {
       "package": "com.nitromaps.example"
-    }
+    },
+    "scheme": "nitromapsperf"
   }
 }

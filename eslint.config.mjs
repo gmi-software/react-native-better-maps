@@ -18,12 +18,17 @@ export default tseslint.config(
       'example/metro.config.js',
       'example/index.js',
       'example/app.config.js',
+      'performance/results/**',
     ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['**/*.config.js', '**/app.plugin.js'],
+    files: [
+      '**/*.config.js',
+      '**/app.plugin.js',
+      'performance/scripts/**/*.mjs',
+    ],
     languageOptions: {
       globals: {
         ...globals.node,

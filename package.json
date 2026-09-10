@@ -15,7 +15,14 @@
     "format": "prettier --write .",
     "doctor": "npx react-doctor@latest",
     "commitlint": "commitlint",
-    "prepare": "husky"
+    "prepare": "husky",
+    "perf": "bun performance/scripts/perf.mjs",
+    "perf:baseline": "bun performance/scripts/perf.mjs baseline",
+    "perf:compare": "bun performance/scripts/perf.mjs compare",
+    "perf:check": "bun performance/scripts/perf.mjs check",
+    "perf:bench": "bun performance/scripts/perf.mjs bench",
+    "perf:test": "bun test performance/fixtures performance/app performance/scripts",
+    "typecheck:perf": "tsc -p example/tsconfig.json --noEmit"
   },
   "overrides": {
     "yargs": "17.7.3"

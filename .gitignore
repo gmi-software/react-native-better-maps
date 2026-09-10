@@ -48,3 +48,10 @@ local.properties
 *.swo
 
 # Bun lockfile is committed for reproducible CI installs
+
+# Performance lab: local runs and micro-benchmark output are not committed;
+# baselines under performance/results/baseline are.
+performance/results/runs/*
+!performance/results/runs/.gitkeep
+performance/results/bench/*
+!performance/results/bench/.gitkeep

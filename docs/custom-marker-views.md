@@ -24,12 +24,12 @@ Give every item a stable React key when rendering a list. Direct `MarkerView` ch
 
 ## Contract
 
-| Property | Behavior |
-| --- | --- |
-| `coordinate` | Required finite latitude −90…90 and longitude −180…180. Changing it repositions only that host. |
-| `width`, `height` | Required positive finite dimensions in points/dp. They define layout, clipping, hit-testing, and the anchor reference. |
-| `anchor` | Defaults to bottom-center (`{ x: 0.5, y: 1 }`). Components are finite fractions of the bounds; values outside 0…1 deliberately offset the host. |
-| `children` | Live React Native tree. Animate child views inside the fixed bounds; the native host reserves its own transform for geographic position. |
+| Property          | Behavior                                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `coordinate`      | Required finite latitude −90…90 and longitude −180…180. Changing it repositions only that host.                                                 |
+| `width`, `height` | Required positive finite dimensions in points/dp. They define layout, clipping, hit-testing, and the anchor reference.                          |
+| `anchor`          | Defaults to bottom-center (`{ x: 0.5, y: 1 }`). Components are finite fractions of the bounds; values outside 0…1 deliberately offset the host. |
+| `children`        | Live React Native tree. Animate child views inside the fixed bounds; the native host reserves its own transform for geographic position.        |
 
 Content is screen-aligned and clipped to its bounds and the map viewport. Marker views are composed above the SDK surface, including its annotations and controls. Use map padding/placement to avoid covering controls. Their order follows JSX order. They do not participate in SDK clustering, annotation collision, depth occlusion, dragging, callouts, or flat/ground-plane rotation. Use `Marker` descriptors for those SDK marker features and for large static datasets.
 
@@ -43,7 +43,7 @@ Removing snapshots eliminates one expensive class of work; it does not remove na
 
 The target is no material regression against the same provider and device baseline for a recorded workload. Google Maps iOS documents a 60 FPS maximum for its native map; a 120 Hz JSX overlay or display callback is not evidence of 120 distinct map frames. See [SDK evidence](research/custom-marker-sdk-sources.md).
 
-The first [physical iPhone experiment](research/custom-marker-device-results.md) found near-120 Hz main-thread callback cadence for static hosts and 10/50 animated hosts, but regressions for 200 animated-layout hosts and a hot 200-transform case. This is not presented-frame proof, and unrestricted 120 FPS acceptance remains open. Run the opt-in example with `EXPO_PUBLIC_MARKER_VIEW_BENCHMARK=1` in a Release build. Its A/B flow compares pins, static JSX, child transform animation, and child layout animation at 10/50/200 mounted hosts, using three passes and alternating mode order. Native callback intervals and memory are diagnostic data; Instruments/Perfetto and functional checks are also required before accepting the feature.
+The corrected moving-camera [physical iPhone experiment](research/custom-marker-device-results.md) found 118.5–120.0 Hz main-thread callback cadence for 10/50 hosts, 119.3 Hz for 200 static hosts, 117.5–119.5 Hz for 200 transformed hosts, and 51.4–54.8 Hz for 200 animated-width hosts. These are callback diagnostics, not presented-frame proof; unrestricted 120 FPS acceptance remains open. The original duration-error runs are retained separately and excluded from moving-camera acceptance. Run the opt-in example with `EXPO_PUBLIC_MARKER_VIEW_BENCHMARK=1` in a Release build. Its A/B flow compares pins, static JSX, child transform animation, and child layout animation at 10/50/200 mounted hosts, using three passes and alternating mode order. Native callback intervals and memory are diagnostic data; Instruments/Perfetto and functional checks are also required before accepting the feature.
 
 The example reuses the local FrameStats module introduced in PR #66. It is example-only and does not ship in the library. Trace the application without a debugger attached; identify the actual map presentation/animation cadence rather than treating display callback intervals as GPU frames. Record device/OS/SDK, visible count, thermal and power state, route, marker dimensions, and baseline/candidate traces.
 

@@ -60,7 +60,6 @@ At this raster size, 200 unique CPU images represent about 31.6 MiB; 1,000 repre
 
 See [architecture recommendation](../../docs/research/custom-marker-performance.md) and [SDK sources](../../docs/research/custom-marker-sdk-sources.md).
 
-
 ## Live Fabric host checks
 
 ```sh
@@ -88,9 +87,9 @@ Raw iOS rows are appended to `Documents/marker-view-benchmark.jsonl` in the exam
 
 ```sh
 xcrun devicectl device copy from --device YOUR_DEVICE --domain-type appDataContainer --domain-identifier com.nitromaps.example --source Documents/marker-view-benchmark.jsonl --destination /tmp/marker-view-benchmark.jsonl
-python3 experiments/custom-markers/summarize-rn-benchmark.py /tmp/marker-view-benchmark.jsonl --output /tmp/marker-view-summary.json
+python3 experiments/custom-markers/summarize-rn-benchmark.py /tmp/marker-view-benchmark.jsonl --suite primary --workload-version 3 --output /tmp/marker-view-summary.json
 ```
 
-A fresh installation or a separate copied log should be used for each investigation; the raw file intentionally appends across runs. Preserve raw samples, workload parameters, device/OS/build identity, and Instruments evidence before drawing a performance conclusion.
+The raw file intentionally appends across runs and can survive app upgrades. Separate repeated runs before summarizing; the suite/version filters prevent mixing different workloads but do not identify individual runs. The summarizer rejects version-3 rows whose camera endpoint validation failed. Preserve raw samples, workload parameters, device/OS/build identity, and Instruments evidence before drawing a performance conclusion.
 
 The initial `iphone-15-pro-run-1.json` and `iphone-15-pro-control.json` used an incorrect camera duration of 1200 seconds. They are retained as faulty-workload diagnostics, **not moving-camera acceptance evidence**. Harness version 3 uses 1.2 seconds and saves camera endpoints. The v2 control separates transform and width properties and compares ordinary fixed screen overlays against geographic hosts.

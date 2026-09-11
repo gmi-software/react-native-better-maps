@@ -39,6 +39,7 @@ def main():
     parser.add_argument('log', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--suite', choices=['primary', 'control', 'selected'])
+    parser.add_argument('--workload-version', type=int)
     args = parser.parse_args()
     rows = []
     for line in args.log.read_text(errors='replace').splitlines():
@@ -48,10 +49,14 @@ def main():
         payload = line.split(marker, 1)[1].strip()
         if payload.startswith('{'):
             row = json.loads(payload)
+            if args.workload_version is not None and row.get('workloadVersion') != args.workload_version:
+                continue
             if args.suite is None or row.get('suite', 'primary') == args.suite:
                 rows.append(row)
     if not rows:
         raise SystemExit('No complete marker benchmark rows found')
+    if any(row.get('workloadVersion', 1) >= 3 and not row.get('cameraRouteCompleted') for row in rows):
+        raise SystemExit('Camera route validation failed; do not summarize as completed motion')
     summary = [summarize(row) for row in rows]
     # Keep raw sample arrays compact so the review diff is not tens of thousands
     # of lines of numbers; the human-readable summary remains expanded.

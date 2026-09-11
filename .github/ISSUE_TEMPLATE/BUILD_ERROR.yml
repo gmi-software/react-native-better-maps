@@ -15,6 +15,8 @@ body:
       description: >
         Share the full build output, from the first command to the last line.
         Do not paste only the final few lines — the real cause is usually much earlier.
+
+        **Redact secrets first.** Build logs can echo `googleMapsApiKey`, `GoogleMapsIosApiKey` and `com.google.android.geo.API_KEY` — replace them with placeholders before pasting.
       render: shell
     validations:
       required: true
@@ -39,6 +41,8 @@ body:
         If you use the config plugin, share the `react-native-better-maps` entry from your `app.json` / `app.config.js`.
         For a bare app, share the relevant parts of `Info.plist`, `AndroidManifest.xml` and `Podfile.properties.json` instead.
         See [Expo setup](https://github.com/gmi-software/react-native-better-maps/blob/main/docs/expo-setup.md).
+
+        **Redact secrets first.** Replace the actual API key values with placeholders such as `<redacted>` — this issue is public.
       render: json
     validations:
       required: false

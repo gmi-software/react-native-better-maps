@@ -15,6 +15,8 @@ body:
       description: >
         Share a small reproduceable snippet — ideally the whole component.
         Include the `MapView` props you set, the marker/overlay data shape, and any imperative `MapViewRef` calls.
+
+        **Redact secrets first.** Replace Google Maps API keys, tokens and any private configuration with placeholders — this issue is public.
       render: tsx
       placeholder: |
         <MapView
@@ -34,6 +36,9 @@ body:
         * For iOS, run the app from Xcode and copy the console output.
 
         * For Android, use the Android Studio Logcat window or run `adb logcat` in a terminal.
+
+        **Redact secrets first.** Strip API keys, tokens and credentials from the logs before pasting.
+        If the log shows this library itself leaking a key — into a log line, a request, a crash payload — do not post it here: report it privately through a [security advisory](https://github.com/gmi-software/react-native-better-maps/security/advisories/new).
       render: shell
     validations:
       required: false

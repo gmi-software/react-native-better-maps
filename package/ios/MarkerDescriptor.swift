@@ -33,10 +33,14 @@ struct MarkerDescriptor {
   var draggable: Bool?
   var clusterable: Bool?
   var image: MarkerImage?
+  /// Tint of the default pin when there is no image.
+  var markerColor: String?
   var anchor: MarkerAnchor?
   var centerOffset: MarkerPoint?
   var rotation: Double?
   var flat: Bool?
   var opacity: Double?
+  /// Drawing order relative to other overlays.
+  var zIndex: Double?
   var enteringAnimation: OverlayEnteringAnimationDescriptor?
 }

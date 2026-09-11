@@ -37,10 +37,14 @@ data class MarkerDescriptor(
   val draggable: Boolean?,
   val clusterable: Boolean?,
   val image: MarkerImage?,
+  /** Tint of the default pin when there is no image. */
+  val markerColor: String?,
   val anchor: MarkerAnchor?,
   val centerOffset: MarkerPoint?,
   val rotation: Double?,
   val flat: Boolean?,
   val opacity: Double?,
+  /** Drawing order relative to other overlays. */
+  val zIndex: Double?,
   val enteringAnimation: OverlayEnteringAnimationDescriptor?,
 )

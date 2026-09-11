@@ -27,6 +27,8 @@ internal class MarkerBatchBuilder {
     val animationDuration: Float,
     val animationDelay: Float,
     val animationReduceMotion: Int,
+    val markerColor: String?,
+    val zIndex: Float,
   )
 
   private val upserts = ArrayList<Upsert>()
@@ -57,12 +59,15 @@ internal class MarkerBatchBuilder {
     animationDuration: Float = Float.NaN,
     animationDelay: Float = Float.NaN,
     animationReduceMotion: Int = 0,
+    markerColor: String? = null,
+    zIndex: Float = Float.NaN,
   ): MarkerBatchBuilder {
     upserts.add(
       Upsert(
         handle, id, latitude, longitude, title, subtitle, imageUri, imageWidth, imageHeight, imageScale,
         anchor, centerOffset, rotation, opacity, draggable, clusterable, flat,
         animationKind, animationDuration, animationDelay, animationReduceMotion,
+        markerColor, zIndex,
       ),
     )
     return this
@@ -140,6 +145,8 @@ internal class MarkerBatchBuilder {
     buffer.putFloat(base + field.ANIMATION_DELAY, upsert.animationDelay)
     buffer.put(base + field.ANIMATION_KIND, upsert.animationKind.toByte())
     buffer.put(base + field.ANIMATION_REDUCE_MOTION, upsert.animationReduceMotion.toByte())
+    buffer.putInt(base + field.MARKER_COLOR, internOptional(upsert.markerColor))
+    buffer.putFloat(base + field.Z_INDEX, upsert.zIndex)
   }
 
   private fun intern(value: String): Int {

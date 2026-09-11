@@ -60,18 +60,24 @@ internal class MarkerIconFactory(
     )
   }
 
-  private fun applyAnchor(descriptor: MarkerDescriptor, marker: Marker) {
-    val size = if (descriptor.image != null) {
-      displaySizePx(descriptor.image) ?: (0f to 0f)
-    } else {
-      defaultMarkerDisplaySizePx()
-    }
+  private fun applyAnchor(
+    descriptor: MarkerDescriptor,
+    marker: Marker,
+  ) {
+    val size =
+      if (descriptor.image != null) {
+        displaySizePx(descriptor.image) ?: (0f to 0f)
+      } else {
+        defaultMarkerDisplaySizePx()
+      }
     val (anchorX, anchorY) = descriptor.effectiveGoogleMapsAnchor(size.first, size.second, density)
     marker.setAnchor(anchorX, anchorY)
   }
 
-  private fun isMarkerCurrent(key: String, marker: Marker): Boolean =
-    markerRegistry()[key] === marker
+  private fun isMarkerCurrent(
+    key: String,
+    marker: Marker,
+  ): Boolean = markerRegistry()[key] === marker
 
   private fun applyIcon(
     marker: Marker,
@@ -85,13 +91,14 @@ internal class MarkerIconFactory(
       if (isIconApplied(marker, iconKey)) {
         return
       }
-      val icon = if (markerColor == null) {
-        BitmapDescriptorFactory.defaultMarker()
-      } else {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(markerColor.toColorInt(Color.RED), hsv)
-        BitmapDescriptorFactory.defaultMarker(hsv[0])
-      }
+      val icon =
+        if (markerColor == null) {
+          BitmapDescriptorFactory.defaultMarker()
+        } else {
+          val hsv = FloatArray(3)
+          Color.colorToHSV(markerColor.toColorInt(Color.RED), hsv)
+          BitmapDescriptorFactory.defaultMarker(hsv[0])
+        }
       marker.setIcon(icon)
       setApplied(marker, iconKey)
       onIconApplied()
@@ -153,14 +160,16 @@ internal class MarkerIconFactory(
     return null
   }
 
-  private fun defaultMarkerDisplaySizePx(): Pair<Float, Float> =
-    (DEFAULT_MARKER_WIDTH_DP * density) to (DEFAULT_MARKER_HEIGHT_DP * density)
+  private fun defaultMarkerDisplaySizePx(): Pair<Float, Float> = (DEFAULT_MARKER_WIDTH_DP * density) to (DEFAULT_MARKER_HEIGHT_DP * density)
 
   private fun cacheKey(image: MarkerImage): String {
     return "${image.uri}|${image.width ?: ""}|${image.height ?: ""}|${image.scale ?: ""}"
   }
 
-  private fun loadLocalIcon(image: MarkerImage, key: String): BitmapDescriptor? {
+  private fun loadLocalIcon(
+    image: MarkerImage,
+    key: String,
+  ): BitmapDescriptor? {
     val bitmap = loadLocalBitmap(image) ?: return null
     return cacheBitmap(key, bitmap)
   }
@@ -184,19 +193,25 @@ internal class MarkerIconFactory(
     }
 
     loadExecutor.execute {
-      val descriptor = if (isRemoteMarkerUri(image.uri)) {
-        loadRemoteIcon(image, key)
-      } else {
-        loadLocalIcon(image, key)
-      }
+      val descriptor =
+        if (isRemoteMarkerUri(image.uri)) {
+          loadRemoteIcon(image, key)
+        } else {
+          loadLocalIcon(image, key)
+        }
       deliverOnMainThread { onLoaded(descriptor) }
     }
   }
 
-  private fun isIconApplied(marker: Marker, key: String): Boolean =
-    appliedIconKeys[marker] == key
+  private fun isIconApplied(
+    marker: Marker,
+    key: String,
+  ): Boolean = appliedIconKeys[marker] == key
 
-  private fun setApplied(marker: Marker, key: String) {
+  private fun setApplied(
+    marker: Marker,
+    key: String,
+  ) {
     appliedIconKeys[marker] = key
     invalidatePendingLoad(marker)
   }
@@ -225,7 +240,10 @@ internal class MarkerIconFactory(
     }
   }
 
-  private fun loadRemoteIcon(image: MarkerImage, key: String): BitmapDescriptor? {
+  private fun loadRemoteIcon(
+    image: MarkerImage,
+    key: String,
+  ): BitmapDescriptor? {
     remoteMarkerUriRejectReason(image.uri, resolveHostAddress = true)?.let { reason ->
       logRejectedRemoteMarkerUri(image.uri, reason)
       return null
@@ -276,7 +294,10 @@ internal class MarkerIconFactory(
     }
   }
 
-  private fun decodeFile(path: String, image: MarkerImage): Bitmap? {
+  private fun decodeFile(
+    path: String,
+    image: MarkerImage,
+  ): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(path, bounds)
     val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
@@ -284,7 +305,10 @@ internal class MarkerIconFactory(
     return resizeBitmap(decoded, image)
   }
 
-  private fun decodeResource(resourceId: Int, image: MarkerImage): Bitmap? {
+  private fun decodeResource(
+    resourceId: Int,
+    image: MarkerImage,
+  ): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeResource(context.resources, resourceId, bounds)
     val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
@@ -292,7 +316,10 @@ internal class MarkerIconFactory(
     return resizeBitmap(decoded, image)
   }
 
-  private fun decodeByteArray(bytes: ByteArray, image: MarkerImage): Bitmap? {
+  private fun decodeByteArray(
+    bytes: ByteArray,
+    image: MarkerImage,
+  ): Bitmap? {
     if (bytes.isEmpty()) {
       return null
     }
@@ -317,12 +344,13 @@ internal class MarkerIconFactory(
       return null
     }
     val target = targetDecodeSizePx(image)
-    val sampleSize = computeInSampleSize(
-      sourceWidth = sourceWidth,
-      sourceHeight = sourceHeight,
-      reqWidth = target?.first,
-      reqHeight = target?.second,
-    )
+    val sampleSize =
+      computeInSampleSize(
+        sourceWidth = sourceWidth,
+        sourceHeight = sourceHeight,
+        reqWidth = target?.first,
+        reqHeight = target?.second,
+      )
     return BitmapFactory.Options().apply {
       inSampleSize = sampleSize
       inScaled = false
@@ -356,13 +384,20 @@ internal class MarkerIconFactory(
     return sampleSize
   }
 
-  private fun decodedPixelCount(sourceWidth: Int, sourceHeight: Int, sampleSize: Int): Long {
+  private fun decodedPixelCount(
+    sourceWidth: Int,
+    sourceHeight: Int,
+    sampleSize: Int,
+  ): Long {
     val width = sourceWidth / sampleSize
     val height = sourceHeight / sampleSize
     return width.toLong() * height
   }
 
-  private fun cacheBitmap(key: String, bitmap: Bitmap): BitmapDescriptor {
+  private fun cacheBitmap(
+    key: String,
+    bitmap: Bitmap,
+  ): BitmapDescriptor {
     val descriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
     cache.put(key, descriptor)
     sizeCache.put(key, bitmap.width.toFloat() to bitmap.height.toFloat())
@@ -381,7 +416,10 @@ internal class MarkerIconFactory(
       null
     }
 
-  private fun remoteMarkerUriRejectReason(uriString: String, resolveHostAddress: Boolean): String? {
+  private fun remoteMarkerUriRejectReason(
+    uriString: String,
+    resolveHostAddress: Boolean,
+  ): String? {
     val uri = parseRemoteMarkerUri(uriString) ?: return "invalid URI"
 
     when (uri.scheme?.lowercase(Locale.US)) {
@@ -402,7 +440,10 @@ internal class MarkerIconFactory(
     return null
   }
 
-  private fun isAllowlistedRemoteHost(host: String, resolveHostAddress: Boolean): Boolean {
+  private fun isAllowlistedRemoteHost(
+    host: String,
+    resolveHostAddress: Boolean,
+  ): Boolean {
     if (host == "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
       return false
     }
@@ -414,11 +455,12 @@ internal class MarkerIconFactory(
       return true
     }
 
-    val address = try {
-      InetAddress.getByName(host)
-    } catch (_: UnknownHostException) {
-      return !resolveHostAddress
-    }
+    val address =
+      try {
+        InetAddress.getByName(host)
+      } catch (_: UnknownHostException) {
+        return !resolveHostAddress
+      }
 
     return isAllowlistedRemoteAddress(address)
   }
@@ -429,10 +471,11 @@ internal class MarkerIconFactory(
     }
 
     val parts = host.split('.')
-    return parts.size == 4 && parts.all { part ->
-      val value = part.toIntOrNull() ?: return@all false
-      value in 0..255
-    }
+    return parts.size == 4 &&
+      parts.all { part ->
+        val value = part.toIntOrNull() ?: return@all false
+        value in 0..255
+      }
   }
 
   private fun isAllowlistedRemoteAddress(address: InetAddress): Boolean {
@@ -456,11 +499,17 @@ internal class MarkerIconFactory(
     return true
   }
 
-  private fun logRejectedRemoteMarkerUri(uri: String, reason: String) {
+  private fun logRejectedRemoteMarkerUri(
+    uri: String,
+    reason: String,
+  ) {
     Log.w(TAG, "Rejected remote marker image URI ($reason): $uri")
   }
 
-  private fun resizeBitmap(source: Bitmap, image: MarkerImage): Bitmap {
+  private fun resizeBitmap(
+    source: Bitmap,
+    image: MarkerImage,
+  ): Bitmap {
     val width = image.width ?: return source
     val height = image.height ?: return source
     val targetWidth = (width * density).toInt().coerceAtLeast(1)
@@ -483,9 +532,10 @@ internal class MarkerIconFactory(
 
     private val loadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
-    private val BLOCKED_REMOTE_HOSTS = setOf(
-      "metadata.google.internal",
-      "metadata.goog",
-    )
+    private val BLOCKED_REMOTE_HOSTS =
+      setOf(
+        "metadata.google.internal",
+        "metadata.goog",
+      )
   }
 }

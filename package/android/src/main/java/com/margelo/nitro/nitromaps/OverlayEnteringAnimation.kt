@@ -22,14 +22,18 @@ internal object OverlayEnteringAnimationResolver {
     fallback: OverlayEnteringAnimationDescriptor? = null,
   ): ResolvedOverlayEnteringAnimation {
     val descriptor = animation ?: fallback
-    val kind = when (descriptor?.kind) {
-      OverlayEnteringAnimationKind.NONE -> ResolvedOverlayEnteringAnimationKind.NONE
-      OverlayEnteringAnimationKind.FADE -> ResolvedOverlayEnteringAnimationKind.FADE
-      OverlayEnteringAnimationKind.FADE_SCALE -> ResolvedOverlayEnteringAnimationKind.FADE
-      OverlayEnteringAnimationKind.SYSTEM,
-      null,
-      -> ResolvedOverlayEnteringAnimationKind.SYSTEM
-    }
+    val kind =
+      when (descriptor?.kind) {
+        OverlayEnteringAnimationKind.NONE -> ResolvedOverlayEnteringAnimationKind.NONE
+
+        OverlayEnteringAnimationKind.FADE -> ResolvedOverlayEnteringAnimationKind.FADE
+
+        OverlayEnteringAnimationKind.FADE_SCALE -> ResolvedOverlayEnteringAnimationKind.FADE
+
+        OverlayEnteringAnimationKind.SYSTEM,
+        null,
+        -> ResolvedOverlayEnteringAnimationKind.SYSTEM
+      }
 
     return ResolvedOverlayEnteringAnimation(
       kind = kind,
@@ -56,7 +60,10 @@ internal object OverlayEnteringAnimationResolver {
     return animation.durationMs > 0
   }
 
-  private fun milliseconds(value: Double?, fallback: Long): Long {
+  private fun milliseconds(
+    value: Double?,
+    fallback: Long,
+  ): Long {
     if (value == null || !value.isFinite()) {
       return fallback
     }

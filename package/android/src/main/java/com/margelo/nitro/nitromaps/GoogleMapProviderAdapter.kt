@@ -27,10 +27,8 @@ import com.margelo.nitro.core.Promise
 class GoogleMapProviderAdapter(
   private val context: ThemedReactContext,
   initialGoogleMapId: String?,
-) :
-  MapProviderAdapter,
+) : MapProviderAdapter,
   LifecycleEventListener {
-
   private var googleMap: GoogleMap? = null
   private var isUserGesture = false
   private var hasFiredMapReady = false
@@ -43,14 +41,15 @@ class GoogleMapProviderAdapter(
 
   private val googleMapIdAtCreation: String? = normalizeGoogleMapId(initialGoogleMapId)
 
-  override val view: MapView = MapView(
-    context,
-    GoogleMapOptions().apply {
-      googleMapIdAtCreation?.let { mapId ->
-        mapId(mapId)
-      }
-    },
-  )
+  override val view: MapView =
+    MapView(
+      context,
+      GoogleMapOptions().apply {
+        googleMapIdAtCreation?.let { mapId ->
+          mapId(mapId)
+        }
+      },
+    )
 
   private val lifecycle = MapViewLifecycleOwner(view)
 
@@ -59,25 +58,27 @@ class GoogleMapProviderAdapter(
   /** React only mounts views while the host runs; [onHostPause] corrects this. */
   private var isHostResumed = true
 
-  private val attachStateListener = object : View.OnAttachStateChangeListener {
-    override fun onViewAttachedToWindow(v: View) {
-      isAttachedToWindow = true
-      syncLifecycleState()
+  private val attachStateListener =
+    object : View.OnAttachStateChangeListener {
+      override fun onViewAttachedToWindow(v: View) {
+        isAttachedToWindow = true
+        syncLifecycleState()
+      }
+
+      override fun onViewDetachedFromWindow(v: View) {
+        isAttachedToWindow = false
+        syncLifecycleState()
+      }
     }
 
-    override fun onViewDetachedFromWindow(v: View) {
-      isAttachedToWindow = false
-      syncLifecycleState()
-    }
-  }
+  private val memoryCallbacks =
+    object : ComponentCallbacks {
+      override fun onConfigurationChanged(newConfig: Configuration) = Unit
 
-  private val memoryCallbacks = object : ComponentCallbacks {
-    override fun onConfigurationChanged(newConfig: Configuration) = Unit
-
-    override fun onLowMemory() {
-      lifecycle.onLowMemory()
+      override fun onLowMemory() {
+        lifecycle.onLowMemory()
+      }
     }
-  }
 
   init {
     context.addLifecycleEventListener(this)
@@ -313,9 +314,10 @@ class GoogleMapProviderAdapter(
       syncMarkerPressHandlers()
     }
 
-  override fun fetchCamera(): Promise<Camera> = promiseOnMain {
-    googleMap?.cameraPosition?.toCamera() ?: fallbackCamera()
-  }
+  override fun fetchCamera(): Promise<Camera> =
+    promiseOnMain {
+      googleMap?.cameraPosition?.toCamera() ?: fallbackCamera()
+    }
 
   /** The camera the caller last asked for, used until the map itself can answer. */
   private fun fallbackCamera(): Camera {
@@ -325,10 +327,11 @@ class GoogleMapProviderAdapter(
     }
 
     return Camera(
-      center = Coordinate(
-        latitude = _region?.latitude ?: 0.0,
-        longitude = _region?.longitude ?: 0.0,
-      ),
+      center =
+        Coordinate(
+          latitude = _region?.latitude ?: 0.0,
+          longitude = _region?.longitude ?: 0.0,
+        ),
       zoom = 10.0,
       heading = null,
       pitch = null,
@@ -340,14 +343,18 @@ class GoogleMapProviderAdapter(
     updateMapCamera(camera, animated = false)
   }
 
-  override fun animateCamera(camera: Camera, duration: Double?) {
+  override fun animateCamera(
+    camera: Camera,
+    duration: Double?,
+  ) {
     val animationDuration = duration ?: 0.25
     updateMapCamera(camera, animated = true, durationMs = (animationDuration * 1000).toInt())
   }
 
-  override fun getVisibleRegion(): Promise<VisibleRegion> = promiseOnMain {
-    googleMap?.projection?.toNitroVisibleRegion() ?: emptyVisibleRegion()
-  }
+  override fun getVisibleRegion(): Promise<VisibleRegion> =
+    promiseOnMain {
+      googleMap?.projection?.toNitroVisibleRegion() ?: emptyVisibleRegion()
+    }
 
   override fun fitToCoordinates(
     coordinates: Array<Coordinate>,
@@ -399,11 +406,12 @@ class GoogleMapProviderAdapter(
    * host is in the foreground. Leaving the window stops the map, never destroys it.
    */
   private fun syncLifecycleState() {
-    val target = when {
-      !isAttachedToWindow -> MapViewLifecycleState.CREATED
-      isHostResumed -> MapViewLifecycleState.RESUMED
-      else -> MapViewLifecycleState.STARTED
-    }
+    val target =
+      when {
+        !isAttachedToWindow -> MapViewLifecycleState.CREATED
+        isHostResumed -> MapViewLifecycleState.RESUMED
+        else -> MapViewLifecycleState.STARTED
+      }
 
     lifecycle.moveTo(target)
   }
@@ -522,9 +530,10 @@ class GoogleMapProviderAdapter(
   private fun syncMarkerPressHandlers() {
     overlayController.setMarkerPressHandlers(
       onMarkerPress = onMarkerPress,
-      onClusterPress = onClusterPress?.let { callback ->
-        { ids, coordinate -> callback(ids.toTypedArray(), coordinate) }
-      },
+      onClusterPress =
+        onClusterPress?.let { callback ->
+          { ids, coordinate -> callback(ids.toTypedArray(), coordinate) }
+        },
     )
   }
 
@@ -545,14 +554,16 @@ class GoogleMapProviderAdapter(
       return
     }
 
-    val hasFineLocationPermission = ContextCompat.checkSelfPermission(
-      context,
-      Manifest.permission.ACCESS_FINE_LOCATION,
-    ) == PackageManager.PERMISSION_GRANTED
-    val hasCoarseLocationPermission = ContextCompat.checkSelfPermission(
-      context,
-      Manifest.permission.ACCESS_COARSE_LOCATION,
-    ) == PackageManager.PERMISSION_GRANTED
+    val hasFineLocationPermission =
+      ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+      ) == PackageManager.PERMISSION_GRANTED
+    val hasCoarseLocationPermission =
+      ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+      ) == PackageManager.PERMISSION_GRANTED
 
     if (hasFineLocationPermission || hasCoarseLocationPermission) {
       map?.isMyLocationEnabled = true
@@ -587,7 +598,10 @@ class GoogleMapProviderAdapter(
     map?.setMapStyle(MapStyleOptions(styleJson))
   }
 
-  private fun applyRegion(region: Region, animated: Boolean = false) {
+  private fun applyRegion(
+    region: Region,
+    animated: Boolean = false,
+  ) {
     val map = googleMap ?: return
     val bounds = region.toLatLngBounds()
     val paddingPx = _mapPadding.toPaddingPixels()
@@ -646,7 +660,10 @@ class GoogleMapProviderAdapter(
     runWhenViewLaidOut(view, block)
   }
 
-  private fun runWhenViewLaidOut(target: View, block: () -> Unit) {
+  private fun runWhenViewLaidOut(
+    target: View,
+    block: () -> Unit,
+  ) {
     if (target.width > 0 && target.height > 0) {
       updateOverlayViewportSize()
       block()

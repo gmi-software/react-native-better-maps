@@ -350,7 +350,8 @@ final class HybridMapView: HybridMapViewSpec {
     }
 
     if let lifecycle,
-       lifecycle.isRecycled || lifecycle.generation != currentGeneration {
+      lifecycle.isRecycled || lifecycle.generation != currentGeneration
+    {
       throw Self.mapViewNotMountedError()
     }
   }
@@ -376,17 +377,17 @@ final class HybridMapView: HybridMapViewSpec {
     case .apple:
       return AppleMapProviderAdapter()
     case .google:
-#if canImport(GoogleMaps)
+      #if canImport(GoogleMaps)
       do {
         return try GoogleMapProviderAdapter(googleMapId: withStateLock { self._state.googleMapId })
       } catch {
         return UnavailableMapProviderAdapter(error: error)
       }
-#else
+      #else
       return UnavailableMapProviderAdapter(
         error: MapProviderConfigurationError.googleMapsSdkNotLinked
       )
-#endif
+      #endif
     case .openstreetmap, .mapbox:
       return UnavailableMapProviderAdapter(
         error: MapProviderConfigurationError.unsupportedIOSProvider(provider)

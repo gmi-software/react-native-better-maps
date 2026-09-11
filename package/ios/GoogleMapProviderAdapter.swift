@@ -32,11 +32,13 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   lazy var view: GMSMapView = {
-    let camera = self.camera?.toGMSCameraPosition()
+    let camera =
+      self.camera?.toGMSCameraPosition()
       ?? GMSCameraPosition(latitude: 0, longitude: 0, zoom: 10)
     let mapView: GMSMapView
     if let googleMapId = _googleMapId?.trimmingCharacters(in: .whitespacesAndNewlines),
-       !googleMapId.isEmpty {
+      !googleMapId.isEmpty
+    {
       mapView = GMSMapView(
         frame: .zero,
         mapID: GMSMapID(identifier: googleMapId),
@@ -454,10 +456,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     followedLocationMapView = mapView
     myLocationObservation = mapView.observe(\.myLocation, options: [.new]) { [weak self, weak mapView] _, change in
       guard let self,
-            self.followsUserLocation == true,
-            self.showsUserLocation == true,
-            let mapView,
-            let location = change.newValue ?? mapView.myLocation else {
+        self.followsUserLocation == true,
+        self.showsUserLocation == true,
+        let mapView,
+        let location = change.newValue ?? mapView.myLocation
+      else {
         return
       }
 

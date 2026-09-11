@@ -20,7 +20,7 @@ import type { Coordinate } from '../types/coordinate';
  * positions  24 bytes   handle u32 · padding u32 · latitude f64 · longitude f64
  * ```
  *
- * Strings (id, title, subtitle, image uri) are indices into the string table,
+ * Strings (id, title, subtitle, image uri, marker color) are indices into the string table,
  * `-1` when absent; each distinct string is sent once per batch. Optional
  * floats are `NaN` when absent. Booleans and the presence of `anchor` and
  * `centerOffset` are bits in `flags`.
@@ -68,6 +68,8 @@ export const UpsertOffset = {
   animationDelay: 80,
   animationKind: 84,
   animationReduceMotion: 85,
+  markerColor: 88,
+  zIndex: 92,
 } as const;
 
 const ANIMATION_KINDS: OverlayEnteringAnimationKind[] = [
@@ -256,6 +258,12 @@ export class MarkerBatchWriter {
       base + UpsertOffset.animationReduceMotion,
       reduceMotionCode(animation?.reduceMotion),
     );
+    view.setInt32(
+      base + UpsertOffset.markerColor,
+      this.internOptional(descriptor.markerColor),
+      true,
+    );
+    view.setFloat32(base + UpsertOffset.zIndex, descriptor.zIndex ?? NaN, true);
     this.upsertCount += 1;
   }
 
@@ -460,6 +468,13 @@ export function decodeMarkerBatch(batch: MarkerBatch): DecodedMarkerBatch {
         flat: (flags & UpsertFlag.flat) !== 0 ? true : undefined,
         opacity: optionalFloat(
           view.getFloat32(base + UpsertOffset.opacity, true),
+        ),
+        markerColor: stringAt(
+          strings,
+          view.getInt32(base + UpsertOffset.markerColor, true),
+        ),
+        zIndex: optionalFloat(
+          view.getFloat32(base + UpsertOffset.zIndex, true),
         ),
         enteringAnimation,
       },

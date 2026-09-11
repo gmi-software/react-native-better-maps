@@ -38,6 +38,8 @@ enum MarkerBatchLayout {
     static let animationDelay = 80
     static let animationKind = 84
     static let animationReduceMotion = 85
+    static let markerColor = 88
+    static let zIndex = 92
   }
 }
 
@@ -177,11 +179,13 @@ enum MarkerBatchDecoder {
       draggable: flags & MarkerBatchLayout.draggable != 0 ? true : nil,
       clusterable: flags & MarkerBatchLayout.clusterable != 0 ? nil : false,
       image: image,
+      markerColor: string(strings, bytes.int32(at: base + Field.markerColor)),
       anchor: anchor,
       centerOffset: centerOffset,
       rotation: bytes.optionalFloat(at: base + Field.rotation),
       flat: flags & MarkerBatchLayout.flat != 0 ? true : nil,
       opacity: bytes.optionalFloat(at: base + Field.opacity),
+      zIndex: bytes.optionalFloat(at: base + Field.zIndex),
       enteringAnimation: enteringAnimation
     )
   }

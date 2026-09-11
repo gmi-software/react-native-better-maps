@@ -8,6 +8,26 @@ import org.junit.Test
 
 class MarkerBatchDecoderTest {
   @Test
+  fun `decodes the marker colour and z-index`() {
+    val builder = MarkerBatchBuilder()
+      .upsert(handle = 1, id = "tinted", latitude = 1.0, longitude = 2.0, markerColor = "#FF9500", zIndex = 3f)
+      .upsert(handle = 2, id = "plain", latitude = 1.0, longitude = 2.0)
+    val decoded = ArrayList<MarkerDescriptor>()
+    MarkerBatchDecoder.decode(
+      MarkerBatchDecoder.wrap(builder.bytes()),
+      builder.strings(),
+      onRemove = {},
+      onUpsert = { _, descriptor -> decoded.add(descriptor) },
+      onPosition = { _, _, _ -> },
+    )
+
+    assertEquals("#FF9500", decoded[0].markerColor)
+    assertEquals(3.0, decoded[0].zIndex)
+    assertNull(decoded[1].markerColor)
+    assertNull(decoded[1].zIndex)
+  }
+
+  @Test
   fun `a header whose byte count overflows Int is rejected`() {
     // 44739243 * 96 wraps to 32 in Int arithmetic, which would make a 48-byte
     // batch pass the length check with 44.7 million declared upserts.

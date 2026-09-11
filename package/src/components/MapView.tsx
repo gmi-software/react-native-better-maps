@@ -2,6 +2,7 @@ import { MarkerView } from './MarkerView';
 import { MapChildrenContext } from './MapChildrenContext';
 import { collectMarkerViewEntries } from '../overlays/collectMarkerViews';
 import { markerViewRenderStatesEqual } from '../overlays/markerViewRenderState';
+import { clusterCoordinates } from '../overlays/clusterCoordinates';
 import {
   cloneElement,
   isValidElement,
@@ -157,27 +158,11 @@ export function MapView({
         count: cluster.markerIds.length,
         onPress: () => {
           onClusterPress?.(cluster.markerIds, cluster.coordinate);
-          const bounds = cluster.region;
-          const wrap = (longitude: number) =>
-            ((((longitude + 180) % 360) + 360) % 360) - 180;
+          // The SDK cluster region has a minimum span that can prevent dense
+          // clusters from expanding. Fit the actual members on a user press.
           return withHybridRef(hybridRef, (hybrid) =>
             hybrid.fitToCoordinates(
-              [
-                {
-                  latitude: Math.max(
-                    -90,
-                    bounds.latitude - bounds.latitudeDelta / 2,
-                  ),
-                  longitude: wrap(bounds.longitude - bounds.longitudeDelta / 2),
-                },
-                {
-                  latitude: Math.min(
-                    90,
-                    bounds.latitude + bounds.latitudeDelta / 2,
-                  ),
-                  longitude: wrap(bounds.longitude + bounds.longitudeDelta / 2),
-                },
-              ],
+              clusterCoordinates(cluster.markerIds, nativeMarkers),
               { top: 32, right: 32, bottom: 32, left: 32 },
               true,
             ),
@@ -192,7 +177,13 @@ export function MapView({
         coordinate: cluster.coordinate,
       });
     });
-  }, [renderCluster, clusteringEnabled, markerViewState, onClusterPress]);
+  }, [
+    renderCluster,
+    clusteringEnabled,
+    markerViewState,
+    onClusterPress,
+    nativeMarkers,
+  ]);
 
   const polylines = polylinesProp != null ? polylinesProp : collectedPolylines;
   const polygons = polygonsProp != null ? polygonsProp : collectedPolygons;

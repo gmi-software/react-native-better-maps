@@ -12,10 +12,10 @@ private const val MAP_VIEW_NOT_MOUNTED_MESSAGE = "MapView is not mounted"
 
 @Keep
 @DoNotStrip
-class HybridMapView(private val context: ThemedReactContext) :
-  HybridMapViewSpec(),
+class HybridMapView(
+  private val context: ThemedReactContext,
+) : HybridMapViewSpec(),
   RecyclableView {
-
   /** Written on the UI thread, read from the JS thread by the imperative methods. */
   @Volatile
   private var adapter: MapProviderAdapter? = null
@@ -284,7 +284,10 @@ class HybridMapView(private val context: ThemedReactContext) :
     return Promise.resolved(Unit)
   }
 
-  override fun animateCamera(camera: Camera, duration: Double?): Promise<Unit> {
+  override fun animateCamera(
+    camera: Camera,
+    duration: Double?,
+  ): Promise<Unit> {
     val mounted = adapter ?: return notMountedRejection()
     mounted.animateCamera(camera, duration)
     return Promise.resolved(Unit)
@@ -347,8 +350,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     onClusterPress = null
   }
 
-  private fun <T> notMountedRejection(): Promise<T> =
-    Promise.rejected(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
+  private fun <T> notMountedRejection(): Promise<T> = Promise.rejected(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
 
   /**
    * Detaches and destroys the installed adapter. Both teardown paths land here:
@@ -374,6 +376,7 @@ class HybridMapView(private val context: ThemedReactContext) :
   private fun makeAdapter(provider: MapProvider): MapProviderAdapter {
     return when (provider) {
       MapProvider.GOOGLE -> GoogleMapProviderAdapter(context, _googleMapId)
+
       MapProvider.APPLE,
       MapProvider.OPENSTREETMAP,
       MapProvider.MAPBOX,

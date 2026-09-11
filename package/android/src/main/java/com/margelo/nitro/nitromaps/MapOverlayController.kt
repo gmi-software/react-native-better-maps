@@ -58,7 +58,10 @@ class MapOverlayController(
   }
 
   /** Updates the cached map viewport size used to size the clustering grid. */
-  fun setViewportSize(widthPx: Int, heightPx: Int) {
+  fun setViewportSize(
+    widthPx: Int,
+    heightPx: Int,
+  ) {
     if (viewWidthPx == widthPx && viewHeightPx == heightPx) {
       return
     }
@@ -164,12 +167,14 @@ class MapOverlayController(
 
     computeExecutor.execute {
       val candidates = index.candidates(bounds)
-      val elements: List<ClusterElement> = if (clustering) {
-        MarkerClusterEngine.clusters(candidates, bounds, widthPx, heightPx, density)
-      } else {
-        MarkerViewportFilter.displaySubset(candidates, bounds, latitudeSpan)
-          .map { ClusterElement.Single(it) }
-      }
+      val elements: List<ClusterElement> =
+        if (clustering) {
+          MarkerClusterEngine.clusters(candidates, bounds, widthPx, heightPx, density)
+        } else {
+          MarkerViewportFilter
+            .displaySubset(candidates, bounds, latitudeSpan)
+            .map { ClusterElement.Single(it) }
+        }
 
       val diff = computeMarkerRenderDiff(elements, displayedVersions)
 
@@ -220,9 +225,10 @@ class MapOverlayController(
       when (element) {
         is ClusterElement.Single -> {
           val animation = enteringAnimation(element)
-          val shouldAnimate = animateEntering &&
-            remainingAnimationBudget > 0 &&
-            OverlayEnteringAnimationResolver.shouldRun(animation)
+          val shouldAnimate =
+            animateEntering &&
+              remainingAnimationBudget > 0 &&
+              OverlayEnteringAnimationResolver.shouldRun(animation)
           val options = element.descriptor.toMarkerOptions()
           if (shouldAnimate) {
             options.alpha(0f)
@@ -239,15 +245,18 @@ class MapOverlayController(
             }
           }
         }
+
         is ClusterElement.Cluster -> {
           val animation = enteringAnimation(element)
-          val shouldAnimate = animateEntering &&
-            remainingAnimationBudget > 0 &&
-            OverlayEnteringAnimationResolver.shouldRun(animation)
-          val options = MarkerOptions()
-            .position(element.position)
-            .icon(iconFactory.icon(element.count))
-            .anchor(0.5f, 0.5f)
+          val shouldAnimate =
+            animateEntering &&
+              remainingAnimationBudget > 0 &&
+              OverlayEnteringAnimationResolver.shouldRun(animation)
+          val options =
+            MarkerOptions()
+              .position(element.position)
+              .icon(iconFactory.icon(element.count))
+              .anchor(0.5f, 0.5f)
           if (shouldAnimate) {
             options.alpha(0f)
           }
@@ -272,16 +281,18 @@ class MapOverlayController(
       when (element) {
         is ClusterElement.Single -> {
           marker.tag = element.descriptor.id
-          marker.position = LatLng(
-            element.descriptor.coordinate.latitude,
-            element.descriptor.coordinate.longitude,
-          )
+          marker.position =
+            LatLng(
+              element.descriptor.coordinate.latitude,
+              element.descriptor.coordinate.longitude,
+            )
           marker.title = element.descriptor.title
           marker.snippet = element.descriptor.subtitle
           marker.isDraggable = element.descriptor.draggable == true
           markerIconFactory.applyVisualProps(element.descriptor, marker, key)
           clusterByKey.remove(key)
         }
+
         is ClusterElement.Cluster -> {
           marker.alpha = 1f
           marker.position = element.position
@@ -301,23 +312,25 @@ class MapOverlayController(
       return
     }
 
-    val animated = added.mapNotNull { addedMarker ->
-      if (!OverlayEnteringAnimationResolver.shouldRun(addedMarker.animation)) {
-        return@mapNotNull null
+    val animated =
+      added.mapNotNull { addedMarker ->
+        if (!OverlayEnteringAnimationResolver.shouldRun(addedMarker.animation)) {
+          return@mapNotNull null
+        }
+        cancelEnteringAnimation(addedMarker.key)
+        addedMarker.marker.alpha = 0f
+        addedMarker
       }
-      cancelEnteringAnimation(addedMarker.key)
-      addedMarker.marker.alpha = 0f
-      addedMarker
-    }
 
     if (animated.isEmpty()) {
       return
     }
 
     val startDelayMs = animated.minOf { it.animation.delayMs }
-    val totalDurationMs = animated.maxOf {
-      it.animation.delayMs + it.animation.durationMs
-    } - startDelayMs
+    val totalDurationMs =
+      animated.maxOf {
+        it.animation.delayMs + it.animation.durationMs
+      } - startDelayMs
 
     val animator = ValueAnimator.ofFloat(0f, 1f)
     animator.duration = totalDurationMs
@@ -327,22 +340,25 @@ class MapOverlayController(
         val elapsed = (animator.animatedFraction * duration).toLong()
         animated.forEach { animatedMarker ->
           val localElapsed = elapsed - (animatedMarker.animation.delayMs - startDelay)
-          val progress = (localElapsed.toFloat() / animatedMarker.animation.durationMs.toFloat())
-            .coerceIn(0f, 1f)
+          val progress =
+            (localElapsed.toFloat() / animatedMarker.animation.durationMs.toFloat())
+              .coerceIn(0f, 1f)
           animatedMarker.marker.alpha = progress * animatedMarker.targetAlpha
         }
       }
-      addListener(object : AnimatorListenerAdapter() {
-        override fun onAnimationEnd(animation: Animator) {
-          revealAnimatedMarkers(animated)
-          clearCompletedAnimator(animation, animated)
-        }
+      addListener(
+        object : AnimatorListenerAdapter() {
+          override fun onAnimationEnd(animation: Animator) {
+            revealAnimatedMarkers(animated)
+            clearCompletedAnimator(animation, animated)
+          }
 
-        override fun onAnimationCancel(animation: Animator) {
-          revealAnimatedMarkers(animated)
-          clearCompletedAnimator(animation, animated)
-        }
-      })
+          override fun onAnimationCancel(animation: Animator) {
+            revealAnimatedMarkers(animated)
+            clearCompletedAnimator(animation, animated)
+          }
+        },
+      )
     }
     animated.forEach { markerEnterAnimators[it.key] = animator }
     animator.start()
@@ -358,7 +374,10 @@ class MapOverlayController(
     markerEnterAnimators.remove(key)?.cancel()
   }
 
-  private fun clearCompletedAnimator(animator: Animator, animated: List<AddedMarker>) {
+  private fun clearCompletedAnimator(
+    animator: Animator,
+    animated: List<AddedMarker>,
+  ) {
     animated.forEach { animatedMarker ->
       if (markerEnterAnimators[animatedMarker.key] === animator) {
         markerEnterAnimators.remove(animatedMarker.key)
@@ -368,11 +387,16 @@ class MapOverlayController(
 
   private fun enteringAnimation(element: ClusterElement): ResolvedOverlayEnteringAnimation {
     return when (element) {
-      is ClusterElement.Single -> OverlayEnteringAnimationResolver.resolve(
-        element.descriptor.enteringAnimation,
-        markerEnteringAnimation,
-      )
-      is ClusterElement.Cluster -> OverlayEnteringAnimationResolver.resolve(clusterEnteringAnimation)
+      is ClusterElement.Single -> {
+        OverlayEnteringAnimationResolver.resolve(
+          element.descriptor.enteringAnimation,
+          markerEnteringAnimation,
+        )
+      }
+
+      is ClusterElement.Cluster -> {
+        OverlayEnteringAnimationResolver.resolve(clusterEnteringAnimation)
+      }
     }
   }
 
@@ -412,10 +436,11 @@ class MapOverlayController(
         val key = "s:" + descriptor.id
         (marker.tag as? String)?.let { cancelEnteringAnimation(it) }
         marker.tag = descriptor.id
-        marker.position = LatLng(
-          descriptor.coordinate.latitude,
-          descriptor.coordinate.longitude,
-        )
+        marker.position =
+          LatLng(
+            descriptor.coordinate.latitude,
+            descriptor.coordinate.longitude,
+          )
         marker.title = descriptor.title
         marker.snippet = descriptor.subtitle
         marker.isDraggable = descriptor.draggable == true
@@ -441,12 +466,13 @@ class MapOverlayController(
   private fun scheduleIdleRefresh() {
     cancelLiveRefresh()
     cancelIdleRefresh()
-    val runnable = Runnable {
-      idleRefreshRunnable = null
-      if (usesViewportPipeline()) {
-        refreshViewportMarkers()
+    val runnable =
+      Runnable {
+        idleRefreshRunnable = null
+        if (usesViewportPipeline()) {
+          refreshViewportMarkers()
+        }
       }
-    }
     idleRefreshRunnable = runnable
     mainHandler.postDelayed(runnable, IDLE_REFRESH_DEBOUNCE_MS)
   }
@@ -463,10 +489,11 @@ class MapOverlayController(
       return
     }
 
-    val runnable = Runnable {
-      liveRefreshRunnable = null
-      runLiveRefresh()
-    }
+    val runnable =
+      Runnable {
+        liveRefreshRunnable = null
+        runLiveRefresh()
+      }
     liveRefreshRunnable = runnable
     mainHandler.postDelayed(runnable, LIVE_REFRESH_THROTTLE_MS - elapsed)
   }

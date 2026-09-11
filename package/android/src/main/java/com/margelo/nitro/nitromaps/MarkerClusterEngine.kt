@@ -12,7 +12,9 @@ internal sealed interface ClusterElement {
   val diffKey: String
   val renderVersion: Long
 
-  data class Single(val descriptor: MarkerDescriptor) : ClusterElement {
+  data class Single(
+    val descriptor: MarkerDescriptor,
+  ) : ClusterElement {
     override val diffKey: String get() = "s:" + descriptor.id
     override val renderVersion: Long = descriptor.displayedIdentityVersion()
   }
@@ -25,18 +27,19 @@ internal sealed interface ClusterElement {
     val bounds: LatLngBounds,
   ) : ClusterElement {
     override val diffKey: String get() = "c:$key"
-    override val renderVersion: Long = renderSignature(
-      "cluster",
-      key,
-      position.latitude,
-      position.longitude,
-      count,
-      memberIds.sorted(),
-      bounds.southwest.latitude,
-      bounds.southwest.longitude,
-      bounds.northeast.latitude,
-      bounds.northeast.longitude,
-    )
+    override val renderVersion: Long =
+      renderSignature(
+        "cluster",
+        key,
+        position.latitude,
+        position.longitude,
+        count,
+        memberIds.sorted(),
+        bounds.southwest.latitude,
+        bounds.southwest.longitude,
+        bounds.northeast.latitude,
+        bounds.northeast.longitude,
+      )
   }
 }
 
@@ -50,16 +53,25 @@ internal sealed interface ClusterElement {
 internal object MarkerClusterEngine {
   private const val CELL_DP = 64.0
 
-  private fun wrapsLongitude(sw: LatLng, ne: LatLng): Boolean {
+  private fun wrapsLongitude(
+    sw: LatLng,
+    ne: LatLng,
+  ): Boolean {
     return ne.longitude < sw.longitude
   }
 
-  private fun longitudeSpan(sw: LatLng, ne: LatLng): Double {
+  private fun longitudeSpan(
+    sw: LatLng,
+    ne: LatLng,
+  ): Double {
     val raw = ne.longitude - sw.longitude
     return if (raw < 0) raw + 360.0 else raw
   }
 
-  private fun normalizeLongitude(lon: Double, reference: Double): Double {
+  private fun normalizeLongitude(
+    lon: Double,
+    reference: Double,
+  ): Double {
     var normalized = lon
     while (normalized - reference > 180.0) {
       normalized -= 360.0
@@ -132,11 +144,12 @@ internal object MarkerClusterEngine {
     val buckets = HashMap<String, Bucket>()
     for (descriptor in clusterableCandidates) {
       val lat = descriptor.coordinate.latitude
-      val lon = if (wraps) {
-        normalizeLongitude(descriptor.coordinate.longitude, sw.longitude)
-      } else {
-        descriptor.coordinate.longitude
-      }
+      val lon =
+        if (wraps) {
+          normalizeLongitude(descriptor.coordinate.longitude, sw.longitude)
+        } else {
+          descriptor.coordinate.longitude
+        }
       val row = floor(lat / cellLat).toInt()
       val col = floor(lon / cellLon).toInt()
       val key = "$row:$col"
@@ -155,14 +168,15 @@ internal object MarkerClusterEngine {
       bucket.memberIds.add(descriptor.id)
     }
 
-    val merged = mergeOverlapping(
-      ArrayList(buckets.values),
-      bounds,
-      wraps,
-      viewWidthPx,
-      viewHeightPx,
-      density,
-    )
+    val merged =
+      mergeOverlapping(
+        ArrayList(buckets.values),
+        bounds,
+        wraps,
+        viewWidthPx,
+        viewHeightPx,
+        density,
+      )
 
     val result = ArrayList<ClusterElement>(merged.size + singles.size)
     result.addAll(singles)
@@ -177,10 +191,11 @@ internal object MarkerClusterEngine {
             position = LatLng(bucket.sumLat / bucket.count, bucket.sumLon / bucket.count),
             count = bucket.count,
             memberIds = bucket.memberIds,
-            bounds = LatLngBounds(
-              LatLng(bucket.minLat, wrapTo180(bucket.minLon)),
-              LatLng(bucket.maxLat, wrapTo180(bucket.maxLon)),
-            ),
+            bounds =
+              LatLngBounds(
+                LatLng(bucket.minLat, wrapTo180(bucket.minLon)),
+                LatLng(bucket.maxLat, wrapTo180(bucket.maxLon)),
+              ),
           ),
         )
       }
@@ -220,27 +235,30 @@ internal object MarkerClusterEngine {
     val centerLat = (sw.latitude + ne.latitude) / 2
     val spanLat = maxOf(ne.latitude - sw.latitude, 1e-9)
     val spanLon = maxOf(longitudeSpan(sw, ne), 1e-9)
-    val centerLon = if (wraps) {
-      normalizeLongitude(sw.longitude + spanLon / 2, sw.longitude)
-    } else {
-      (sw.longitude + ne.longitude) / 2
-    }
+    val centerLon =
+      if (wraps) {
+        normalizeLongitude(sw.longitude + spanLon / 2, sw.longitude)
+      } else {
+        (sw.longitude + ne.longitude) / 2
+      }
 
     val px = DoubleArray(n)
     val py = DoubleArray(n)
     for (i in 0 until n) {
       val bucket = buckets[i]
       val lat = bucket.sumLat / bucket.count
-      val lon = if (wraps) {
-        normalizeLongitude(bucket.sumLon / bucket.count, sw.longitude)
-      } else {
-        bucket.sumLon / bucket.count
-      }
+      val lon =
+        if (wraps) {
+          normalizeLongitude(bucket.sumLon / bucket.count, sw.longitude)
+        } else {
+          bucket.sumLon / bucket.count
+        }
       px[i] = (lon - centerLon) / spanLon * width
       py[i] = (centerLat - lat) / spanLat * height
     }
 
     val parent = IntArray(n) { it }
+
     fun find(value: Int): Int {
       var root = value
       while (parent[root] != root) {

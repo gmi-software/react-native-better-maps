@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "//": "Everything not listed here is swift-format's default. Two deviations: the Google Maps adapters are whole files wrapped in `#if canImport(GoogleMaps)` and indenting that block would re-indent every one of them for no benefit; and the line length matches config/.clang-format so both native formatters agree on one width.",
+  "indentConditionalCompilationBlocks": false,
+  "lineLength": 140
+}

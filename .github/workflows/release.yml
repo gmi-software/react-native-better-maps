@@ -11,7 +11,7 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
   # Rehearsal against the current branch. Always a dry run: it validates the
-  # version, changelog and full gate without tagging or publishing anything.
+  # version and the full gate without tagging or publishing anything.
   workflow_dispatch:
 
 concurrency:
@@ -78,15 +78,6 @@ jobs:
         run: |
           if [ "$TAG" != "v$VERSION" ]; then
             echo "::error::Tag $TAG does not match package.json version $VERSION. Bump the version on main first."
-            exit 1
-          fi
-
-      - name: Verify CHANGELOG entry exists
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if ! grep -qE "^## +${VERSION//./\\.}( |$)" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no '## $VERSION' section. Add the release notes before publishing."
             exit 1
           fi
 

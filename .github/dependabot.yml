@@ -1,0 +1,43 @@
+version: 2
+
+updates:
+  # The workflows pin every action by commit SHA, which never resolves to a newer
+  # release on its own. Without this, those pins silently rot.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    # Keep the subject conventional — the commitlint job runs on every pull
+    # request, Dependabot's included.
+    commit-message:
+      prefix: chore
+
+  # Bun is its own Dependabot ecosystem, not part of `npm`: it reads `bun.lock`.
+  # Version updates are supported; security updates are not, so Dependabot
+  # security alerts for these dependencies have to be acted on by hand.
+  - package-ecosystem: bun
+    directories:
+      - /
+      - /package
+      - /example
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        patterns:
+          - '*'
+    # React Native, React and Nitro are peer dependencies with native
+    # counterparts; upgrading them is a deliberate, tested change, never an
+    # automated bump.
+    ignore:
+      - dependency-name: react
+      - dependency-name: react-native
+      - dependency-name: react-native-nitro-modules
+      - dependency-name: nitrogen
+    commit-message:
+      prefix: chore

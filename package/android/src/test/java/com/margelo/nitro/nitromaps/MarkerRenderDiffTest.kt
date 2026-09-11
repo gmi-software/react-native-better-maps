@@ -19,10 +19,11 @@ class MarkerRenderDiffTest {
   @Test
   fun `missing keys are removed`() {
     val kept = ClusterElement.Single(marker(id = "a"))
-    val diff = computeMarkerRenderDiff(
-      listOf(kept),
-      mapOf("s:a" to kept.renderVersion, "s:gone" to 9L),
-    )
+    val diff =
+      computeMarkerRenderDiff(
+        listOf(kept),
+        mapOf("s:a" to kept.renderVersion, "s:gone" to 9L),
+      )
 
     assertEquals(setOf("s:gone"), diff.removedKeys)
     assertTrue(diff.added.isEmpty())
@@ -33,10 +34,11 @@ class MarkerRenderDiffTest {
   fun `version change marks retained`() {
     val displayed = ClusterElement.Single(marker(id = "a", opacity = 1.0))
     val next = ClusterElement.Single(marker(id = "a", opacity = 0.2))
-    val diff = computeMarkerRenderDiff(
-      listOf(next),
-      mapOf(displayed.diffKey to displayed.renderVersion),
-    )
+    val diff =
+      computeMarkerRenderDiff(
+        listOf(next),
+        mapOf(displayed.diffKey to displayed.renderVersion),
+      )
 
     assertTrue(diff.removedKeys.isEmpty())
     assertTrue(diff.added.isEmpty())
@@ -46,10 +48,11 @@ class MarkerRenderDiffTest {
   @Test
   fun `unchanged version is skipped`() {
     val element = ClusterElement.Single(marker(id = "a"))
-    val diff = computeMarkerRenderDiff(
-      listOf(element),
-      mapOf(element.diffKey to element.renderVersion),
-    )
+    val diff =
+      computeMarkerRenderDiff(
+        listOf(element),
+        mapOf(element.diffKey to element.renderVersion),
+      )
 
     assertTrue(diff.removedKeys.isEmpty())
     assertTrue(diff.added.isEmpty())

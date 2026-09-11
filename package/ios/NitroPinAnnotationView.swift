@@ -30,16 +30,18 @@ final class NitroPinAnnotationView: MKMarkerAnnotationView {
     displayPriority = .required
     alpha = marker.opacity
     markerTintColor = marker.markerColor?.toUIColor(fallback: .systemRed)
-    zPriority = marker.zIndex.map {
-      MKAnnotationViewZPriority(rawValue: Float($0))
-    } ?? .defaultUnselected
+    zPriority =
+      marker.zIndex.map {
+        MKAnnotationViewZPriority(rawValue: Float($0))
+      } ?? .defaultUnselected
 
     layoutIfNeeded()
     let pinSize = bounds.size == .zero ? Self.defaultPinSize : bounds.size
     centerOffset = marker.centerOffset(forImageSize: pinSize)
 
     let rotation = marker.rotation ?? 0
-    transform = marker.flat != true && rotation != 0
+    transform =
+      marker.flat != true && rotation != 0
       ? CGAffineTransform(rotationAngle: rotation * .pi / 180)
       : .identity
   }

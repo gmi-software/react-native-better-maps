@@ -101,9 +101,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
   func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
     if let cluster = annotation as? MapClusterAnnotation {
-      let view = mapView.dequeueReusableAnnotationView(
-        withIdentifier: NitroClusterAnnotationView.reuseIdentifier
-      ) as? NitroClusterAnnotationView
+      let view =
+        mapView.dequeueReusableAnnotationView(
+          withIdentifier: NitroClusterAnnotationView.reuseIdentifier
+        ) as? NitroClusterAnnotationView
         ?? NitroClusterAnnotationView(
           annotation: cluster,
           reuseIdentifier: NitroClusterAnnotationView.reuseIdentifier
@@ -119,19 +120,21 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     if marker.image != nil {
-      let imageView = mapView.dequeueReusableAnnotationView(
-        withIdentifier: NitroImageAnnotationView.reuseIdentifier,
-        for: marker
-      ) as! NitroImageAnnotationView
+      let imageView =
+        mapView.dequeueReusableAnnotationView(
+          withIdentifier: NitroImageAnnotationView.reuseIdentifier,
+          for: marker
+        ) as! NitroImageAnnotationView
 
       imageView.configure(for: marker)
       return imageView
     }
 
-    let pinView = mapView.dequeueReusableAnnotationView(
-      withIdentifier: NitroPinAnnotationView.reuseIdentifier,
-      for: marker
-    ) as! NitroPinAnnotationView
+    let pinView =
+      mapView.dequeueReusableAnnotationView(
+        withIdentifier: NitroPinAnnotationView.reuseIdentifier,
+        for: marker
+      ) as! NitroPinAnnotationView
 
     pinView.configure(for: marker)
     return pinView
@@ -140,14 +143,16 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
     for view in views {
       if let marker = view.annotation as? MapMarkerAnnotation,
-         marker.enteringAnimation.kind != .system {
+        marker.enteringAnimation.kind != .system
+      {
         OverlayEnteringAnimationResolver.animateAnnotationView(
           view,
           animation: marker.enteringAnimation,
           supportsScale: true
         )
       } else if let cluster = view.annotation as? MapClusterAnnotation,
-                cluster.enteringAnimation.kind != .system {
+        cluster.enteringAnimation.kind != .system
+      {
         OverlayEnteringAnimationResolver.animateAnnotationView(
           view,
           animation: cluster.enteringAnimation,
@@ -159,8 +164,9 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
   func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
     if #available(iOS 16.0, *),
-       let mapFeature = view.annotation as? MKMapFeatureAnnotation,
-       handleMapFeatureSelection(mapFeature) {
+      let mapFeature = view.annotation as? MKMapFeatureAnnotation,
+      handleMapFeatureSelection(mapFeature)
+    {
       return
     }
 
@@ -187,7 +193,8 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
   func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
     if #available(iOS 16.0, *),
-       let mapFeature = annotation as? MKMapFeatureAnnotation {
+      let mapFeature = annotation as? MKMapFeatureAnnotation
+    {
       _ = handleMapFeatureSelection(mapFeature)
     }
   }
@@ -221,7 +228,8 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     fromOldState oldState: MKAnnotationView.DragState
   ) {
     guard newState == .ending,
-          let marker = view.annotation as? MapMarkerAnnotation else {
+      let marker = view.annotation as? MapMarkerAnnotation
+    else {
       return
     }
 

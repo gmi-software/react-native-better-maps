@@ -21,18 +21,18 @@ enum MarkerClusterEngine {
     /// instead of removing and re-adding the native marker during gestures.
     var diffKey: String {
       switch self {
-      case let .single(descriptor):
+      case .single(let descriptor):
         return "s:" + descriptor.id
-      case let .cluster(key, _, _, _, _):
+      case .cluster(let key, _, _, _, _):
         return "c:" + key
       }
     }
 
     var renderVersion: Int {
       switch self {
-      case let .single(descriptor):
+      case .single(let descriptor):
         return descriptor.displayedIdentityVersion()
-      case let .cluster(key, coordinate, count, memberIds, region):
+      case .cluster(let key, let coordinate, let count, let memberIds, let region):
         var hasher = Hasher()
         hasher.combine("cluster")
         hasher.combine(key)
@@ -55,7 +55,7 @@ enum MarkerClusterEngine {
       clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
     ) -> MKAnnotation {
       switch self {
-      case let .single(descriptor):
+      case .single(let descriptor):
         return MapMarkerAnnotation(
           descriptor: descriptor,
           enteringAnimation: OverlayEnteringAnimationResolver.resolve(
@@ -63,7 +63,7 @@ enum MarkerClusterEngine {
             fallback: markerEnteringAnimation
           )
         )
-      case let .cluster(key, coordinate, count, memberIds, region):
+      case .cluster(let key, let coordinate, let count, let memberIds, let region):
         return MapClusterAnnotation(
           id: key,
           coordinate: coordinate,
@@ -187,7 +187,8 @@ enum MarkerClusterEngine {
     var buckets: [String: Bucket] = [:]
     for descriptor in clusterableCandidates {
       let lat = descriptor.coordinate.latitude
-      let lon = wraps
+      let lon =
+        wraps
         ? normalizeLongitude(descriptor.coordinate.longitude, reference: referenceLon)
         : descriptor.coordinate.longitude
       let row = Int((lat / cellLat).rounded(.down))
@@ -223,21 +224,22 @@ enum MarkerClusterEngine {
       if bucket.count == 1, let descriptor = bucket.first {
         elements.append(.single(descriptor))
       } else {
-        elements.append(.cluster(
-          key: bucket.key,
-          coordinate: CLLocationCoordinate2D(
-            latitude: bucket.sumLat / Double(bucket.count),
-            longitude: bucket.sumLon / Double(bucket.count)
-          ),
-          count: bucket.count,
-          memberIds: bucket.memberIds,
-          region: expandedRegion(
-            minLat: bucket.minLat,
-            maxLat: bucket.maxLat,
-            minLon: wrapTo180(bucket.minLon),
-            maxLon: wrapTo180(bucket.maxLon)
-          )
-        ))
+        elements.append(
+          .cluster(
+            key: bucket.key,
+            coordinate: CLLocationCoordinate2D(
+              latitude: bucket.sumLat / Double(bucket.count),
+              longitude: bucket.sumLon / Double(bucket.count)
+            ),
+            count: bucket.count,
+            memberIds: bucket.memberIds,
+            region: expandedRegion(
+              minLat: bucket.minLat,
+              maxLat: bucket.maxLat,
+              minLon: wrapTo180(bucket.minLon),
+              maxLon: wrapTo180(bucket.maxLon)
+            )
+          ))
       }
     }
     return elements
@@ -264,7 +266,8 @@ enum MarkerClusterEngine {
     let referenceLon = region.center.longitude - region.span.longitudeDelta / 2
     let spanLat = max(region.span.latitudeDelta, 1e-9)
     let spanLon = max(region.span.longitudeDelta, 1e-9)
-    let centerLon = wraps
+    let centerLon =
+      wraps
       ? normalizeLongitude(referenceLon + spanLon / 2, reference: referenceLon)
       : region.center.longitude
 
@@ -273,7 +276,8 @@ enum MarkerClusterEngine {
     for i in 0..<n {
       let bucket = buckets[i]
       let lat = bucket.sumLat / Double(bucket.count)
-      let lon = wraps
+      let lon =
+        wraps
         ? normalizeLongitude(bucket.sumLon / Double(bucket.count), reference: referenceLon)
         : bucket.sumLon / Double(bucket.count)
       px[i] = (lon - centerLon) / spanLon * width
@@ -425,10 +429,11 @@ final class MarkerRenderPipeline {
       viewportRefreshWorkItem?.cancel()
       viewportRefreshWorkItem = nil
       refreshGeneration += 1
-      apply(Self.computeDiff(
-        target: allMarkerDescriptors.map { .single($0) },
-        displayed: displayedVersions
-      ))
+      apply(
+        Self.computeDiff(
+          target: allMarkerDescriptors.map { .single($0) },
+          displayed: displayedVersions
+        ))
     }
   }
 
@@ -502,7 +507,8 @@ final class MarkerRenderPipeline {
           cellPoints: clusterCellPoints
         )
       } else {
-        elements = MarkerViewportFilter
+        elements =
+          MarkerViewportFilter
           .displaySubset(candidates: candidates, region: region)
           .map { .single($0) }
       }

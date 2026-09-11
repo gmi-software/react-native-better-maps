@@ -125,10 +125,10 @@ final class GoogleMapOverlayController {
 
   func handleMarkerTap(_ marker: GMSMarker) -> Bool {
     switch marker.userData as? MarkerPayload {
-    case let .marker(id):
+    case .marker(let id):
       onMarkerPress?(id)
       return marker.title == nil && marker.snippet == nil
-    case let .cluster(memberIds, region):
+    case .cluster(let memberIds, let region):
       onClusterPress?(
         memberIds,
         Coordinate(latitude: marker.position.latitude, longitude: marker.position.longitude)
@@ -141,7 +141,7 @@ final class GoogleMapOverlayController {
   }
 
   func handleMarkerDragEnd(_ marker: GMSMarker) {
-    guard case let .marker(id) = marker.userData as? MarkerPayload else {
+    guard case .marker(let id) = marker.userData as? MarkerPayload else {
       return
     }
 
@@ -228,7 +228,8 @@ final class GoogleMapOverlayController {
       let marker = GMSMarker()
       updateMarker(marker, with: entry.element)
       let animation = enteringAnimation(for: entry.element)
-      let shouldAnimate = animateEntering
+      let shouldAnimate =
+        animateEntering
         && remainingAnimationBudget > 0
         && OverlayEnteringAnimationResolver.canAnimateGoogleMarker(animation)
 
@@ -275,7 +276,7 @@ final class GoogleMapOverlayController {
     for element: MarkerClusterEngine.Element
   ) -> ResolvedOverlayEnteringAnimation {
     switch element {
-    case let .single(descriptor):
+    case .single(let descriptor):
       return OverlayEnteringAnimationResolver.resolve(
         descriptor.enteringAnimation,
         fallback: markerEnteringAnimation
@@ -287,7 +288,7 @@ final class GoogleMapOverlayController {
 
   private func updateMarker(_ marker: GMSMarker, with element: MarkerClusterEngine.Element) {
     switch element {
-    case let .single(descriptor):
+    case .single(let descriptor):
       marker.position = descriptor.coordinate.toCLLocationCoordinate2D()
       marker.title = descriptor.title
       marker.snippet = descriptor.subtitle
@@ -295,7 +296,7 @@ final class GoogleMapOverlayController {
       marker.zIndex = Self.nativeZIndex(descriptor.zIndex)
       marker.userData = MarkerPayload.marker(descriptor.id)
       visualApplier.apply(descriptor, to: marker)
-    case let .cluster(_, coordinate, count, memberIds, region):
+    case .cluster(_, let coordinate, let count, let memberIds, let region):
       marker.position = coordinate
       marker.title = nil
       marker.snippet = nil
@@ -323,10 +324,11 @@ final class GoogleMapOverlayController {
     let icon = UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter), format: format)
       .image { context in
         let rect = CGRect(x: 0, y: 0, width: diameter, height: diameter)
-        let colors = [
-          UIColor(red: 0.30, green: 0.62, blue: 1.0, alpha: 1).cgColor,
-          UIColor(red: 0.04, green: 0.52, blue: 1.0, alpha: 1).cgColor,
-        ] as CFArray
+        let colors =
+          [
+            UIColor(red: 0.30, green: 0.62, blue: 1.0, alpha: 1).cgColor,
+            UIColor(red: 0.04, green: 0.52, blue: 1.0, alpha: 1).cgColor,
+          ] as CFArray
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0, 1])!
         context.cgContext.addEllipse(in: rect.insetBy(dx: 1, dy: 1))
@@ -412,9 +414,10 @@ final class GoogleMapOverlayController {
     polygon.path = descriptor.coordinates.toGMSPath()
     polygon.holes = descriptor.holes?.map { $0.toGMSPath() }
     polygon.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
-    polygon.fillColor = descriptor.fillColor?.toUIColor(
-      fallback: UIColor.systemBlue.withAlphaComponent(0.2)
-    ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
+    polygon.fillColor =
+      descriptor.fillColor?.toUIColor(
+        fallback: UIColor.systemBlue.withAlphaComponent(0.2)
+      ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
     polygon.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
     polygon.zIndex = Self.nativeZIndex(descriptor.zIndex)
     polygon.isTappable = descriptor.tappable ?? false
@@ -434,9 +437,10 @@ final class GoogleMapOverlayController {
     circle.position = descriptor.center.toCLLocationCoordinate2D()
     circle.radius = descriptor.radius
     circle.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
-    circle.fillColor = descriptor.fillColor?.toUIColor(
-      fallback: UIColor.systemBlue.withAlphaComponent(0.2)
-    ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
+    circle.fillColor =
+      descriptor.fillColor?.toUIColor(
+        fallback: UIColor.systemBlue.withAlphaComponent(0.2)
+      ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
     circle.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
     circle.isTappable = descriptor.tappable ?? false
     circle.userData = descriptor.id
@@ -478,8 +482,8 @@ extension PolylineDescriptor: IdentifiedOverlayDescriptor {}
 extension PolygonDescriptor: IdentifiedOverlayDescriptor {}
 extension CircleDescriptor: IdentifiedOverlayDescriptor {}
 
-private extension Array where Element == Coordinate {
-  func toGMSPath() -> GMSPath {
+extension Array where Element == Coordinate {
+  fileprivate func toGMSPath() -> GMSPath {
     let path = GMSMutablePath()
     for coordinate in self {
       path.add(coordinate.toCLLocationCoordinate2D())

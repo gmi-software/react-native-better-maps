@@ -32,6 +32,10 @@ Thank you for your interest in contributing!
 | `bun run build` | Build the library with react-native-builder-bob |
 | `bun run nitrogen` | Run Nitrogen codegen (when specs are ready) |
 | `bun run format` | Format all files with Prettier |
+| `bun run format:cpp` | Format C++ with clang-format (`config/.clang-format`) |
+| `bun run format:kotlin` | Format Kotlin with ktlint (`config/.editorconfig`) |
+| `bun run format:swift` | Format Swift with swift-format (`config/.swift-format`) |
+| `bun run format:native` | Run all three native formatters |
 | `bun run doctor` | Run React Doctor locally |
 
 ## React Doctor
@@ -56,6 +60,14 @@ React Doctor runs in a separate GitHub Actions workflow (`.github/workflows/reac
 - **Pushes to `main`:** records the health score trend without failing the branch.
 
 After the baseline is documented and critical findings are addressed, CI will switch to blocking new errors on changed files only.
+
+## Code of conduct
+
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By taking part you are expected to uphold it; report unacceptable behavior to security@gmi.software.
+
+## Security
+
+Do not report vulnerabilities through issues or pull requests. See [SECURITY.md](SECURITY.md) for the private reporting channel.
 
 ## Commit messages
 

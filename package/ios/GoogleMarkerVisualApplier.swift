@@ -51,9 +51,10 @@ final class GoogleMarkerVisualApplier {
     guard let image = descriptor.image else {
       cancelPending(state)
       let markerColor = descriptor.markerColor
-      let iconToken = markerColor.map {
-        "\(Self.defaultIconToken):\($0)" as NSString
-      } ?? Self.defaultIconToken
+      let iconToken =
+        markerColor.map {
+          "\(Self.defaultIconToken):\($0)" as NSString
+        } ?? Self.defaultIconToken
       if state.appliedImageToken != iconToken {
         marker.icon = markerColor.map {
           GMSMarker.markerImage(with: $0.toUIColor(fallback: .systemRed))
@@ -89,7 +90,7 @@ final class GoogleMarkerVisualApplier {
         return
       }
       guard let pending = state.pending,
-            pending.applicationToken === applicationToken
+        pending.applicationToken === applicationToken
       else {
         return
       }
@@ -134,7 +135,7 @@ final class GoogleMarkerVisualApplier {
 
   private func anchorImageSize(_ descriptor: MarkerDescriptor, icon: UIImage?) -> CGSize {
     if let image = descriptor.image, let width = image.width, let height = image.height,
-       width > 0, height > 0
+      width > 0, height > 0
     {
       return CGSize(width: width, height: height)
     }

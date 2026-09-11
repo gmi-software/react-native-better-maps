@@ -44,10 +44,21 @@ interface MapProviderAdapter {
   var onClusterPress: ((markerIds: Array<String>, coordinate: Coordinate) -> Unit)?
 
   fun fetchCamera(): Promise<Camera>
+
   fun applyCamera(camera: Camera)
-  fun animateCamera(camera: Camera, duration: Double?)
+
+  fun animateCamera(
+    camera: Camera,
+    duration: Double?,
+  )
+
   fun getVisibleRegion(): Promise<VisibleRegion>
-  fun fitToCoordinates(coordinates: Array<Coordinate>, padding: EdgePadding?, animated: Boolean?)
+
+  fun fitToCoordinates(
+    coordinates: Array<Coordinate>,
+    padding: EdgePadding?,
+    animated: Boolean?,
+  )
 
   /**
    * Destroys the underlying native map and unregisters everything the adapter owns.

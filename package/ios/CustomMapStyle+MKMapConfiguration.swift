@@ -6,8 +6,9 @@ enum CustomMapStyleParser {
   @available(iOS 16.0, *)
   static func apply(json: String?, mapType: MapType, to mapView: MKMapView) {
     guard let json, !json.isEmpty,
-          let data = json.data(using: .utf8),
-          let rules = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+      let data = json.data(using: .utf8),
+      let rules = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+    else {
       mapView.preferredConfiguration = mapType.toMKMapConfiguration()
       return
     }

@@ -146,14 +146,14 @@ final class MapOverlayController {
       }
 
       switch entry.element {
-      case let .single(descriptor):
+      case .single(let descriptor):
         if let marker = existing as? MapMarkerAnnotation {
           let visualChanged = marker.update(from: descriptor)
           if visualChanged {
             refreshMarkerView(for: marker)
           }
         }
-      case let .cluster(key, coordinate, count, memberIds, region):
+      case .cluster(let key, let coordinate, let count, let memberIds, let region):
         if let cluster = existing as? MapClusterAnnotation {
           cluster.update(
             id: key,

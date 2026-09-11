@@ -28,6 +28,8 @@ const full: MarkerDescriptor = {
   rotation: 45,
   flat: true,
   opacity: 0.75,
+  markerColor: '#FF9500',
+  zIndex: 3,
   enteringAnimation: {
     kind: 'fade-scale',
     duration: 180,

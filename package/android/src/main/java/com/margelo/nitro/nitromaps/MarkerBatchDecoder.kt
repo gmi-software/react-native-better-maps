@@ -43,6 +43,8 @@ internal object MarkerBatchLayout {
     const val ANIMATION_DELAY = 80
     const val ANIMATION_KIND = 84
     const val ANIMATION_REDUCE_MOTION = 85
+    const val MARKER_COLOR = 88
+    const val Z_INDEX = 92
   }
 }
 
@@ -176,11 +178,13 @@ internal object MarkerBatchDecoder {
       draggable = if (flags and MarkerBatchLayout.DRAGGABLE != 0) true else null,
       clusterable = if (flags and MarkerBatchLayout.CLUSTERABLE != 0) null else false,
       image = image,
+      markerColor = stringAt(strings, buffer.getInt(base + MarkerBatchLayout.Upsert.MARKER_COLOR)),
       anchor = anchor,
       centerOffset = centerOffset,
       rotation = buffer.optionalFloat(base + MarkerBatchLayout.Upsert.ROTATION),
       flat = if (flags and MarkerBatchLayout.FLAT != 0) true else null,
       opacity = buffer.optionalFloat(base + MarkerBatchLayout.Upsert.OPACITY),
+      zIndex = buffer.optionalFloat(base + MarkerBatchLayout.Upsert.Z_INDEX),
       enteringAnimation = enteringAnimation,
     )
   }

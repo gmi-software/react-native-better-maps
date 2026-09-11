@@ -9,6 +9,7 @@ export const OverlayType = {
   Polyline: 'NitroMaps.Polyline',
   Polygon: 'NitroMaps.Polygon',
   Circle: 'NitroMaps.Circle',
+  Geojson: 'NitroMaps.Geojson',
 } as const;
 
 export type OverlayTypeName = (typeof OverlayType)[keyof typeof OverlayType];
@@ -17,9 +18,6 @@ export interface OverlayComponentType {
   overlayType?: OverlayTypeName;
 }
 
-export function overlayCallbackKey(
-  type: OverlayTypeName,
-  id: string,
-): string {
+export function overlayCallbackKey(type: OverlayTypeName, id: string): string {
   return `${type}:${id}`;
 }

@@ -39,6 +39,10 @@ Pod::Spec.new do |s|
     'ios/**/*.{m,mm}',
     'cpp/**/*.{hpp,cpp}',
   ]
+  s.exclude_files = [
+    'ios/Package.swift',
+    'ios/Tests/**/*',
+  ]
 
   s.frameworks = 'MapKit', 'CoreLocation'
 

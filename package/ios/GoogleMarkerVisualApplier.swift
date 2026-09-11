@@ -50,9 +50,15 @@ final class GoogleMarkerVisualApplier {
 
     guard let image = descriptor.image else {
       cancelPending(state)
-      if state.appliedImageToken != Self.defaultIconToken {
-        marker.icon = nil
-        state.appliedImageToken = Self.defaultIconToken
+      let markerColor = descriptor.markerColor
+      let iconToken = markerColor.map {
+        "\(Self.defaultIconToken):\($0)" as NSString
+      } ?? Self.defaultIconToken
+      if state.appliedImageToken != iconToken {
+        marker.icon = markerColor.map {
+          GMSMarker.markerImage(with: $0.toUIColor(fallback: .systemRed))
+        }
+        state.appliedImageToken = iconToken
       }
       return
     }

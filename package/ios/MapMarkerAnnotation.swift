@@ -6,11 +6,13 @@ final class MapMarkerAnnotation: NSObject, MKAnnotation {
   var draggable: Bool
   var isClusterable: Bool
   private(set) var image: MarkerImage?
+  private(set) var markerColor: String?
   private(set) var anchor: MarkerAnchor?
   private(set) var centerOffset: MarkerPoint?
   private(set) var rotation: Double?
   private(set) var flat: Bool?
   private(set) var opacity: CGFloat
+  private(set) var zIndex: Double?
   let enteringAnimation: ResolvedOverlayEnteringAnimation
 
   @objc dynamic var coordinate: CLLocationCoordinate2D
@@ -32,11 +34,13 @@ final class MapMarkerAnnotation: NSObject, MKAnnotation {
     draggable = descriptor.draggable ?? false
     isClusterable = descriptor.clusterable ?? true
     image = descriptor.image
+    markerColor = descriptor.markerColor
     anchor = descriptor.anchor
     centerOffset = descriptor.centerOffset
     rotation = descriptor.rotation
     flat = descriptor.flat
     opacity = CGFloat(descriptor.opacity ?? 1)
+    zIndex = descriptor.zIndex
   }
 
   @discardableResult
@@ -64,30 +68,36 @@ final class MapMarkerAnnotation: NSObject, MKAnnotation {
       MarkerImageLoader.cacheKey(for: current) != MarkerImageLoader.cacheKey(for: next)
     default: true
     }
+    let markerColorChanged = markerColor != descriptor.markerColor
     let anchorChanged = anchor?.x != descriptor.anchor?.x || anchor?.y != descriptor.anchor?.y
     let centerOffsetChanged = centerOffset?.x != descriptor.centerOffset?.x
       || centerOffset?.y != descriptor.centerOffset?.y
     let rotationChanged = rotation != descriptor.rotation
     let flatChanged = flat != descriptor.flat
     let opacityChanged = opacity != CGFloat(descriptor.opacity ?? 1)
+    let zIndexChanged = zIndex != descriptor.zIndex
 
     image = descriptor.image
+    markerColor = descriptor.markerColor
     anchor = descriptor.anchor
     centerOffset = descriptor.centerOffset
     rotation = descriptor.rotation
     flat = descriptor.flat
     opacity = CGFloat(descriptor.opacity ?? 1)
+    zIndex = descriptor.zIndex
 
     return titleChanged
       || subtitleChanged
       || draggableChanged
       || clusterableChanged
       || imageChanged
+      || markerColorChanged
       || anchorChanged
       || centerOffsetChanged
       || rotationChanged
       || flatChanged
       || opacityChanged
+      || zIndexChanged
   }
 
   func centerOffset(forImageSize imageSize: CGSize) -> CGPoint {

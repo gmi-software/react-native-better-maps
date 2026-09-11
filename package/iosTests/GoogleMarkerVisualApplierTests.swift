@@ -81,11 +81,13 @@ private func markerDescriptor(image: MarkerImage, anchor: MarkerAnchor) -> Marke
     draggable: nil,
     clusterable: nil,
     image: image,
+    markerColor: nil,
     anchor: anchor,
     centerOffset: nil,
     rotation: nil,
     flat: nil,
     opacity: nil,
+    zIndex: nil,
     enteringAnimation: nil
   )
 }

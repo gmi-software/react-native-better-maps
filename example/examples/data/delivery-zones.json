@@ -1,0 +1,96 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "srodmiescie",
+      "properties": {
+        "name": "Śródmieście",
+        "fill": "#34C759",
+        "fill-opacity": 0.25,
+        "stroke": "#34C759",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [21.0, 52.238],
+            [21.015, 52.242],
+            [21.028, 52.235],
+            [21.025, 52.225],
+            [21.008, 52.22],
+            [21.0, 52.238]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "wola",
+      "properties": {
+        "name": "Wola",
+        "fill": "#007AFF",
+        "fill-opacity": 0.22,
+        "stroke": "#007AFF",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [20.978, 52.236],
+            [20.995, 52.24],
+            [21.0, 52.232],
+            [20.992, 52.222],
+            [20.976, 52.226],
+            [20.978, 52.236]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "courier-run",
+      "properties": {
+        "name": "Courier run",
+        "stroke": "#FF3B30",
+        "stroke-width": 4
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [20.985, 52.23],
+          [21.0, 52.229],
+          [21.0122, 52.2297],
+          [21.022, 52.232]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hub",
+      "properties": {
+        "name": "Bistro Central"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [21.0122, 52.2297]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "pickups",
+      "properties": {
+        "name": "Pickup"
+      },
+      "geometry": {
+        "type": "MultiPoint",
+        "coordinates": [
+          [20.985, 52.23],
+          [21.022, 52.232]
+        ]
+      }
+    }
+  ]
+}

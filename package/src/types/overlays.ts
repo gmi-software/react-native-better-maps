@@ -56,6 +56,9 @@ export interface MarkerDescriptor {
   /** Custom marker image. */
   image?: MarkerImageSource;
 
+  /** Color applied to the default marker when no custom image is set. */
+  markerColor?: string;
+
   /** Anchor point on the image relative to the coordinate (default bottom-center). */
   anchor?: MarkerAnchor;
 
@@ -70,6 +73,9 @@ export interface MarkerDescriptor {
 
   /** Opacity from 0 to 1. */
   opacity?: number;
+
+  /** Drawing order relative to other map overlays. */
+  zIndex?: number;
 
   /** Entering animation override for this marker. */
   enteringAnimation?: OverlayEnteringAnimation;

@@ -92,3 +92,5 @@ python3 experiments/custom-markers/summarize-rn-benchmark.py /tmp/marker-view-be
 ```
 
 A fresh installation or a separate copied log should be used for each investigation; the raw file intentionally appends across runs. Preserve raw samples, workload parameters, device/OS/build identity, and Instruments evidence before drawing a performance conclusion.
+
+The initial `iphone-15-pro-run-1.json` and `iphone-15-pro-control.json` used an incorrect camera duration of 1200 seconds. They are retained as faulty-workload diagnostics, **not moving-camera acceptance evidence**. Harness version 3 uses 1.2 seconds and saves camera endpoints. The v2 control separates transform and width properties and compares ordinary fixed screen overlays against geographic hosts.

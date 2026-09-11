@@ -1,5 +1,7 @@
 # Physical iPhone experiment, 2026-09-11
 
+> **Camera-workload error:** these initial series passed `1200` to a duration measured in seconds. They are not valid moving-camera acceptance runs. Retained numbers describe internal JSX animation under that faulty camera workload. Version 3 corrects this to `1.2` seconds and records camera endpoints.
+
 ## Build and workload
 
 - iPhone 15 Pro, iOS 26.6 (23G5043d), Release, RN 0.86 / Reanimated 4.5.0 / Nitro 0.35.10, MapKit. Library native source matches commit `3085c91`.

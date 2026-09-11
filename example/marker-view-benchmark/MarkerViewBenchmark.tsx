@@ -27,6 +27,7 @@ import {
 
 const CENTER = { latitude: 52.2297, longitude: 21.0122 };
 const CAMERA = { center: CENTER, zoom: 14, pitch: 0, heading: 0 };
+const CAMERA_ANIMATION_SECONDS = 1.2;
 type Mode =
   | 'pins'
   | 'live-static'
@@ -183,6 +184,7 @@ export default function MarkerViewBenchmark() {
             await map.current.setCamera(CAMERA);
             await sleep(1000);
             const beforeBytes = await memoryFootprintBytes();
+            const cameraBefore = await map.current.getCamera();
             setStatus(`Recording ${name}`);
             await sleep(100);
             await startFrameRecording(`${candidate}-${size}-pass${pass + 1}`);
@@ -196,15 +198,29 @@ export default function MarkerViewBenchmark() {
                   },
                   heading: leg * 12,
                 },
-                1200,
+                CAMERA_ANIMATION_SECONDS,
               );
               await sleep(1500);
             }
             const recording = await stopFrameRecording();
+            const cameraAfter = await map.current.getCamera();
+            const cameraRouteCompleted =
+              Math.abs(
+                cameraAfter.center.latitude - (CENTER.latitude - 0.001),
+              ) < 0.00005 &&
+              Math.abs(cameraAfter.center.longitude - CENTER.longitude) <
+                0.00005 &&
+              Math.abs((((cameraAfter.heading ?? 0) - 36 + 540) % 360) - 180) <
+                1;
             const afterBytes = await memoryFootprintBytes();
             const row = {
               kind: 'marker-view-benchmark',
               suite: kind,
+              workloadVersion: 3,
+              cameraAnimationSeconds: CAMERA_ANIMATION_SECONDS,
+              cameraBefore,
+              cameraAfter,
+              cameraRouteCompleted,
               provider,
               mode: candidate,
               count: size,
@@ -216,6 +232,8 @@ export default function MarkerViewBenchmark() {
             await logBenchmarkLine(
               `[marker-view-benchmark] ${JSON.stringify(row)}`,
             );
+            if (!cameraRouteCompleted)
+              throw new Error('Camera did not complete the benchmark route');
           }
         }
       }

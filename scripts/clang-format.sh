@@ -20,7 +20,7 @@ CPP_DIRS=(
 
 if which clang-format >/dev/null; then
   DIRS=$(printf "%s " "${CPP_DIRS[@]}")
-  find $DIRS -type f \( -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.m" -o -name "*.mm" -o -name "*.c" \) -print0 | while read -d $'\0' file; do
+  find $DIRS -type f \( -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.m" -o -name "*.mm" -o -name "*.c" \) -print0 | while read -r -d '' file; do
     clang-format -style=file:./config/.clang-format -i "$file"
   done
   echo "C++ Format done!"

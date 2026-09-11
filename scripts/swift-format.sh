@@ -11,7 +11,7 @@ SWIFT_DIRS=(
 
 if which swift >/dev/null; then
   DIRS=$(printf "%s " "${SWIFT_DIRS[@]}")
-  find $DIRS -type f \( -name "*.swift" \) -print0 | while read -d $'\0' file; do
+  find $DIRS -type f \( -name "*.swift" \) -print0 | while read -r -d '' file; do
     swift format --configuration ./config/.swift-format --in-place "$file"
   done
   echo "Swift Format done!"

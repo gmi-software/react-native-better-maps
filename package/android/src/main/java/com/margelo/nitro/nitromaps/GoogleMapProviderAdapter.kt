@@ -196,6 +196,17 @@ class GoogleMapProviderAdapter(
       }
     }
 
+  override var customClusterViews: Boolean? = null
+    set(value) {
+      field = value
+      overlayController.setCustomClusterViews(value == true)
+    }
+  override var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)? = null
+    set(value) {
+      field = value
+      overlayController.onMarkerViewRenderState = value
+    }
+
   private var _clusteringEnabled: Boolean? = null
   override var clusteringEnabled: Boolean?
     get() = _clusteringEnabled
@@ -761,6 +772,7 @@ class GoogleMapProviderAdapter(
     onPolygonPress = null
     onCirclePress = null
     onClusterPress = null
+    onMarkerViewRenderState = null
 
     overlayController.clear()
     destroyMapView()

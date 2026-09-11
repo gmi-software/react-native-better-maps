@@ -157,6 +157,17 @@ class HybridMapView(private val context: ThemedReactContext) :
       }
     }
 
+  override var customClusterViews: Boolean? = null
+    set(value) {
+      field = value
+      adapter?.customClusterViews = value
+    }
+  override var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)? = null
+    set(value) {
+      field = value
+      adapter?.onMarkerViewRenderState = value
+    }
+
   override var clusteringEnabled: Boolean?
     get() = _clusteringEnabled
     set(value) {
@@ -336,6 +347,8 @@ class HybridMapView(private val context: ThemedReactContext) :
     _customMapStyle = null
     _googleMapId = null
     _clusteringEnabled = null
+    customClusterViews = null
+    onMarkerViewRenderState = null
     _mapPadding = null
     _markerEnteringAnimation = null
     _clusterEnteringAnimation = null
@@ -423,6 +436,8 @@ class HybridMapView(private val context: ThemedReactContext) :
     adapter.showsScale = _showsScale
     adapter.customMapStyle = _customMapStyle
     adapter.googleMapId = _googleMapId
+    adapter.customClusterViews = customClusterViews
+    adapter.onMarkerViewRenderState = onMarkerViewRenderState
     adapter.clusteringEnabled = _clusteringEnabled
     adapter.markerEnteringAnimation = _markerEnteringAnimation
     adapter.clusterEnteringAnimation = _clusterEnteringAnimation

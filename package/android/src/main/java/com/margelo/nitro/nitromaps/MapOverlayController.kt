@@ -27,6 +27,24 @@ class MapOverlayController(
   private val density: Float = context.resources.displayMetrics.density
   private val markerIconFactory = MarkerIconFactory(context, density) { markers }
   private val markerVersions = HashMap<String, Long>()
+  private val markerViews = MarkerViewRenderRegistry()
+  private val renderedVersions: Map<String, Long> get() = markerVersions + markerViews.versions
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)?
+    get() = markerViews.onChange
+    set(value) { markerViews.onChange = value }
+
+  fun setCustomClusterViews(enabled: Boolean) {
+    if (markerViews.customClusters == enabled) return
+    markerViews.customClusters = enabled
+    markerEnterAnimators.values.toSet().forEach { it.cancel() }
+    markerEnterAnimators.clear()
+    markers.values.forEach { it.remove() }
+    markers.clear()
+    markerVersions.clear()
+    clusterByKey.clear()
+    markerViews.reset()
+    reapplyMarkers()
+  }
   private val clusterByKey = HashMap<String, ClusterElement.Cluster>()
   private val polylines = LinkedHashMap<String, Polyline>()
   private val polygons = LinkedHashMap<String, Polygon>()
@@ -88,6 +106,7 @@ class MapOverlayController(
   }
 
   fun clear() {
+    markerViews.reset()
     markerEnterAnimators.values.toSet().forEach { it.cancel() }
     cancelIdleRefresh()
     cancelLiveRefresh()
@@ -158,7 +177,7 @@ class MapOverlayController(
     val clustering = clusteringEnabled
     val widthPx = viewWidthPx
     val heightPx = viewHeightPx
-    val displayedVersions = HashMap(markerVersions)
+    val displayedVersions = HashMap(renderedVersions)
     refreshGeneration += 1
     val generation = refreshGeneration
 
@@ -200,12 +219,13 @@ class MapOverlayController(
   }
 
   private fun applyDiff(
-    diff: MarkerRenderDiff,
+    incoming: MarkerRenderDiff,
     animateEntering: Boolean = true,
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
   ) {
     val map = googleMap ?: return
 
+    val diff = markerViews.consume(incoming)
     for (key in diff.removedKeys) {
       cancelEnteringAnimation(key)
       markers.remove(key)?.remove()
@@ -377,6 +397,14 @@ class MapOverlayController(
   }
 
   private fun applyMarkersSync(descriptors: Array<MarkerDescriptor>) {
+    if (descriptors.any { it.customViewId != null } || markerViews.versions.isNotEmpty()) {
+      cancelIdleRefresh()
+      cancelLiveRefresh()
+      refreshGeneration += 1
+      applyDiff(computeMarkerRenderDiff(descriptors.map { ClusterElement.Single(it) }, renderedVersions))
+      return
+    }
+
     val map = googleMap ?: return
     refreshGeneration += 1
     cancelIdleRefresh()

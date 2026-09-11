@@ -20,6 +20,8 @@ protocol MapProviderAdapter: AnyObject {
   var customMapStyle: String? { get set }
   var googleMapId: String? { get set }
   var clusteringEnabled: Bool? { get set }
+  var customClusterViews: Bool? { get set }
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? { get set }
   var mapPadding: EdgePadding? { get set }
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
@@ -71,6 +73,8 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Bool?
+  var customClusterViews: Bool?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?

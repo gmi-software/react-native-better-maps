@@ -23,6 +23,23 @@ final class MapOverlayController {
   private var displayedAnnotations: [String: MKAnnotation] = [:]
   private var displayedAnnotationVersions: [String: Int] = [:]
   private let markerPipeline = MarkerRenderPipeline()
+  private let markerViews = MarkerViewRenderRegistry()
+  private var renderedVersions: [String: Int] {
+    displayedAnnotationVersions.merging(markerViews.versions) { _, live in live }
+  }
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { markerViews.onChange }
+    set { markerViews.onChange = newValue }
+  }
+  func setCustomClusterViews(_ enabled: Bool) {
+    guard markerViews.customClusters != enabled else { return }
+    markerViews.customClusters = enabled
+    mapView?.removeAnnotations(Array(displayedAnnotations.values))
+    displayedAnnotations.removeAll()
+    displayedAnnotationVersions.removeAll()
+    markerViews.reset()
+    reapplyMarkers()
+  }
   private var shapeOverlays: [String: MKOverlay] = [:]
   private var overlayStyles: [ObjectIdentifier: OverlayStyle] = [:]
 
@@ -46,6 +63,7 @@ final class MapOverlayController {
 
   func reset() {
     markerPipeline.reset()
+    markerViews.reset()
     guard let mapView else {
       return
     }
@@ -71,7 +89,7 @@ final class MapOverlayController {
     }
 
     markerPipeline.reapply(
-      displayedVersions: displayedAnnotationVersions,
+      displayedVersions: renderedVersions,
       region: mapView.region,
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -86,7 +104,7 @@ final class MapOverlayController {
       return
     }
     markerPipeline.refreshNow(
-      displayedVersions: displayedAnnotationVersions,
+      displayedVersions: renderedVersions,
       region: mapView.region,
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -102,7 +120,7 @@ final class MapOverlayController {
     }
 
     markerPipeline.scheduleViewportRefresh(
-      displayedVersions: displayedAnnotationVersions,
+      displayedVersions: renderedVersions,
       region: mapView.region,
       viewSize: mapView.bounds.size,
       immediate: immediate,
@@ -112,11 +130,12 @@ final class MapOverlayController {
     )
   }
 
-  private func applyDiff(_ diff: MarkerRenderDiff) {
+  private func applyDiff(_ incoming: MarkerRenderDiff) {
     guard let mapView else {
       return
     }
 
+    let diff = markerViews.consume(incoming)
     if !diff.removedKeys.isEmpty {
       let removed = diff.removedKeys.compactMap { key in
         displayedAnnotationVersions.removeValue(forKey: key)

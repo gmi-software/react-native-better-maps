@@ -38,7 +38,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('log', type=Path)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--suite', choices=['primary', 'control', 'selected'])
+    parser.add_argument('--suite', choices=['primary', 'control', 'selected', 'cluster'])
     parser.add_argument('--workload-version', type=int)
     args = parser.parse_args()
     rows = []

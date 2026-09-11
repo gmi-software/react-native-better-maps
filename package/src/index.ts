@@ -23,6 +23,7 @@ export type {
   MapViewProps,
   MapViewPropsForProvider,
   PoiPressEvent,
+  MarkerViewCluster,
   MarkerAnchor,
   MarkerImage,
   MarkerImageSource,

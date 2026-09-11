@@ -15,6 +15,8 @@ struct MapViewState {
   var showsScale: Bool?
   var customMapStyle: String?
   var googleMapId: String?
+  var customClusterViews: Bool?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)?
   var clusteringEnabled: Bool?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
@@ -50,6 +52,8 @@ struct MapViewState {
     adapter.showsScale = showsScale
     adapter.customMapStyle = customMapStyle
     adapter.googleMapId = googleMapId
+    adapter.customClusterViews = customClusterViews
+    adapter.onMarkerViewRenderState = onMarkerViewRenderState
     adapter.clusteringEnabled = clusteringEnabled
     adapter.mapPadding = mapPadding
     adapter.markerEnteringAnimation = markerEnteringAnimation

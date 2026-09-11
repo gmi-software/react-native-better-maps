@@ -34,7 +34,11 @@ type Mode =
   | 'live-transform'
   | 'live-layout'
   | 'overlay-transform'
-  | 'overlay-layout';
+  | 'overlay-layout'
+  | 'cluster-pins'
+  | 'cluster-static'
+  | 'cluster-transform'
+  | 'cluster-layout';
 const MODES: Mode[] = [
   'pins',
   'live-static',
@@ -42,6 +46,10 @@ const MODES: Mode[] = [
   'live-layout',
   'overlay-transform',
   'overlay-layout',
+  'cluster-pins',
+  'cluster-static',
+  'cluster-transform',
+  'cluster-layout',
 ];
 const PRIMARY_MODES: Mode[] = [
   'pins',
@@ -55,6 +63,12 @@ const CONTROL_MODES: Mode[] = [
   'overlay-layout',
   'live-layout',
 ];
+const CLUSTER_MODES: Mode[] = [
+  'cluster-pins',
+  'cluster-static',
+  'cluster-transform',
+  'cluster-layout',
+];
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -62,10 +76,14 @@ function Badge({
   progress,
   mode,
   index,
+  clusterCount,
+  onClusterPress,
 }: {
   progress: SharedValue<number>;
   mode: Mode;
   index: number;
+  clusterCount?: number;
+  onClusterPress?: () => Promise<void>;
 }) {
   const [presses, setPresses] = useState(0);
   const animation = useAnimatedStyle(() => {
@@ -77,13 +95,20 @@ function Badge({
   });
   return (
     <Pressable
-      accessibilityLabel={`Marker ${index}, presses ${presses}`}
-      onPress={() => setPresses((value) => value + 1)}
+      accessibilityLabel={
+        clusterCount == null
+          ? `Marker ${index}, presses ${presses}`
+          : `Cluster ${clusterCount} points`
+      }
+      onPress={() => {
+        if (onClusterPress) void onClusterPress();
+        else setPresses((value) => value + 1);
+      }}
       style={styles.badge}
     >
       <Animated.View style={[styles.glyph, animation]} />
       <Text style={styles.price}>
-        {presses > 0 ? `Tap ${presses}` : `$${100 + index}`}
+        {clusterCount ?? (presses > 0 ? `Tap ${presses}` : `$${100 + index}`)}
       </Text>
     </Pressable>
   );
@@ -92,8 +117,8 @@ function Badge({
 export default function MarkerViewBenchmark() {
   const map = useRef<MapViewRef>(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const [mode, setMode] = useState<Mode>('live-transform');
-  const [count, setCount] = useState(10);
+  const [mode, setMode] = useState<Mode>('cluster-transform');
+  const [count, setCount] = useState(200);
   const [mapGeneration, setMapGeneration] = useState(0);
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('Ready');
@@ -129,7 +154,9 @@ export default function MarkerViewBenchmark() {
           latitude: CENTER.latitude + ((i % 10) - 4.5) * 0.0005,
           longitude:
             CENTER.longitude +
-            (Math.floor(i / 10) - Math.floor(count / 20)) * 0.00065,
+            (Math.floor(i / 10) - Math.floor(count / 20)) *
+              0.00065 *
+              Math.min(1, 200 / count),
         },
         enteringAnimation: false as const,
       })),
@@ -137,11 +164,15 @@ export default function MarkerViewBenchmark() {
   );
   const children = useMemo(
     () =>
-      !mode.startsWith('live-')
+      !(
+        mode.startsWith('live-') ||
+        (mode.startsWith('cluster-') && mode !== 'cluster-pins')
+      )
         ? null
         : markers.map((marker, index) => (
             <MarkerView
               key={marker.id}
+              id={marker.id}
               coordinate={marker.coordinate}
               width={96}
               height={48}
@@ -152,24 +183,30 @@ export default function MarkerViewBenchmark() {
     [markers, mode, progress],
   );
 
-  async function run(kind: 'primary' | 'control' | 'selected' = 'primary') {
+  async function run(
+    kind: 'primary' | 'control' | 'selected' | 'cluster' = 'primary',
+  ) {
     if (running) return;
     setRunning(true);
     setMounted(true);
     try {
       // Alternating candidate order on repeated passes limits warmup/order bias.
       const cases =
-        kind === 'control'
-          ? CONTROL_MODES
-          : kind === 'selected'
-            ? [mode]
-            : PRIMARY_MODES;
+        kind === 'cluster'
+          ? CLUSTER_MODES
+          : kind === 'control'
+            ? CONTROL_MODES
+            : kind === 'selected'
+              ? [mode]
+              : PRIMARY_MODES;
       const sizes =
-        kind === 'control'
-          ? [200]
-          : kind === 'selected'
-            ? [count]
-            : [10, 50, 200];
+        kind === 'cluster'
+          ? [200, 1000]
+          : kind === 'control'
+            ? [200]
+            : kind === 'selected'
+              ? [count]
+              : [10, 50, 200];
       for (let pass = 0; pass < 3 && active.current; pass++) {
         for (const size of sizes) {
           for (const candidate of pass % 2 ? [...cases].reverse() : cases) {
@@ -192,6 +229,10 @@ export default function MarkerViewBenchmark() {
               await map.current?.animateCamera(
                 {
                   ...CAMERA,
+                  zoom:
+                    candidate.startsWith('cluster-') && (leg === 1 || leg === 2)
+                      ? 17
+                      : 14,
                   center: {
                     latitude: CENTER.latitude + (leg % 2 ? -0.001 : 0.001),
                     longitude: CENTER.longitude,
@@ -216,7 +257,8 @@ export default function MarkerViewBenchmark() {
             const row = {
               kind: 'marker-view-benchmark',
               suite: kind,
-              workloadVersion: 3,
+              workloadVersion: 4,
+              clusteringEnabled: candidate.startsWith('cluster-'),
               cameraAnimationSeconds: CAMERA_ANIMATION_SECONDS,
               cameraBefore,
               cameraAfter,
@@ -259,7 +301,30 @@ export default function MarkerViewBenchmark() {
           camera={CAMERA}
           markerEnteringAnimation={false}
           clusterEnteringAnimation={false}
-          markers={mode === 'pins' ? markers : undefined}
+          markers={
+            mode === 'pins' || mode === 'cluster-pins' ? markers : undefined
+          }
+          clusteringEnabled={mode.startsWith('cluster-')}
+          renderCluster={
+            mode.startsWith('cluster-') && mode !== 'cluster-pins'
+              ? (cluster) => (
+                  <MarkerView
+                    coordinate={cluster.coordinate}
+                    width={96}
+                    height={48}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                  >
+                    <Badge
+                      progress={progress}
+                      mode={mode}
+                      index={0}
+                      clusterCount={cluster.count}
+                      onClusterPress={cluster.onPress}
+                    />
+                  </MarkerView>
+                )
+              : undefined
+          }
           onPress={() => setMapPresses((value) => value + 1)}
         >
           {children}
@@ -289,7 +354,7 @@ export default function MarkerViewBenchmark() {
       <View style={styles.panel}>
         <Text>{status}</Text>
         <Text>
-          {mode}, {count} hosts, map presses {mapPresses}
+          {mode}, {count} points, map presses {mapPresses}
         </Text>
         <View style={styles.buttons}>
           <Pressable
@@ -346,6 +411,15 @@ export default function MarkerViewBenchmark() {
             style={styles.button}
           >
             <Text>Run selected</Text>
+          </Pressable>
+          <Pressable
+            disabled={running}
+            onPress={() => {
+              void run('cluster');
+            }}
+            style={styles.button}
+          >
+            <Text>Clusters</Text>
           </Pressable>
         </View>
       </View>

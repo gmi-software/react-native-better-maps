@@ -132,6 +132,16 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
+  var customClusterViews: Bool? {
+    get { getBacked(\.customClusterViews) }
+    set { setBackedOnMain(newValue, store: \.customClusterViews) { $0.customClusterViews = $1 } }
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { getBacked(\.onMarkerViewRenderState) }
+    set { setBackedOnMain(newValue, store: \.onMarkerViewRenderState) { $0.onMarkerViewRenderState = $1 } }
+  }
+
   var clusteringEnabled: Bool? {
     get { getBacked(\.clusteringEnabled) }
     set {

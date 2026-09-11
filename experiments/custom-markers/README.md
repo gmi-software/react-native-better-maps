@@ -93,3 +93,9 @@ python3 experiments/custom-markers/summarize-rn-benchmark.py /tmp/marker-view-be
 The raw file intentionally appends across runs and can survive app upgrades. Separate repeated runs before summarizing; the suite/version filters prevent mixing different workloads but do not identify individual runs. The summarizer rejects version-3 rows whose camera endpoint validation failed. Preserve raw samples, workload parameters, device/OS/build identity, and Instruments evidence before drawing a performance conclusion.
 
 The initial `iphone-15-pro-run-1.json` and `iphone-15-pro-control.json` used an incorrect camera duration of 1200 seconds. They are retained as faulty-workload diagnostics, **not moving-camera acceptance evidence**. Harness version 3 uses 1.2 seconds and saves camera endpoints. The v2 control separates transform and width properties and compares ordinary fixed screen overlays against geographic hosts.
+
+### Cluster workload (v4)
+
+The **Clusters** button runs three alternating passes of descriptor clusters and static/transform/layout JSX clusters at 200 and 1000 input points. Each route moves through zoom 14 → 17 → 17 → 14 while panning/rotating, exercising expansion and regrouping. At 1000 points the longitude spacing is reduced to keep the dataset footprint comparable to 200 points. Native endpoint host counts describe the rendered display set; the input count no longer equals mounted JSX views.
+
+Use `--suite cluster --workload-version 4` when extracting these runs. The renderer's cluster Pressable calls the supplied `onPress` helper to expand bounds. Separately verify expansion, individual interaction, regrouping, removal and provider replacement outside recorded timing windows. v3 results predate this integration and remain the unclustered design checkpoint.

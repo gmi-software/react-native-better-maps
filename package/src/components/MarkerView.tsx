@@ -6,7 +6,11 @@ import type { MarkerAnchor } from '../types/overlays';
 import { MapChildrenContext } from './MapChildrenContext';
 
 export interface MarkerViewProps {
+  /** Stable identity used in cluster membership and onClusterPress. */
+  id?: string;
   coordinate: Coordinate;
+  /** Defaults to true when clustering is enabled on the map. */
+  clusterable?: boolean;
   /** Fixed layout bounds in points/dp. Animate content inside these bounds. */
   width: number;
   height: number;
@@ -18,7 +22,8 @@ export interface MarkerViewProps {
 
 /**
  * A live, screen-aligned marker. Its JSX stays in Fabric; no snapshots or
- * per-frame JS camera updates are used. Does not participate in clustering.
+ * per-frame JS camera updates are used. Native clustering mounts only the
+ * visible display set; keep persistent application state outside the marker.
  */
 export function MarkerView({
   coordinate,
@@ -31,6 +36,24 @@ export function MarkerView({
   if (!isInsideMap) {
     throw new Error('MarkerView must be a child of MapView');
   }
+  validateMarkerViewProps({ coordinate, width, height, anchor, children });
+  return (
+    <NativeMarkerView
+      coordinate={coordinate}
+      anchor={anchor}
+      style={{ position: 'absolute', left: 0, top: 0, width, height }}
+    >
+      {children}
+    </NativeMarkerView>
+  );
+}
+
+export function validateMarkerViewProps({
+  coordinate,
+  width,
+  height,
+  anchor,
+}: MarkerViewProps) {
   if (
     !Number.isFinite(width) ||
     width <= 0 ||
@@ -57,13 +80,4 @@ export function MarkerView({
   ) {
     throw new Error('MarkerView anchor must contain finite values');
   }
-  return (
-    <NativeMarkerView
-      coordinate={coordinate}
-      anchor={anchor}
-      style={{ position: 'absolute', left: 0, top: 0, width, height }}
-    >
-      {children}
-    </NativeMarkerView>
-  );
 }

@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import type { MarkerViewProps } from '../components/MarkerView';
 import type { StyleProp, ViewStyle } from 'react-native';
 import type { Camera } from './camera';
 import type { Coordinate } from './coordinate';
@@ -38,12 +39,24 @@ export interface GooglePoiPressEvent {
 
 export type PoiPressEvent = ApplePoiPressEvent | GooglePoiPressEvent;
 
+export interface MarkerViewCluster {
+  id: string;
+  coordinate: Coordinate;
+  markerIds: string[];
+  count: number;
+  /** Calls onClusterPress and fits the native map to the cluster's bounds. */
+  onPress: () => Promise<void>;
+}
+
 /**
  * Props shared by all map providers.
  */
 interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
+
+  /** Render native clusters as a live MarkerView containing arbitrary JSX. */
+  renderCluster?: (cluster: MarkerViewCluster) => ReactElement<MarkerViewProps>;
 
   /** Initial or controlled region. */
   region?: Region;

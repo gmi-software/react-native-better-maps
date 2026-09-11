@@ -22,6 +22,8 @@ interface MapProviderAdapter {
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Boolean?
+  var customClusterViews: Boolean?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?

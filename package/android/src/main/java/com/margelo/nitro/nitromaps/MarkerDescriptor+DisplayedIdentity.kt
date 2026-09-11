@@ -4,6 +4,7 @@ package com.margelo.nitro.nitromaps
 internal fun MarkerDescriptor.displayedIdentityVersion(): Long =
   renderSignature(
     id,
+    customViewId,
     coordinate.latitude,
     coordinate.longitude,
     title,

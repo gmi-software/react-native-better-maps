@@ -32,7 +32,7 @@ The native spec carries `coordinate` and optional `anchor`; standard Fabric layo
 - iOS components explicitly forward Fabric mount/unmount into Swift containers. Hosts mount within the SDK surface so SDK map gestures remain ancestors; provider replacement preserves the existing Fabric hosts.
 - Android components use ViewGroup managers with separate Fabric child indexing. Native gesture dispatch gives descendants a chance to claim a gesture before forwarding unclaimed map gestures to the SDK surface.
 - The Nitrogen compatibility script validates generated patch targets and supports repeated execution without duplicate methods.
-- Fixed bounds define anchors, clipping, and touch regions. JSX order defines host order. Offscreen hosts are hidden; application-owned timers/worklet work are not automatically suspended.
+- Fixed bounds define anchors, clipping, and touch regions. JSX order defines host order. Offscreen hosts are hidden; the native display set unmounts clustered-away/filtered subtrees. External application timers still need cleanup.
 
 See the [public contract](../custom-marker-views.md) for exact API and limitations.
 
@@ -45,10 +45,14 @@ See the [public contract](../custom-marker-views.md) for exact API and limitatio
 
 ## Consequences and acceptance
 
-Live hosts do not participate in SDK clustering, collision, depth occlusion, dragging, callouts, or ground-plane rotation. Their explicit dimensions and finite number are part of the workload. The package cannot remove the intrinsic rendering cost of arbitrary user JSX.
+Live descriptors participate in the shared native cluster engine. Their Fabric hosts do not participate in SDK collision, depth occlusion, dragging, callouts, or ground-plane rotation. Their explicit dimensions and finite number are part of the workload. The package cannot remove the intrinsic rendering cost of arbitrary user JSX.
 
 The target is no material regression against the same provider/device baseline for an explicitly measured workload. Google iOS documents a 60 FPS maximum for its map renderer; a 120 Hz display callback does not override that limit. Provider acceptance must be separate.
 
-The first physical iPhone experiment retained near-120 Hz callback cadence for static hosts and the 10/50-marker animation cases, but 200 animated-layout markers regressed, as did transformed markers in the hottest pass. These callback results are not presented-frame evidence. The unrestricted 120 FPS condition is therefore not accepted. Follow-up controls compare identical JSX outside geographic hosts, and presentation/thermal traces remain required.
+The corrected v3 physical runs retained near-120 Hz callback cadence for static/transform hosts, while 200 animated-width hosts and the same JSX in ordinary overlays both fell to about 51–55 callbacks/s. Earlier duration-error runs are excluded from moving-camera acceptance. Actual surface traces did not establish a sustained 120 FPS map baseline in these device conditions. These are pre-clustering results; custom cluster expansion/collapse needs separate physical validation before accepting the performance condition.
 
 [Experiments and reproduction](../../experiments/custom-markers/README.md) · [Physical device results](../research/custom-marker-device-results.md)
+
+## Cluster integration
+
+Live marker descriptors share the existing native cluster engine with SDK markers. A render registry separates SDK objects from the visible Fabric display set. `renderCluster` supplies a live `MarkerView` for cluster badges; otherwise existing native badges remain available. Clustered-away React subtrees unmount to remove their animation/layout work. Persistent marker state therefore belongs in application data. The performance gate includes cluster expansion/collapse and fully expanded markers, not just a zoomed-out clustered screenshot.

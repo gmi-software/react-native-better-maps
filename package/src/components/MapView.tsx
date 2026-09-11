@@ -1,6 +1,11 @@
+import { MarkerView } from './MarkerView';
 import { MapChildrenContext } from './MapChildrenContext';
-import { collectMarkerViews } from '../overlays/collectMarkerViews';
+import { collectMarkerViewEntries } from '../overlays/collectMarkerViews';
+import { markerViewRenderStatesEqual } from '../overlays/markerViewRenderState';
 import {
+  cloneElement,
+  isValidElement,
+  useState,
   useCallback,
   useImperativeHandle,
   useMemo,
@@ -14,6 +19,7 @@ import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
   NativePoiPressEvent,
+  NativeMarkerViewRenderState,
 } from '../native/specs/MapView.nitro';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
@@ -41,6 +47,7 @@ export function MapView({
   ref,
   style,
   children,
+  renderCluster,
   provider,
   googleMapId,
   region,
@@ -77,7 +84,24 @@ export function MapView({
   onCirclePress: onCirclePressProp,
 }: MapViewProps & { ref?: Ref<MapViewRef> }) {
   const resolvedProvider = resolveMapProvider(provider);
-  const markerViews = useMemo(() => collectMarkerViews(children), [children]);
+  const markerViewEntries = useMemo(
+    () => collectMarkerViewEntries(children),
+    [children],
+  );
+  const [markerViewState, setMarkerViewState] =
+    useState<NativeMarkerViewRenderState | null>(null);
+  const handleMarkerViewRenderState = useCallback(
+    (state: NativeMarkerViewRenderState) => {
+      setMarkerViewState((previous) =>
+        markerViewRenderStatesEqual(previous, state) ? previous : state,
+      );
+    },
+    [],
+  );
+  const markerViewRenderCallback = useMemo(
+    () => callback(handleMarkerViewRenderState),
+    [handleMarkerViewRenderState],
+  );
   const hybridRef = useRef<NativeMapViewHybrid>(null);
   const {
     markers: collectedMarkers,
@@ -99,6 +123,77 @@ export function MapView({
 
   const markers =
     normalizedBulkMarkers != null ? normalizedBulkMarkers : collectedMarkers;
+  const nativeMarkers = useMemo(() => {
+    if (markerViewEntries.length === 0) return markers;
+    const ids = new Set(markers.map((marker) => marker.id));
+    const liveDescriptors = markerViewEntries.map(
+      ({ markerId, viewId, element }) => {
+        if (ids.has(markerId))
+          throw new Error(`Duplicate map marker id: ${markerId}`);
+        ids.add(markerId);
+        return {
+          id: markerId,
+          customViewId: viewId,
+          coordinate: element.props.coordinate,
+          clusterable: element.props.clusterable,
+        };
+      },
+    );
+    return [...markers, ...liveDescriptors];
+  }, [markers, markerViewEntries]);
+  const visibleMarkerViews = useMemo(() => {
+    const ids = new Set(markerViewState?.markerViewIds);
+    return markerViewEntries
+      .filter((entry) => ids.has(entry.viewId))
+      .map((entry) => entry.element);
+  }, [markerViewState, markerViewEntries]);
+  const clusterViews = useMemo(() => {
+    if (!renderCluster || clusteringEnabled !== true) return [];
+    return (markerViewState?.clusters ?? []).map((cluster) => {
+      const element = renderCluster({
+        id: cluster.id,
+        coordinate: cluster.coordinate,
+        markerIds: cluster.markerIds,
+        count: cluster.markerIds.length,
+        onPress: () => {
+          onClusterPress?.(cluster.markerIds, cluster.coordinate);
+          const bounds = cluster.region;
+          const wrap = (longitude: number) =>
+            ((((longitude + 180) % 360) + 360) % 360) - 180;
+          return withHybridRef(hybridRef, (hybrid) =>
+            hybrid.fitToCoordinates(
+              [
+                {
+                  latitude: Math.max(
+                    -90,
+                    bounds.latitude - bounds.latitudeDelta / 2,
+                  ),
+                  longitude: wrap(bounds.longitude - bounds.longitudeDelta / 2),
+                },
+                {
+                  latitude: Math.min(
+                    90,
+                    bounds.latitude + bounds.latitudeDelta / 2,
+                  ),
+                  longitude: wrap(bounds.longitude + bounds.longitudeDelta / 2),
+                },
+              ],
+              { top: 32, right: 32, bottom: 32, left: 32 },
+              true,
+            ),
+          );
+        },
+      });
+      if (!isValidElement(element) || element.type !== MarkerView) {
+        throw new Error('renderCluster must return a MarkerView');
+      }
+      return cloneElement(element, {
+        key: `cluster:${cluster.id}`,
+        coordinate: cluster.coordinate,
+      });
+    });
+  }, [renderCluster, clusteringEnabled, markerViewState, onClusterPress]);
+
   const polylines = polylinesProp != null ? polylinesProp : collectedPolylines;
   const polygons = polygonsProp != null ? polygonsProp : collectedPolygons;
   const circles = circlesProp != null ? circlesProp : collectedCircles;
@@ -238,6 +333,12 @@ export function MapView({
         showsScale={showsScale}
         customMapStyle={customMapStyle}
         clusteringEnabled={clusteringEnabled}
+        customClusterViews={renderCluster != null}
+        onMarkerViewRenderState={
+          markerViewEntries.length > 0 || renderCluster != null
+            ? markerViewRenderCallback
+            : undefined
+        }
         mapPadding={mapPadding}
         markerEnteringAnimation={normalizeEnteringAnimation(
           markerEnteringAnimation,
@@ -245,7 +346,7 @@ export function MapView({
         clusterEnteringAnimation={normalizeEnteringAnimation(
           clusterEnteringAnimation,
         )}
-        markers={markers}
+        markers={nativeMarkers}
         polylines={polylines}
         polygons={polygons}
         circles={circles}
@@ -278,7 +379,8 @@ export function MapView({
           hasCirclePressHandler ? callback(handleCirclePress) : undefined
         }
       >
-        {markerViews}
+        {visibleMarkerViews}
+        {clusterViews}
       </NativeMapView>
     </MapChildrenContext.Provider>
   );

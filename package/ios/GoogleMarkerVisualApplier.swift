@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import GoogleMaps
 import UIKit
 
@@ -147,3 +148,4 @@ final class GoogleMarkerVisualApplier {
     return Self.defaultPinImage.size
   }
 }
+#endif

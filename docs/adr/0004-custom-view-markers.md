@@ -2,146 +2,57 @@
 
 ## Status
 
-Proposed
+Proposed — live-host implementation available; performance acceptance remains open.
 
 ## Context
 
-Today markers are **serialized descriptors**, not React Native child views. `<Marker />`
-returns `null`; its props are collected in `MapView.tsx` into `MarkerDescriptor[]` and
-passed as a single prop on the `MapView` HybridView. Native code renders SDK objects
-(`MKAnnotation` / `MKAnnotationView` on Apple, bitmap-backed `GMSMarker` on Google).
-Appearance customization is limited to a **bitmap image** (`MarkerDescriptor.image`); any
-`children` passed to `<Marker>` are ignored.
+`Marker` elements are serialized descriptors. Their native SDK objects support images, clustering, dragging, and callouts, but their JSX children are not mounted. The requested custom-marker contract includes arbitrary live React Native JSX and internal animations while preserving map smoothness.
 
-`react-native-maps` supports `<Marker>{arbitraryJSX}</Marker>`, where children are real RN
-views. This is a fundamentally different rendering model from the current bulk-descriptor
-pipeline and is a common migration blocker.
+The earlier proposal used live MapKit annotation views and snapshots on Google. That does not preserve interactive animated JSX across providers. Google iOS `iconView` uses snapshots, and Android's advanced-marker view API has separate renderer and performance constraints. A native projected overlay is a distinct alternative to those SDK icon APIs. See the [SDK source investigation](../research/custom-marker-sdk-sources.md).
 
-### Platform constraint (the crux)
+The optimized UIKit experiment exceeded the entire 8.33 ms interval when taking 50 simple layer snapshots in a batch. This is simulator CPU evidence against capturing every animated marker on every frame, not a measured Google SDK cost or a device FPS claim.
 
-| Platform / SDK | Can a marker be a "live" view? |
-| --- | --- |
-| **Apple MapKit** | Yes — `MKAnnotationView` can host any `UIView` (live, interactive RN views) |
-| **Google Maps (iOS + Android)** | No — the marker icon is a **bitmap only**; a view must be snapshotted to a bitmap and re-snapshotted on change |
+## Proposed decision
 
-`react-native-maps` handles this by hosting a live view on MapKit and snapshotting children
-to a bitmap on Google Maps. Any solution here must accept the same asymmetry.
-
-## Decision
-
-Add custom-view markers as a **separate, opt-in capability** alongside — not replacing —
-the existing descriptor pipeline. These are two distinct contracts:
-
-- `<Marker image=... />` — the high-throughput bulk path (hundreds/thousands of markers,
-  bitmaps, clustering, viewport culling). Unchanged.
-- `<MarkerView coordinate=...>{JSX}</MarkerView>` — a new opt-in, heavier path for a
-  bounded number of custom-view markers.
-
-Rendering follows **Option C (hybrid)**: live views where the SDK allows (MapKit),
-bitmap snapshot where it does not (Google Maps on both iOS and Android). The public API is
-identical across platforms; only the native implementation differs per backend.
-
-Keeping these as separate types (rather than adding `children` + nullable fields to the
-existing `Marker` descriptor) follows the API-design rule of splitting distinct workflows
-into distinct types instead of overloading one object.
-
-### Considered alternatives
-
-- **Option A — snapshot only (JS/view-shot → existing `image` pipeline).** Fastest,
-  cross-platform, reuses clustering. But static: no live interactivity/animation, every
-  content change requires a re-snapshot. Adopted as the **Phase 1 MVP**, not the end state.
-- **Option B — live native subviews everywhere.** Not possible on Google Maps (bitmap-only
-  icons); would require manually positioned overlay views with z-order/gesture problems.
-- **Option C — hybrid (chosen).** Live on MapKit, snapshot on Google. Closest to
-  `react-native-maps` behavior with the least fighting against each SDK.
-
-## Proposed API
-
-### Nitro spec (new HybridView)
-
-```typescript
-// package/src/native/specs/MarkerView.nitro.ts
-import type { HybridView, HybridViewMethods, HybridViewProps } from 'react-native-nitro-modules'
-import type { Coordinate } from '../../types/coordinate'
-import type { MarkerAnchor, MarkerPoint } from './overlays'
-
-export interface MarkerViewProps extends HybridViewProps {
-  coordinate: Coordinate
-  anchor?: MarkerAnchor
-  centerOffset?: MarkerPoint
-  draggable?: boolean
-  /**
-   * Rendering strategy on backends that support live views (MapKit).
-   * Google Maps always snapshots (SDK limitation).
-   * @default 'auto'
-   */
-  renderMode?: 'auto' | 'snapshot'
-  zIndex?: number
-}
-
-export interface MarkerViewMethods extends HybridViewMethods {
-  /** Force a re-snapshot on bitmap backends after child content changes. */
-  redraw(): Promise<void>
-}
-
-export type MarkerView = HybridView<MarkerViewProps, MarkerViewMethods>
-```
-
-Add a `MarkerView` autolinking entry to `nitro.json` (separate `HybridMarkerView`
-implementation class on iOS and Android).
-
-### React usage
+Add `MarkerView` as a separate live Fabric component. Keep `Marker` descriptors for SDK annotation features and large static datasets.
 
 ```tsx
 <MapView>
-  <MarkerView coordinate={{ latitude, longitude }} onPress={...}>
-    <View style={styles.bubble}>
-      <Text>Custom!</Text>
-    </View>
+  <MarkerView coordinate={{ latitude, longitude }} width={96} height={48}>
+    <Pressable onPress={selectPlace}>
+      <Animated.View style={animatedStyle} />
+      <Text>Custom content</Text>
+    </Pressable>
   </MarkerView>
 </MapView>
 ```
 
-`<MarkerView>` is a real Nitro HybridView (`getHostComponent`) that renders its children
-natively — unlike the null-rendering `<Marker>`.
+The native spec carries `coordinate` and optional `anchor`; standard Fabric layout receives explicit width and height. Child state and animations remain in React Native. Camera movement projects coordinates and moves the outer native host on the UI thread. It does not serialize child content, capture bitmaps, or send screen positions through JavaScript.
 
-## Implementation plan (phased)
+- iOS components explicitly forward Fabric mount/unmount into Swift containers. Hosts mount within the SDK surface so SDK map gestures remain ancestors; provider replacement preserves the existing Fabric hosts.
+- Android components use ViewGroup managers with separate Fabric child indexing. Native gesture dispatch gives descendants a chance to claim a gesture before forwarding unclaimed map gestures to the SDK surface.
+- The Nitrogen compatibility script validates generated patch targets and supports repeated execution without duplicate methods.
+- Fixed bounds define anchors, clipping, and touch regions. JSX order defines host order. Offscreen hosts are hidden; the native display set unmounts clustered-away/filtered subtrees. External application timers still need cleanup.
 
-### Phase 0 — quick win (independent)
+See the [public contract](../custom-marker-views.md) for exact API and limitations.
 
-Done: iOS Google applies `MarkerDescriptor` image, anchor, centerOffset, rotation, flat,
-and opacity so `<Marker image>` is consistent across MapKit, iOS Google, and Android Google.
+## Alternatives
 
-### Phase 1 — MVP custom views (Option A)
+- **Snapshot all JSX:** reuses the descriptor/image path, but changes live animation and interaction semantics and introduces repeated capture/upload cost.
+- **SDK annotation hosts / Google icon views:** retain more SDK marker features, but have different ownership, snapshot, and interaction behavior across providers.
+- **Native projected live hosts:** preserve live Fabric content and avoid snapshot work, at the cost of explicit projection, mounting, gestures, and clipping. This is the implemented prototype.
+- **Per-frame JavaScript screen projection:** adds camera events and many JS/native updates to the frame path; excluded from this design.
 
-- Add `children` support that renders off-screen and snapshots to a bitmap (prefer a native
-  snapshot; `react-native-view-shot` optional), feeding the existing
-  `MarkerDescriptor.image` pipeline. Delivers working cross-platform custom markers quickly.
+## Consequences and acceptance
 
-### Phase 2 — full `MarkerView` (Option C)
+Live descriptors participate in the shared native cluster engine. Their Fabric hosts do not participate in SDK collision, depth occlusion, dragging, callouts, or ground-plane rotation. Their explicit dimensions and finite number are part of the workload. The package cannot remove the intrinsic rendering cost of arbitrary user JSX.
 
-- New `MarkerView` Nitro HybridView hosting the RN child subtree natively.
-- `MapView` native code detects mounted child `MarkerView`s in its native view hierarchy.
-- **iOS Apple / MapKit:** embed the live hosted `UIView` in an `MKAnnotationView`; reuse
-  existing anchor/center-offset logic.
-- **iOS Google + Android Google:** snapshot the hosted view to a bitmap
-  (`UIGraphicsImageRenderer` / `Canvas`+`Bitmap`) → `GMSMarker.icon` / `BitmapDescriptor`;
-  re-snapshot on `redraw()` or layout change. Reuse `MarkerIconFactory` (Android).
-- Implement `prepareForRecycle` (state reset) and `memorySize` (bitmaps) on the hosts.
-- Follow native code rules: `final` classes, one top-level type per file, converters in
-  their own extension files.
+The target is no material regression against the same provider/device baseline for an explicitly measured workload. Google iOS documents a 60 FPS maximum for its map renderer; a 120 Hz display callback does not override that limit. Provider acceptance must be separate.
 
-## Open items to verify before Phase 2
+The corrected v3 physical runs retained near-120 Hz callback cadence for static/transform hosts, while 200 animated-width hosts and the same JSX in ordinary overlays both fell to about 51–55 callbacks/s. Earlier duration-error runs are excluded from moving-camera acceptance. Actual surface traces did not establish a sustained 120 FPS map baseline in these device conditions. These are pre-clustering results; custom cluster expansion/collapse needs separate physical validation before accepting the performance condition.
 
-- Confirm, against **current** Nitrogen docs/source, the supported model for HybridView
-  `children` and for mounting child views into the parent map's native hierarchy (do not
-  rely on remembered API details).
+[Experiments and reproduction](../../experiments/custom-markers/README.md) · [Physical device results](../research/custom-marker-device-results.md)
 
-## Consequences
+## Cluster integration
 
-- The existing bulk descriptor + clustering path is untouched; custom views are additive.
-- Behavior is asymmetric by necessity: live/interactive on MapKit, static bitmap on Google
-  Maps. `renderMode` and `redraw()` make the snapshot semantics explicit.
-- Custom-view markers are intended for a bounded count; large marker sets should keep using
-  the descriptor/image path.
-- Enables a smoother migration path from `react-native-maps` for view-backed markers.
+Live marker descriptors share the existing native cluster engine with SDK markers. A render registry separates SDK objects from the visible Fabric display set. `renderCluster` supplies a live `MarkerView` for cluster badges; otherwise existing native badges remain available. Clustered-away React subtrees unmount to remove their animation/layout work. Persistent marker state therefore belongs in application data. The performance gate includes cluster expansion/collapse and fully expanded markers, not just a zoomed-out clustered screenshot.

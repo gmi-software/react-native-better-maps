@@ -1,6 +1,7 @@
 export {
   MapView,
   Marker,
+  MarkerView,
   Polyline,
   Polygon,
   Circle,
@@ -22,6 +23,7 @@ export type {
   MapViewProps,
   MapViewPropsForProvider,
   PoiPressEvent,
+  MarkerViewCluster,
   MarkerAnchor,
   MarkerImage,
   MarkerImageSource,
@@ -46,3 +48,5 @@ export type {
 } from './types';
 
 export { regionFromCoordinate, distanceBetween } from './utils';
+
+export type { MarkerViewProps } from './components/MarkerView';

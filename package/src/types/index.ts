@@ -10,6 +10,7 @@ export type {
   MapViewProps,
   MapViewPropsForProvider,
   PoiPressEvent,
+  MarkerViewCluster,
 } from './map';
 export type {
   MarkerAnchor,

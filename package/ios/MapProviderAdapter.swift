@@ -3,6 +3,8 @@ import UIKit
 
 protocol MapProviderAdapter: AnyObject {
   var contentView: UIView { get }
+  var onCameraMoved: (() -> Void)? { get set }
+  func projectMarker(_ coordinate: Coordinate) -> CGPoint?
 
   var mapType: MapType { get set }
   var region: Region? { get set }
@@ -18,6 +20,8 @@ protocol MapProviderAdapter: AnyObject {
   var customMapStyle: String? { get set }
   var googleMapId: String? { get set }
   var clusteringEnabled: Bool? { get set }
+  var customClusterViews: Bool? { get set }
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? { get set }
   var mapPadding: EdgePadding? { get set }
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
@@ -51,6 +55,8 @@ protocol MapProviderAdapter: AnyObject {
 
 final class UnavailableMapProviderAdapter: MapProviderAdapter {
   let contentView: UIView
+  var onCameraMoved: (() -> Void)?
+  func projectMarker(_ coordinate: Coordinate) -> CGPoint? { nil }
   private let error: Error
 
   var mapType: MapType = .standard
@@ -67,6 +73,8 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Bool?
+  var customClusterViews: Bool?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?

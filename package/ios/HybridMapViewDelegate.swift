@@ -30,6 +30,7 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     let point = recognizer.location(in: parent.view)
+    if (parent.view.superview as? NitroMapContainerView)?.containsMarker(at: point) == true { return }
     if parent.notifyOverlayPress(at: point) {
       return
     }
@@ -58,7 +59,19 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     let point = recognizer.location(in: parent.view)
+    if (parent.view.superview as? NitroMapContainerView)?.containsMarker(at: point) == true { return }
     parent.notifyLongPress(at: point)
+  }
+
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldReceive touch: UITouch
+  ) -> Bool {
+    guard let mapView = parent?.view,
+          let container = mapView.superview as? NitroMapContainerView else { return true }
+    // Reject before recognition: returning early from handleTap still cancels
+    // the child's touch sequence when UIKit recognizes this tap.
+    return !container.containsMarker(at: touch.location(in: mapView))
   }
 
   func gestureRecognizer(
@@ -79,11 +92,16 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     return false
   }
 
+  func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+    parent?.onCameraMoved?()
+  }
+
   func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
     parent?.handleRegionWillChange(userInteracting: mapView.isUserInteracting)
   }
 
   func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+    parent?.onCameraMoved?()
     parent?.handleRegionDidChange()
   }
 

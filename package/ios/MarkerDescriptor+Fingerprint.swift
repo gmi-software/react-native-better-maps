@@ -2,6 +2,7 @@ extension MarkerDescriptor {
   /// Combines optionals as-is so `nil` stays distinguishable from a present value.
   private func hashDisplayedIdentity(into hasher: inout Hasher) {
     hasher.combine(id)
+    hasher.combine(customViewId)
     hasher.combine(coordinate.latitude)
     hasher.combine(coordinate.longitude)
     hasher.combine(title)

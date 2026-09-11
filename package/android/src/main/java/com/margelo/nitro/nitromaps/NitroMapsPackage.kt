@@ -6,6 +6,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.model.ReactModuleInfoProvider
 import com.facebook.react.uimanager.ViewManager
 import com.margelo.nitro.nitromaps.views.HybridMapViewManager
+import com.margelo.nitro.nitromaps.views.HybridMarkerViewManager
 
 /**
  * React Native package that registers the `MapView` Nitro HybridView's view
@@ -21,7 +22,7 @@ class NitroMapsPackage : BaseReactPackage() {
   }
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
-    return listOf(HybridMapViewManager())
+    return listOf(HybridMapViewManager(), HybridMarkerViewManager())
   }
 
   companion object {

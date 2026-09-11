@@ -102,6 +102,18 @@ export interface NativePoiPressEvent {
   placeId?: string;
 }
 
+export interface NativeMarkerViewCluster {
+  id: string;
+  coordinate: Coordinate;
+  markerIds: string[];
+  region: Region;
+}
+
+export interface NativeMarkerViewRenderState {
+  markerViewIds: string[];
+  clusters: NativeMarkerViewCluster[];
+}
+
 /**
  * Native props for the {@linkcode MapView} Nitro HybridView.
  *
@@ -156,6 +168,12 @@ export interface MapViewProps extends HybridViewProps {
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
+
+  /** Use live Fabric hosts for cluster badges. */
+  customClusterViews?: boolean;
+
+  /** Emitted only when the native display set changes, not for camera frames. */
+  onMarkerViewRenderState?: (state: NativeMarkerViewRenderState) => void;
 
   /** Padding applied to map edges, in density-independent pixels. */
   mapPadding?: EdgePadding;
@@ -238,7 +256,7 @@ export interface MapViewMethods extends HybridViewMethods {
    */
   applyCamera(camera: Camera): Promise<void>;
 
-  /** Animates the camera to the given position. */
+  /** Animates the camera to the given position. Duration is in seconds. */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */

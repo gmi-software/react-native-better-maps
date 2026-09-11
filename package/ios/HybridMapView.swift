@@ -2,7 +2,7 @@ import NitroModules
 import UIKit
 
 final class HybridMapView: HybridMapViewSpec {
-  private let containerView = UIView()
+  private let containerView = NitroMapContainerView()
   private let lifecycleLock = NSLock()
   private let stateLock = NSLock()
   private var adapter: MapProviderAdapter?
@@ -130,6 +130,16 @@ final class HybridMapView: HybridMapViewSpec {
         installAdapter(for: withStateLock { self._state.provider })
       }
     }
+  }
+
+  var customClusterViews: Bool? {
+    get { getBacked(\.customClusterViews) }
+    set { setBackedOnMain(newValue, store: \.customClusterViews) { $0.customClusterViews = $1 } }
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { getBacked(\.onMarkerViewRenderState) }
+    set { setBackedOnMain(newValue, store: \.onMarkerViewRenderState) { $0.onMarkerViewRenderState = $1 } }
   }
 
   var clusteringEnabled: Bool? {
@@ -293,6 +303,8 @@ final class HybridMapView: HybridMapViewSpec {
       }
 
       recycleLifecycle()
+      containerView.projectCoordinate = nil
+      containerView.mapSurface = nil
       adapter?.prepareForRecycle()
       adapter?.contentView.removeFromSuperview()
       adapter = nil
@@ -362,11 +374,19 @@ final class HybridMapView: HybridMapViewSpec {
   private func installAdapter(for provider: MapProvider) {
     precondition(Thread.isMainThread)
 
+    containerView.projectCoordinate = nil
+    containerView.mapSurface = nil
     adapter?.prepareForRecycle()
     adapter?.contentView.removeFromSuperview()
 
     let nextAdapter = makeAdapter(for: provider)
     adapter = nextAdapter
+    containerView.projectCoordinate = { [weak nextAdapter] coordinate in
+      nextAdapter?.projectMarker(coordinate)
+    }
+    nextAdapter.onCameraMoved = { [weak containerView] in
+      containerView?.updateMarkerPositions()
+    }
     attach(contentView: nextAdapter.contentView)
     syncState(to: nextAdapter)
   }
@@ -396,7 +416,8 @@ final class HybridMapView: HybridMapViewSpec {
 
   private func attach(contentView: UIView) {
     contentView.translatesAutoresizingMaskIntoConstraints = false
-    containerView.addSubview(contentView)
+    containerView.mapSurface = contentView
+    containerView.insertSubview(contentView, at: 0)
     NSLayoutConstraint.activate([
       contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
       contentView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),

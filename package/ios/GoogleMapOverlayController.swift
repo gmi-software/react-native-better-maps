@@ -35,6 +35,20 @@ final class GoogleMapOverlayController {
   private var polygons: [String: GMSPolygon] = [:]
   private var circles: [String: GMSCircle] = [:]
   private let markerPipeline: MarkerRenderPipeline
+  private let markerViews = MarkerViewRenderRegistry()
+  private var renderedVersions: [String: Int] {
+    markerVersions.merging(markerViews.versions) { _, live in live }
+  }
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { markerViews.onChange }
+    set { markerViews.onChange = newValue }
+  }
+  func setCustomClusterViews(_ enabled: Bool) {
+    guard markerViews.customClusters != enabled else { return }
+    markerViews.customClusters = enabled
+    clearMarkers()
+    reapplyMarkers()
+  }
   private let visualApplier = GoogleMarkerVisualApplier()
   private var clusterIconCache: [String: UIImage] = [:]
 
@@ -86,7 +100,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.refreshNow(
-      displayedVersions: markerVersions,
+      displayedVersions: renderedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -109,7 +123,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.scheduleViewportRefresh(
-      displayedVersions: markerVersions,
+      displayedVersions: renderedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       immediate: immediate,
@@ -198,7 +212,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.reapply(
-      displayedVersions: markerVersions,
+      displayedVersions: renderedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -208,7 +222,7 @@ final class GoogleMapOverlayController {
   }
 
   private func applyDiff(
-    _ diff: MarkerRenderDiff,
+    _ incoming: MarkerRenderDiff,
     animateEntering: Bool = true,
     animationBudget: Int = maximumAnimatedMarkersPerDiff
   ) {
@@ -216,6 +230,7 @@ final class GoogleMapOverlayController {
       return
     }
 
+    let diff = markerViews.consume(incoming)
     for key in diff.removedKeys {
       markers.removeValue(forKey: key)?.map = nil
       markerVersions.removeValue(forKey: key)
@@ -365,6 +380,7 @@ final class GoogleMapOverlayController {
   }
 
   private func clearMarkers() {
+    markerViews.reset()
     for marker in markers.values {
       marker.map = nil
     }

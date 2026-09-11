@@ -125,6 +125,13 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   var googleMapId: String?
 
+  var customClusterViews: Bool? {
+    didSet { overlayController.setCustomClusterViews(customClusterViews == true) }
+  }
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    didSet { overlayController.onMarkerViewRenderState = onMarkerViewRenderState }
+  }
+
   var clusteringEnabled: Bool? {
     didSet {
       overlayController.setClusteringEnabled(clusteringEnabled == true)
@@ -147,6 +154,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     didSet {
       overlayController.clusterEnteringAnimation = clusterEnteringAnimation
     }
+  }
+
+  var onCameraMoved: (() -> Void)?
+
+  func projectMarker(_ coordinate: Coordinate) -> CGPoint? {
+    view.convert(coordinate.toCLLocationCoordinate2D(), toPointTo: view)
   }
 
   var onRegionChange: ((Region) -> Void)?
@@ -406,6 +419,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     isUserRegionChange = false
     isMapReady = false
     hasDeliveredMapReady = false
+    onCameraMoved = nil
     onRegionChange = nil
     onRegionChangeComplete = nil
     onMapReady = nil
@@ -418,6 +432,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     onPolygonPress = nil
     onCirclePress = nil
     onClusterPress = nil
+    onMarkerViewRenderState = nil
     markers = nil
     polylines = nil
     polygons = nil
@@ -437,6 +452,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     customMapStyle = nil
     googleMapId = nil
     clusteringEnabled = nil
+    customClusterViews = nil
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil

@@ -1,0 +1,1055 @@
+{
+  "sourceCommit": "6343832",
+  "workloadVersion": 4,
+  "device": "isolated iPhone 17 Pro Max simulator",
+  "os": "iOS 26.5",
+  "provider": "MapKit",
+  "configuration": "Release",
+  "reportedMaximumHz": 60,
+  "purpose": "Functional clustering and camera-route validation. Not physical-device performance or presented-frame evidence.",
+  "limitations": [
+    "Intermediate zoom targets are exercised but only final camera endpoints are asserted.",
+    "Native host counts are endpoint measurements, not per-frame counts.",
+    "Host machine also ran other work. One recorded interval lasted 6.823 seconds; simulator timings are excluded from performance acceptance."
+  ],
+  "interactiveChecks": {
+    "clusterPress": "200-point custom cluster press expanded to individual markers; the zoomed viewport had no cluster badges.",
+    "markerPress": "Marker 83 press count changed from 0 to 1 while the map press count stayed 0.",
+    "completion": "24 cases completed; map press count 0; 24 custom cluster badges in final accessibility tree.",
+    "unmount": "Mount toggle removed all cluster/map accessibility entries; only benchmark controls remained."
+  },
+  "cases": [
+    {
+      "mode": "cluster-pins",
+      "count": 200,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6011.4990833099,
+      "environmentBefore": {
+        "os": "26.5",
+        "visibleMarkerViews": 0,
+        "lowPowerMode": false,
+        "applicationActive": true,
+        "thermalState": 0,
+        "mountedMarkerViews": 0
+      },
+      "environmentAfter": {
+        "applicationActive": true,
+        "os": "26.5",
+        "lowPowerMode": false,
+        "visibleMarkerViews": 0,
+        "thermalState": 0,
+        "mountedMarkerViews": 0
+      }
+    },
+    {
+      "mode": "cluster-static",
+      "count": 200,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6065.83358332864,
+      "environmentBefore": {
+        "applicationActive": true,
+        "thermalState": 0,
+        "mountedMarkerViews": 48,
+        "os": "26.5",
+        "lowPowerMode": false,
+        "visibleMarkerViews": 48
+      },
+      "environmentAfter": {
+        "applicationActive": true,
+        "thermalState": 0,
+        "mountedMarkerViews": 24,
+        "lowPowerMode": false,
+        "visibleMarkerViews": 22,
+        "os": "26.5"
+      }
+    },
+    {
+      "mode": "cluster-transform",
+      "count": 200,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6063.3725416555535,
+      "environmentBefore": {
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "mountedMarkerViews": 48,
+        "os": "26.5",
+        "applicationActive": true,
+        "visibleMarkerViews": 48
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "mountedMarkerViews": 24,
+        "os": "26.5",
+        "applicationActive": true,
+        "visibleMarkerViews": 22
+      }
+    },
+    {
+      "mode": "cluster-layout",
+      "count": 200,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6062.2295000066515,
+      "environmentBefore": {
+        "thermalState": 0,
+        "visibleMarkerViews": 48,
+        "applicationActive": true,
+        "os": "26.5",
+        "lowPowerMode": false,
+        "mountedMarkerViews": 48
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "applicationActive": true,
+        "os": "26.5",
+        "visibleMarkerViews": 22,
+        "lowPowerMode": false,
+        "mountedMarkerViews": 24
+      }
+    },
+    {
+      "mode": "cluster-pins",
+      "count": 1000,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6007.412666658638,
+      "environmentBefore": {
+        "thermalState": 0,
+        "mountedMarkerViews": 0,
+        "applicationActive": true,
+        "os": "26.5",
+        "visibleMarkerViews": 0,
+        "lowPowerMode": false
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "mountedMarkerViews": 0,
+        "applicationActive": true,
+        "os": "26.5",
+        "visibleMarkerViews": 0,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-static",
+      "count": 1000,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6070.638000004692,
+      "environmentBefore": {
+        "visibleMarkerViews": 48,
+        "applicationActive": true,
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "mountedMarkerViews": 48,
+        "os": "26.5"
+      },
+      "environmentAfter": {
+        "visibleMarkerViews": 23,
+        "os": "26.5",
+        "thermalState": 0,
+        "mountedMarkerViews": 24,
+        "applicationActive": true,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-transform",
+      "count": 1000,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6070.5380416766275,
+      "environmentBefore": {
+        "lowPowerMode": false,
+        "thermalState": 0,
+        "visibleMarkerViews": 48,
+        "os": "26.5",
+        "applicationActive": true,
+        "mountedMarkerViews": 48
+      },
+      "environmentAfter": {
+        "lowPowerMode": false,
+        "thermalState": 0,
+        "visibleMarkerViews": 23,
+        "os": "26.5",
+        "applicationActive": true,
+        "mountedMarkerViews": 24
+      }
+    },
+    {
+      "mode": "cluster-layout",
+      "count": 1000,
+      "pass": 0,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6067.25458332221,
+      "environmentBefore": {
+        "thermalState": 0,
+        "os": "26.5",
+        "mountedMarkerViews": 48,
+        "applicationActive": true,
+        "visibleMarkerViews": 48,
+        "lowPowerMode": false
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "os": "26.5",
+        "mountedMarkerViews": 24,
+        "applicationActive": true,
+        "visibleMarkerViews": 23,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-layout",
+      "count": 200,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6065.64070834429,
+      "environmentBefore": {
+        "mountedMarkerViews": 48,
+        "visibleMarkerViews": 48,
+        "thermalState": 0,
+        "applicationActive": true,
+        "lowPowerMode": false,
+        "os": "26.5"
+      },
+      "environmentAfter": {
+        "mountedMarkerViews": 24,
+        "visibleMarkerViews": 22,
+        "thermalState": 0,
+        "applicationActive": true,
+        "os": "26.5",
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-transform",
+      "count": 200,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6070.488541648956,
+      "environmentBefore": {
+        "os": "26.5",
+        "lowPowerMode": false,
+        "thermalState": 0,
+        "applicationActive": true,
+        "mountedMarkerViews": 48,
+        "visibleMarkerViews": 48
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "os": "26.5",
+        "visibleMarkerViews": 22,
+        "mountedMarkerViews": 24,
+        "applicationActive": true
+      }
+    },
+    {
+      "mode": "cluster-static",
+      "count": 200,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6066.4352500170935,
+      "environmentBefore": {
+        "os": "26.5",
+        "visibleMarkerViews": 48,
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "applicationActive": true,
+        "mountedMarkerViews": 48
+      },
+      "environmentAfter": {
+        "mountedMarkerViews": 24,
+        "visibleMarkerViews": 22,
+        "os": "26.5",
+        "applicationActive": true,
+        "lowPowerMode": false,
+        "thermalState": 0
+      }
+    },
+    {
+      "mode": "cluster-pins",
+      "count": 200,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6010.145249980269,
+      "environmentBefore": {
+        "visibleMarkerViews": 0,
+        "os": "26.5",
+        "applicationActive": true,
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "mountedMarkerViews": 0
+      },
+      "environmentAfter": {
+        "visibleMarkerViews": 0,
+        "os": "26.5",
+        "applicationActive": true,
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "mountedMarkerViews": 0
+      }
+    },
+    {
+      "mode": "cluster-layout",
+      "count": 1000,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6070.447000005515,
+      "environmentBefore": {
+        "mountedMarkerViews": 48,
+        "lowPowerMode": false,
+        "os": "26.5",
+        "visibleMarkerViews": 48,
+        "applicationActive": true,
+        "thermalState": 0
+      },
+      "environmentAfter": {
+        "mountedMarkerViews": 24,
+        "lowPowerMode": false,
+        "os": "26.5",
+        "visibleMarkerViews": 23,
+        "applicationActive": true,
+        "thermalState": 0
+      }
+    },
+    {
+      "mode": "cluster-transform",
+      "count": 1000,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6822.899833350675,
+      "environmentBefore": {
+        "thermalState": 0,
+        "os": "26.5",
+        "visibleMarkerViews": 48,
+        "applicationActive": true,
+        "mountedMarkerViews": 48,
+        "lowPowerMode": false
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "os": "26.5",
+        "applicationActive": true,
+        "visibleMarkerViews": 23,
+        "mountedMarkerViews": 24,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-static",
+      "count": 1000,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6079.998333327239,
+      "environmentBefore": {
+        "applicationActive": true,
+        "visibleMarkerViews": 48,
+        "mountedMarkerViews": 48,
+        "lowPowerMode": false,
+        "os": "26.5",
+        "thermalState": 0
+      },
+      "environmentAfter": {
+        "applicationActive": true,
+        "os": "26.5",
+        "visibleMarkerViews": 23,
+        "lowPowerMode": false,
+        "mountedMarkerViews": 24,
+        "thermalState": 0
+      }
+    },
+    {
+      "mode": "cluster-pins",
+      "count": 1000,
+      "pass": 1,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6014.580999995815,
+      "environmentBefore": {
+        "os": "26.5",
+        "visibleMarkerViews": 0,
+        "lowPowerMode": false,
+        "applicationActive": true,
+        "thermalState": 0,
+        "mountedMarkerViews": 0
+      },
+      "environmentAfter": {
+        "os": "26.5",
+        "visibleMarkerViews": 0,
+        "lowPowerMode": false,
+        "applicationActive": true,
+        "thermalState": 0,
+        "mountedMarkerViews": 0
+      }
+    },
+    {
+      "mode": "cluster-pins",
+      "count": 200,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6008.01925000269,
+      "environmentBefore": {
+        "mountedMarkerViews": 0,
+        "lowPowerMode": false,
+        "thermalState": 0,
+        "applicationActive": true,
+        "os": "26.5",
+        "visibleMarkerViews": 0
+      },
+      "environmentAfter": {
+        "applicationActive": true,
+        "lowPowerMode": false,
+        "thermalState": 0,
+        "mountedMarkerViews": 0,
+        "os": "26.5",
+        "visibleMarkerViews": 0
+      }
+    },
+    {
+      "mode": "cluster-static",
+      "count": 200,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6065.660791675327,
+      "environmentBefore": {
+        "applicationActive": true,
+        "os": "26.5",
+        "mountedMarkerViews": 48,
+        "lowPowerMode": false,
+        "visibleMarkerViews": 48,
+        "thermalState": 0
+      },
+      "environmentAfter": {
+        "applicationActive": true,
+        "os": "26.5",
+        "lowPowerMode": false,
+        "mountedMarkerViews": 24,
+        "visibleMarkerViews": 22,
+        "thermalState": 0
+      }
+    },
+    {
+      "mode": "cluster-transform",
+      "count": 200,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6065.691875002813,
+      "environmentBefore": {
+        "mountedMarkerViews": 48,
+        "os": "26.5",
+        "applicationActive": true,
+        "thermalState": 0,
+        "lowPowerMode": false,
+        "visibleMarkerViews": 48
+      },
+      "environmentAfter": {
+        "mountedMarkerViews": 24,
+        "os": "26.5",
+        "applicationActive": true,
+        "lowPowerMode": false,
+        "thermalState": 0,
+        "visibleMarkerViews": 22
+      }
+    },
+    {
+      "mode": "cluster-layout",
+      "count": 200,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6070.110625005327,
+      "environmentBefore": {
+        "applicationActive": true,
+        "os": "26.5",
+        "visibleMarkerViews": 48,
+        "thermalState": 0,
+        "mountedMarkerViews": 48,
+        "lowPowerMode": false
+      },
+      "environmentAfter": {
+        "applicationActive": true,
+        "os": "26.5",
+        "thermalState": 0,
+        "mountedMarkerViews": 24,
+        "visibleMarkerViews": 22,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-pins",
+      "count": 1000,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6009.8441666632425,
+      "environmentBefore": {
+        "mountedMarkerViews": 0,
+        "visibleMarkerViews": 0,
+        "os": "26.5",
+        "thermalState": 0,
+        "applicationActive": true,
+        "lowPowerMode": false
+      },
+      "environmentAfter": {
+        "visibleMarkerViews": 0,
+        "thermalState": 0,
+        "os": "26.5",
+        "mountedMarkerViews": 0,
+        "applicationActive": true,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-static",
+      "count": 1000,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6070.38245833246,
+      "environmentBefore": {
+        "os": "26.5",
+        "thermalState": 0,
+        "visibleMarkerViews": 48,
+        "mountedMarkerViews": 48,
+        "applicationActive": true,
+        "lowPowerMode": false
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "os": "26.5",
+        "visibleMarkerViews": 23,
+        "applicationActive": true,
+        "mountedMarkerViews": 24,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-transform",
+      "count": 1000,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6060.8458333299495,
+      "environmentBefore": {
+        "mountedMarkerViews": 48,
+        "thermalState": 0,
+        "os": "26.5",
+        "visibleMarkerViews": 48,
+        "applicationActive": true,
+        "lowPowerMode": false
+      },
+      "environmentAfter": {
+        "thermalState": 0,
+        "mountedMarkerViews": 24,
+        "os": "26.5",
+        "visibleMarkerViews": 23,
+        "applicationActive": true,
+        "lowPowerMode": false
+      }
+    },
+    {
+      "mode": "cluster-layout",
+      "count": 1000,
+      "pass": 2,
+      "cameraBefore": {
+        "center": {
+          "latitude": 52.229699999999994,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 0,
+        "pitch": 0,
+        "altitude": 2996.3187130528754
+      },
+      "cameraAfter": {
+        "center": {
+          "latitude": 52.22870000000001,
+          "longitude": 21.01220000000001
+        },
+        "zoom": 14,
+        "heading": 36,
+        "pitch": 0,
+        "altitude": 2996.386203923062
+      },
+      "cameraRouteCompleted": true,
+      "durationMs": 6064.618874981534,
+      "environmentBefore": {
+        "os": "26.5",
+        "lowPowerMode": false,
+        "mountedMarkerViews": 48,
+        "visibleMarkerViews": 48,
+        "thermalState": 0,
+        "applicationActive": true
+      },
+      "environmentAfter": {
+        "os": "26.5",
+        "lowPowerMode": false,
+        "applicationActive": true,
+        "visibleMarkerViews": 23,
+        "thermalState": 0,
+        "mountedMarkerViews": 24
+      }
+    }
+  ]
+}

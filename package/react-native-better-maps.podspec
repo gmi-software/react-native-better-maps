@@ -2,7 +2,7 @@ require 'json'
 
 package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
-def better_maps_podfile_properties
+better_maps_podfile_properties = lambda do
   installation_root = Pod::Config.instance.installation_root
   return {} if installation_root.nil?
 
@@ -15,10 +15,10 @@ rescue StandardError => e
   {}
 end
 
-def better_maps_ios_google_provider_enabled?
-  # Must match IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY in plugin/src/ios.ts
-  better_maps_podfile_properties['betterMaps.iosGoogleProvider'] == 'true'
-end
+# Local binding survives CocoaPods evaluating the podspec in its module scope.
+# Must match IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY in plugin/src/ios.ts.
+better_maps_ios_google_provider_enabled =
+  better_maps_podfile_properties.call['betterMaps.iosGoogleProvider'] == 'true'
 
 Pod::Spec.new do |s|
   s.name         = 'react-native-better-maps'
@@ -48,7 +48,7 @@ Pod::Spec.new do |s|
 
   s.dependency 'React-jsi'
   s.dependency 'React-callinvoker'
-  if better_maps_ios_google_provider_enabled?
+  if better_maps_ios_google_provider_enabled
     s.dependency 'GoogleMaps'
   end
 

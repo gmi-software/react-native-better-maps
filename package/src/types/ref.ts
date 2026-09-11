@@ -12,7 +12,7 @@ export interface MapViewRef {
   /** Sets the camera position immediately. */
   setCamera(camera: Camera): Promise<void>;
 
-  /** Animates the camera to the given position. */
+  /** Animate to a camera position; duration is in seconds. */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */

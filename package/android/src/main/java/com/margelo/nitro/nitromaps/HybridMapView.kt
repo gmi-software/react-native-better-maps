@@ -39,7 +39,7 @@ class HybridMapView(private val context: ThemedReactContext) :
   private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
 
-  override val view: FrameLayout = FrameLayout(context)
+  override val view = NitroMapContainerView(context)
 
   override var provider: MapProvider?
     get() = _provider
@@ -78,6 +78,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _scrollEnabled
     set(value) {
       _scrollEnabled = value
+      view.scrollGesturesEnabled = value != false
       adapter?.scrollEnabled = value
     }
 
@@ -85,6 +86,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _zoomEnabled
     set(value) {
       _zoomEnabled = value
+      updateMultiTouchGestures()
       adapter?.zoomEnabled = value
     }
 
@@ -92,6 +94,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _rotateEnabled
     set(value) {
       _rotateEnabled = value
+      updateMultiTouchGestures()
       adapter?.rotateEnabled = value
     }
 
@@ -99,8 +102,13 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _pitchEnabled
     set(value) {
       _pitchEnabled = value
+      updateMultiTouchGestures()
       adapter?.pitchEnabled = value
     }
+
+  private fun updateMultiTouchGestures() {
+    view.multiTouchGesturesEnabled = _zoomEnabled != false || _rotateEnabled != false || _pitchEnabled != false
+  }
 
   override var showsUserLocation: Boolean?
     get() = _showsUserLocation
@@ -147,6 +155,17 @@ class HybridMapView(private val context: ThemedReactContext) :
       if (_provider == MapProvider.GOOGLE && adapter != null) {
         installAdapter(_provider)
       }
+    }
+
+  override var customClusterViews: Boolean? = null
+    set(value) {
+      field = value
+      adapter?.customClusterViews = value
+    }
+  override var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)? = null
+    set(value) {
+      field = value
+      adapter?.onMarkerViewRenderState = value
     }
 
   override var clusteringEnabled: Boolean?
@@ -316,6 +335,8 @@ class HybridMapView(private val context: ThemedReactContext) :
     _region = null
     _camera = null
     _scrollEnabled = true
+    view.scrollGesturesEnabled = true
+    view.multiTouchGesturesEnabled = true
     _zoomEnabled = true
     _rotateEnabled = true
     _pitchEnabled = true
@@ -326,6 +347,8 @@ class HybridMapView(private val context: ThemedReactContext) :
     _customMapStyle = null
     _googleMapId = null
     _clusteringEnabled = null
+    customClusterViews = null
+    onMarkerViewRenderState = null
     _mapPadding = null
     _markerEnteringAnimation = null
     _clusterEnteringAnimation = null
@@ -359,6 +382,9 @@ class HybridMapView(private val context: ThemedReactContext) :
     adapter?.release()
     adapter?.view?.let(view::removeView)
     adapter = null
+    view.mapSurface = null
+    view.projectCoordinate = null
+    view.updateMarkerPositions()
   }
 
   private fun installAdapter(provider: MapProvider) {
@@ -367,6 +393,8 @@ class HybridMapView(private val context: ThemedReactContext) :
 
     releaseAdapter()
     adapter = nextAdapter
+    view.projectCoordinate = nextAdapter::projectMarker
+    nextAdapter.onCameraMoved = view::updateMarkerPositions
     attach(nextAdapter.view)
     syncState(nextAdapter)
   }
@@ -382,8 +410,10 @@ class HybridMapView(private val context: ThemedReactContext) :
   }
 
   private fun attach(contentView: View) {
+    view.mapSurface = contentView
     view.addView(
       contentView,
+      0,
       FrameLayout.LayoutParams(
         FrameLayout.LayoutParams.MATCH_PARENT,
         FrameLayout.LayoutParams.MATCH_PARENT,
@@ -406,6 +436,8 @@ class HybridMapView(private val context: ThemedReactContext) :
     adapter.showsScale = _showsScale
     adapter.customMapStyle = _customMapStyle
     adapter.googleMapId = _googleMapId
+    adapter.customClusterViews = customClusterViews
+    adapter.onMarkerViewRenderState = onMarkerViewRenderState
     adapter.clusteringEnabled = _clusteringEnabled
     adapter.markerEnteringAnimation = _markerEnteringAnimation
     adapter.clusterEnteringAnimation = _clusterEnteringAnimation

@@ -5,6 +5,8 @@ import com.margelo.nitro.core.Promise
 
 interface MapProviderAdapter {
   val view: View
+  var onCameraMoved: (() -> Unit)?
+  fun projectMarker(coordinate: Coordinate): android.graphics.Point?
 
   var mapType: MapType
   var region: Region?
@@ -20,6 +22,8 @@ interface MapProviderAdapter {
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Boolean?
+  var customClusterViews: Boolean?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?

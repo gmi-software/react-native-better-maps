@@ -53,6 +53,9 @@ export interface MarkerDescriptor {
   /** Unique identifier for the marker. */
   id: string;
 
+  /** Internal Fabric host identity; omitted for SDK-rendered markers. */
+  customViewId?: string;
+
   /** Geographic position of the marker. */
   coordinate: Coordinate;
 

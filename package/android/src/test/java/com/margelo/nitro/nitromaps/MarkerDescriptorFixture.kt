@@ -2,6 +2,7 @@ package com.margelo.nitro.nitromaps
 
 internal fun marker(
   id: String = "marker-1",
+  customViewId: String? = null,
   image: MarkerImage? = null,
   markerColor: String? = null,
   anchor: MarkerAnchor? = null,
@@ -14,6 +15,7 @@ internal fun marker(
 ): MarkerDescriptor {
   return MarkerDescriptor(
     id,
+    customViewId,
     Coordinate(37.77, -122.41),
     "Title",
     "Subtitle",

@@ -65,6 +65,17 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
   func gestureRecognizer(
     _ gestureRecognizer: UIGestureRecognizer,
+    shouldReceive touch: UITouch
+  ) -> Bool {
+    guard let mapView = parent?.view,
+          let container = mapView.superview as? NitroMapContainerView else { return true }
+    // Reject before recognition: returning early from handleTap still cancels
+    // the child's touch sequence when UIKit recognizes this tap.
+    return !container.containsMarker(at: touch.location(in: mapView))
+  }
+
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
     shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
   ) -> Bool {
     true

@@ -293,6 +293,8 @@ final class HybridMapView: HybridMapViewSpec {
       }
 
       recycleLifecycle()
+      containerView.projectCoordinate = nil
+      containerView.mapSurface = nil
       adapter?.prepareForRecycle()
       adapter?.contentView.removeFromSuperview()
       adapter = nil
@@ -362,6 +364,8 @@ final class HybridMapView: HybridMapViewSpec {
   private func installAdapter(for provider: MapProvider) {
     precondition(Thread.isMainThread)
 
+    containerView.projectCoordinate = nil
+    containerView.mapSurface = nil
     adapter?.prepareForRecycle()
     adapter?.contentView.removeFromSuperview()
 

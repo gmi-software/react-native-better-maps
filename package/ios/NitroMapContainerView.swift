@@ -12,7 +12,18 @@ final class NitroMapContainerView: UIView {
 
   required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
 
-  weak var mapSurface: UIView?
+  weak var mapSurface: UIView? {
+    didSet {
+      guard oldValue !== mapSurface else { return }
+      // Provider replacement keeps the same Fabric children and React state.
+      // Also handles children mounted before the provider surface is ready.
+      let surface = mapSurface ?? self
+      for marker in markerContents {
+        if let host = marker.fabricHost { surface.addSubview(host) }
+      }
+      updateMarkerPositions()
+    }
+  }
 
   @objc(nitroMountChild:atIndex:)
   func mountFabricChild(_ child: UIView, at index: Int) {

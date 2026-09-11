@@ -7,6 +7,13 @@ final class NitroMarkerContentView: UIView {
   weak var mapContainer: NitroMapContainerView?
   weak var fabricHost: UIView?
 
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    clipsToBounds = true
+  }
+
+  required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
+
   @objc(nitroMountChild:atIndex:)
   func mountFabricChild(_ child: UIView, at index: Int) {
     insertSubview(child, at: index)

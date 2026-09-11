@@ -78,6 +78,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _scrollEnabled
     set(value) {
       _scrollEnabled = value
+      view.scrollGesturesEnabled = value != false
       adapter?.scrollEnabled = value
     }
 
@@ -85,6 +86,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _zoomEnabled
     set(value) {
       _zoomEnabled = value
+      updateMultiTouchGestures()
       adapter?.zoomEnabled = value
     }
 
@@ -92,6 +94,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _rotateEnabled
     set(value) {
       _rotateEnabled = value
+      updateMultiTouchGestures()
       adapter?.rotateEnabled = value
     }
 
@@ -99,8 +102,13 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _pitchEnabled
     set(value) {
       _pitchEnabled = value
+      updateMultiTouchGestures()
       adapter?.pitchEnabled = value
     }
+
+  private fun updateMultiTouchGestures() {
+    view.multiTouchGesturesEnabled = _zoomEnabled != false || _rotateEnabled != false || _pitchEnabled != false
+  }
 
   override var showsUserLocation: Boolean?
     get() = _showsUserLocation
@@ -316,6 +324,8 @@ class HybridMapView(private val context: ThemedReactContext) :
     _region = null
     _camera = null
     _scrollEnabled = true
+    view.scrollGesturesEnabled = true
+    view.multiTouchGesturesEnabled = true
     _zoomEnabled = true
     _rotateEnabled = true
     _pitchEnabled = true

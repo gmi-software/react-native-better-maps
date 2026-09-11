@@ -11,11 +11,11 @@ function replaceOnce(filePath, from, to) {
   const fromCount = source.split(from).length - 1;
   const toCount = source.split(to).length - 1;
 
-  if (fromCount === 0 && toCount === 1) {
+  if (toCount === 1 && fromCount === to.split(from).length - 1) {
     return;
   }
 
-  if (fromCount !== 1) {
+  if (fromCount !== 1 || toCount !== 0) {
     throw new Error(
       `Expected exactly one patch target in ${filePath}, found ${fromCount}`,
     );
@@ -24,30 +24,32 @@ function replaceOnce(filePath, from, to) {
   writeFileSync(filePath, source.replace(from, to));
 }
 
-replaceOnce(
-  join(
-    packageDir,
-    'nitrogen/generated/shared/c++/views/HybridMapViewComponent.cpp',
-  ),
-  `    const std::shared_ptr<const HybridMapViewProps>& constProps = concreteShadowNode.getConcreteSharedProps();
-    const std::shared_ptr<HybridMapViewProps>& props = std::const_pointer_cast<HybridMapViewProps>(constProps);
+for (const name of ['MapView', 'MarkerView']) {
+  replaceOnce(
+    join(
+      packageDir,
+      `nitrogen/generated/shared/c++/views/Hybrid${name}Component.cpp`,
+    ),
+    `    const std::shared_ptr<const Hybrid${name}Props>& constProps = concreteShadowNode.getConcreteSharedProps();
+    const std::shared_ptr<Hybrid${name}Props>& props = std::const_pointer_cast<Hybrid${name}Props>(constProps);
 `,
-  `    auto constProps = std::static_pointer_cast<const HybridMapViewProps>(concreteShadowNode.getProps());
-    auto props = std::const_pointer_cast<HybridMapViewProps>(constProps);
+    `    auto constProps = std::static_pointer_cast<const Hybrid${name}Props>(concreteShadowNode.getProps());
+    auto props = std::const_pointer_cast<Hybrid${name}Props>(constProps);
 `,
-);
+  );
 
-replaceOnce(
-  join(
-    packageDir,
-    'nitrogen/generated/shared/c++/views/HybridMapViewComponent.hpp',
-  ),
-  `  HybridMapViewState(const HybridMapViewState& /* previousState */, folly::dynamic /* data */) {}
+  replaceOnce(
+    join(
+      packageDir,
+      `nitrogen/generated/shared/c++/views/Hybrid${name}Component.hpp`,
+    ),
+    `  Hybrid${name}State(const Hybrid${name}State& /* previousState */, folly::dynamic /* data */) {}
 `,
-  `  HybridMapViewState(const HybridMapViewState& previousState, folly::dynamic /* data */):
+    `  Hybrid${name}State(const Hybrid${name}State& previousState, folly::dynamic /* data */):
     _props(previousState.getProps()) {}
 `,
-);
+  );
+}
 
 for (const fileName of [
   'Func_void_std__vector_std__string__Coordinate.swift',
@@ -97,15 +99,25 @@ replaceOnce(
 
 // Explicit Fabric mount targets: no SDK-driven reparenting of RN children.
 for (const name of ['MapView', 'MarkerView']) {
-  const file = join(packageDir, `nitrogen/generated/ios/c++/views/Hybrid${name}Component.mm`);
-  replaceOnce(file, `@interface Hybrid${name}Component: RCTViewComponentView`, `// Implemented by both Swift content containers via explicit @objc selectors.
+  const file = join(
+    packageDir,
+    `nitrogen/generated/ios/c++/views/Hybrid${name}Component.mm`,
+  );
+  replaceOnce(
+    file,
+    `@interface Hybrid${name}Component: RCTViewComponentView`,
+    `// Implemented by both Swift content containers via explicit @objc selectors.
 @interface UIView (NitroMapFabricChildren)
 - (void)nitroMountChild:(UIView *)child atIndex:(NSInteger)index;
 - (void)nitroUnmountChild:(UIView *)child;
 @end
 
-@interface Hybrid${name}Component: RCTViewComponentView`);
-  replaceOnce(file, '- (void) updateView {', `
+@interface Hybrid${name}Component: RCTViewComponentView`,
+  );
+  replaceOnce(
+    file,
+    '- (void) updateView {',
+    `
 - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)child index:(NSInteger)index {
   NSAssert(child.superview == nil, @"Marker child is already mounted");
   [self.contentView nitroMountChild:child atIndex:index];
@@ -115,7 +127,8 @@ for (const name of ['MapView', 'MarkerView']) {
   [self.contentView nitroUnmountChild:child];
 }
 
-- (void) updateView {`);
+- (void) updateView {`,
+  );
 }
 
 // Android must expose a ViewGroupManager for Fabric to mount descendants.
@@ -164,25 +177,3 @@ for (const name of ['MapView', 'MarkerView']) {
     );
   }
 }
-
-// Both views need the existing RN 0.86 state compatibility fixes.
-replaceOnce(
-  join(
-    packageDir,
-    'nitrogen/generated/shared/c++/views/HybridMarkerViewComponent.cpp',
-  ),
-  `    const std::shared_ptr<const HybridMarkerViewProps>& constProps = concreteShadowNode.getConcreteSharedProps();
-    const std::shared_ptr<HybridMarkerViewProps>& props = std::const_pointer_cast<HybridMarkerViewProps>(constProps);
-`,
-  `    auto constProps = std::static_pointer_cast<const HybridMarkerViewProps>(concreteShadowNode.getProps());
-    auto props = std::const_pointer_cast<HybridMarkerViewProps>(constProps);
-`,
-);
-replaceOnce(
-  join(
-    packageDir,
-    'nitrogen/generated/shared/c++/views/HybridMarkerViewComponent.hpp',
-  ),
-  `  HybridMarkerViewState(const HybridMarkerViewState& /* previousState */, folly::dynamic /* data */) {}\n`,
-  `  HybridMarkerViewState(const HybridMarkerViewState& previousState, folly::dynamic /* data */):\n    _props(previousState.getProps()) {}\n`,
-);

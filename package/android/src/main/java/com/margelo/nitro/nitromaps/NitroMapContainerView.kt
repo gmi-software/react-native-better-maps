@@ -16,6 +16,9 @@ class NitroMapContainerView(context: Context) : ViewGroup(context) {
   private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
   private var markerDown: MotionEvent? = null
   private var forwardingGesture = false
+  private var descendantOwnsGesture = false
+  var scrollGesturesEnabled = true
+  var multiTouchGesturesEnabled = true
 
   init { clipChildren = true }
 
@@ -44,14 +47,17 @@ class NitroMapContainerView(context: Context) : ViewGroup(context) {
       }
       if (touchesMarker) markerDown = MotionEvent.obtain(event)
     }
+    // A ScrollView commonly claims ownership on its first MOVE beyond slop,
+    // not on DOWN. Let it inspect that event before deciding to hand it off.
+    val handled = if (!forwardingGesture) super.dispatchTouchEvent(event) else false
     val down = markerDown
     val surface = mapSurface
     if (down != null && surface != null) {
       val dx = event.x - down.x
       val dy = event.y - down.y
-      val startsGesture = event.actionMasked == MotionEvent.ACTION_POINTER_DOWN ||
-        (event.actionMasked == MotionEvent.ACTION_MOVE && dx * dx + dy * dy > touchSlop * touchSlop)
-      if (!forwardingGesture && startsGesture) {
+      val startsGesture = (multiTouchGesturesEnabled && event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) ||
+        (scrollGesturesEnabled && event.actionMasked == MotionEvent.ACTION_MOVE && dx * dx + dy * dy > touchSlop * touchSlop)
+      if (!forwardingGesture && !descendantOwnsGesture && startsGesture) {
         NativeGestureUtil.notifyNativeGestureStarted(this, event)
         val cancel = MotionEvent.obtain(event)
         cancel.action = MotionEvent.ACTION_CANCEL
@@ -69,7 +75,6 @@ class NitroMapContainerView(context: Context) : ViewGroup(context) {
         return true
       }
     }
-    val handled = super.dispatchTouchEvent(event)
     if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
       clearMarkerGesture()
     }
@@ -80,6 +85,12 @@ class NitroMapContainerView(context: Context) : ViewGroup(context) {
     markerDown?.recycle()
     markerDown = null
     forwardingGesture = false
+    descendantOwnsGesture = false
+  }
+
+  override fun requestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {
+    descendantOwnsGesture = disallowIntercept
+    super.requestDisallowInterceptTouchEvent(disallowIntercept)
   }
 
   override fun onDetachedFromWindow() {

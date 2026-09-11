@@ -29,6 +29,10 @@ final class NitroPinAnnotationView: MKMarkerAnnotationView {
     canShowCallout = marker.title != nil || marker.subtitle != nil
     displayPriority = .required
     alpha = marker.opacity
+    markerTintColor = marker.markerColor?.toUIColor(fallback: .systemRed)
+    zPriority = marker.zIndex.map {
+      MKAnnotationViewZPriority(rawValue: Float($0))
+    } ?? .defaultUnselected
 
     layoutIfNeeded()
     let pinSize = bounds.size == .zero ? Self.defaultPinSize : bounds.size

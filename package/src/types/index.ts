@@ -26,4 +26,13 @@ export type {
   PolygonProps,
   CircleProps,
 } from './overlays';
+export type {
+  GeojsonFeature,
+  GeojsonFeatureCollection,
+  GeojsonGeometry,
+  GeojsonInput,
+  GeojsonOverlayDescriptors,
+  GeojsonProps,
+  GeojsonToOverlayOptions,
+} from './geojson';
 export type { MapViewRef } from './ref';

@@ -12,6 +12,7 @@ extension MarkerDescriptor {
     hasher.combine(image?.width)
     hasher.combine(image?.height)
     hasher.combine(image?.scale)
+    hasher.combine(markerColor)
     hasher.combine(anchor?.x)
     hasher.combine(anchor?.y)
     hasher.combine(centerOffset?.x)
@@ -19,6 +20,7 @@ extension MarkerDescriptor {
     hasher.combine(rotation)
     hasher.combine(flat)
     hasher.combine(opacity)
+    hasher.combine(zIndex)
   }
 
   func markersDescriptorFingerprint() -> Int {

@@ -8,12 +8,16 @@ import com.facebook.react.uimanager.ThemedReactContext
 import com.margelo.nitro.core.Promise
 import com.margelo.nitro.views.RecyclableView
 
+private const val MAP_VIEW_NOT_MOUNTED_MESSAGE = "MapView is not mounted"
+
 @Keep
 @DoNotStrip
 class HybridMapView(private val context: ThemedReactContext) :
   HybridMapViewSpec(),
   RecyclableView {
 
+  /** Written on the UI thread, read from the JS thread by the imperative methods. */
+  @Volatile
   private var adapter: MapProviderAdapter? = null
 
   private var _provider = MapProvider.GOOGLE
@@ -269,33 +273,44 @@ class HybridMapView(private val context: ThemedReactContext) :
       adapter?.onClusterPress = value
     }
 
-  override fun fetchCamera(): Promise<Camera> = currentAdapter().fetchCamera()
+  override fun fetchCamera(): Promise<Camera> {
+    val mounted = adapter ?: return notMountedRejection()
+    return mounted.fetchCamera()
+  }
 
   override fun applyCamera(camera: Camera): Promise<Unit> {
-    currentAdapter().applyCamera(camera)
+    val mounted = adapter ?: return notMountedRejection()
+    mounted.applyCamera(camera)
     return Promise.resolved(Unit)
   }
 
   override fun animateCamera(camera: Camera, duration: Double?): Promise<Unit> {
-    currentAdapter().animateCamera(camera, duration)
+    val mounted = adapter ?: return notMountedRejection()
+    mounted.animateCamera(camera, duration)
     return Promise.resolved(Unit)
   }
 
-  override fun getVisibleRegion(): Promise<VisibleRegion> = currentAdapter().getVisibleRegion()
+  override fun getVisibleRegion(): Promise<VisibleRegion> {
+    val mounted = adapter ?: return notMountedRejection()
+    return mounted.getVisibleRegion()
+  }
 
   override fun fitToCoordinates(
     coordinates: Array<Coordinate>,
     padding: EdgePadding?,
     animated: Boolean?,
   ): Promise<Unit> {
-    currentAdapter().fitToCoordinates(coordinates, padding, animated)
+    val mounted = adapter ?: return notMountedRejection()
+    mounted.fitToCoordinates(coordinates, padding, animated)
     return Promise.resolved(Unit)
   }
 
+  override fun onDropView() {
+    releaseAdapter()
+  }
+
   override fun prepareForRecycle() {
-    adapter?.prepareForRecycle()
-    adapter?.view?.let(view::removeView)
-    adapter = null
+    releaseAdapter()
     _provider = MapProvider.GOOGLE
     _mapType = MapType.STANDARD
     _region = null
@@ -332,18 +347,25 @@ class HybridMapView(private val context: ThemedReactContext) :
     onClusterPress = null
   }
 
-  private fun currentAdapter(): MapProviderAdapter {
-    adapter?.let { return it }
-    installAdapter(_provider)
-    return requireNotNull(adapter)
+  private fun <T> notMountedRejection(): Promise<T> =
+    Promise.rejected(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
+
+  /**
+   * Detaches and destroys the installed adapter. Both teardown paths land here:
+   * [onDropView] fires on every unmount, while [prepareForRecycle] only fires when
+   * React Native has view recycling enabled.
+   */
+  private fun releaseAdapter() {
+    adapter?.release()
+    adapter?.view?.let(view::removeView)
+    adapter = null
   }
 
   private fun installAdapter(provider: MapProvider) {
+    // Built before the teardown so an unsupported provider leaves the current map intact.
     val nextAdapter = makeAdapter(provider)
-    val previousAdapter = adapter
 
-    previousAdapter?.prepareForRecycle()
-    previousAdapter?.view?.let(view::removeView)
+    releaseAdapter()
     adapter = nextAdapter
     attach(nextAdapter.view)
     syncState(nextAdapter)

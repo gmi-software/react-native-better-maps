@@ -612,6 +612,9 @@ See [example/.env.example](example/.env.example) for the supported environment v
 - [GeoJSON overlays](docs/geojson.md)
 - [Roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md)
+- [Releasing](RELEASING.md)
 - [ADRs](docs/adr)
 
 ## Common problems

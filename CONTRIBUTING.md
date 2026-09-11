@@ -57,6 +57,14 @@ React Doctor runs in a separate GitHub Actions workflow (`.github/workflows/reac
 
 After the baseline is documented and critical findings are addressed, CI will switch to blocking new errors on changed files only.
 
+## Code of conduct
+
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By taking part you are expected to uphold it; report unacceptable behavior to security@gmi.software.
+
+## Security
+
+Do not report vulnerabilities through issues or pull requests. See [SECURITY.md](SECURITY.md) for the private reporting channel.
+
 ## Commit messages
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/). Commit messages are validated locally via Husky and on pull requests in CI.

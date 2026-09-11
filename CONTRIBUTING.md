@@ -32,6 +32,10 @@ Thank you for your interest in contributing!
 | `bun run build` | Build the library with react-native-builder-bob |
 | `bun run nitrogen` | Run Nitrogen codegen (when specs are ready) |
 | `bun run format` | Format all files with Prettier |
+| `bun run format:cpp` | Format C++ with clang-format (`config/.clang-format`) |
+| `bun run format:kotlin` | Format Kotlin with ktlint (`config/.editorconfig`) |
+| `bun run format:swift` | Format Swift with swift-format (`config/.swift-format`) |
+| `bun run format:native` | Run all three native formatters |
 | `bun run doctor` | Run React Doctor locally |
 
 ## React Doctor

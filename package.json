@@ -13,6 +13,10 @@
     "nitrogen": "bun run --filter react-native-better-maps nitrogen",
     "example": "bun run --filter react-native-better-maps-example",
     "format": "prettier --write .",
+    "format:cpp": "bash scripts/clang-format.sh",
+    "format:kotlin": "bash scripts/kotlin-format.sh",
+    "format:swift": "bash scripts/swift-format.sh",
+    "format:native": "bun run format:cpp && bun run format:kotlin && bun run format:swift",
     "doctor": "npx react-doctor@latest",
     "commitlint": "commitlint",
     "prepare": "husky"

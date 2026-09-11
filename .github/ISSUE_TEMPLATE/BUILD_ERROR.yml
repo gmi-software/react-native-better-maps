@@ -1,0 +1,117 @@
+name: 🔧 Build Error
+description: The native app fails to build, prebuild, or install pods
+labels: [build/setup]
+body:
+  - type: textarea
+    attributes:
+      label: How were you trying to build the app?
+      description: Explain how you built — Xcode, `expo run:ios`, `pod install`, a Gradle task, EAS Build, CI, or something else. Be as precise as possible.
+      placeholder: I added react-native-better-maps to an Expo SDK 57 app, ran `expo prebuild --clean` and then `expo run:ios`, and the build failed while compiling the Google adapter files.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Full build logs
+      description: >
+        Share the full build output, from the first command to the last line.
+        Do not paste only the final few lines — the real cause is usually much earlier.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Project dependencies
+      description: Share the `dependencies` block from your app's `package.json`, so conflicting libraries are visible.
+      render: json
+      placeholder: |
+        "dependencies": {
+          "expo": "~57.0.0",
+          "react-native": "0.81.4",
+          "react-native-better-maps": "^1.1.0",
+          "react-native-nitro-modules": "^0.35.10"
+        }
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expo config plugin setup
+      description: >
+        If you use the config plugin, share the `react-native-better-maps` entry from your `app.json` / `app.config.js`.
+        For a bare app, share the relevant parts of `Info.plist`, `AndroidManifest.xml` and `Podfile.properties.json` instead.
+        See [Expo setup](https://github.com/gmi-software/react-native-better-maps/blob/main/docs/expo-setup.md).
+      render: json
+    validations:
+      required: false
+  - type: dropdown
+    attributes:
+      label: Target platforms
+      description: Select every platform the build fails on.
+      multiple: true
+      options:
+        - iOS
+        - Android
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Operating system
+      description: Select the operating system you are building on.
+      multiple: true
+      options:
+        - macOS
+        - Windows
+        - Linux
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: react-native-better-maps version
+      placeholder: ex. 1.1.0
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: React Native version
+      description: The library requires 0.78+ with the New Architecture enabled.
+      placeholder: ex. 0.81.4
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: react-native-nitro-modules version
+      placeholder: ex. 0.35.10
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Expo SDK version
+      description: Leave empty if this is a bare React Native app.
+      placeholder: ex. 57.0.0
+    validations:
+      required: false
+  - type: dropdown
+    attributes:
+      label: Can you build the example app?
+      description: >
+        Try to build the example app (`example/`, see [Example app](https://github.com/gmi-software/react-native-better-maps#example-app)).
+        **Note:** this separates a problem in the library from a problem in your app's native setup, and is the single most useful thing you can report here.
+      options:
+        - I didn't try (⚠️ your issue may take much longer to get looked at)
+        - Yes, the example app builds fine
+        - 'No, the example app fails to build too'
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Additional information
+      description: Please check all the boxes that apply
+      options:
+        - label: I am using Expo with a development build
+        - label: I am using the Expo config plugin
+        - label: I am using Google Maps on iOS (`betterMaps.iosGoogleProvider`)
+        - label: I retried after a clean build (`expo prebuild --clean`, deleted `ios/Pods` and `android/build`)
+        - label: I checked [Common problems](https://github.com/gmi-software/react-native-better-maps#common-problems) and my issue is not listed there.
+          required: true
+        - label: I searched for [similar issues in this repository](https://github.com/gmi-software/react-native-better-maps/issues) and found none.
+          required: true

@@ -5,10 +5,12 @@
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/index.d.ts",
   "source": "./src/index.ts",
+  "react-native": "./src/index.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
+      "react-native": "./src/index.ts",
       "types": "./lib/typescript/index.d.ts",
+      "import": "./lib/module/index.js",
       "default": "./lib/module/index.js"
     },
     "./app.plugin.js": "./app.plugin.js",

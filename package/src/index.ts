@@ -1,6 +1,7 @@
 export {
   MapView,
   Marker,
+  MarkerView,
   Polyline,
   Polygon,
   Circle,
@@ -47,5 +48,4 @@ export type {
 
 export { regionFromCoordinate, distanceBetween } from './utils';
 
-export { MarkerView } from './components/MarkerView';
 export type { MarkerViewProps } from './components/MarkerView';

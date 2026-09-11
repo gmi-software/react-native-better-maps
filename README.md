@@ -128,7 +128,7 @@ in `react-native-better-maps` and `react-native-maps` with
 
 Not supported today:
 
-- Custom React Native marker child views such as `<Marker><View /></Marker>`; use bitmap marker images instead.
+- JSX children inside descriptor `<Marker>` elements; use the separate [`MarkerView`](docs/custom-marker-views.md) component for live React Native content and animations.
 - `openstreetmap` and `mapbox` providers; the public provider type reserves these names for future native implementations.
 
 ## Supported platforms
@@ -356,7 +356,7 @@ Platform notes:
 - Recommended icon size: up to **128×128 dp**; larger bitmaps are downscaled when `width`/`height` are provided.
 - Retina assets: pass `require()` and let Metro resolve `@2x`/`@3x`; optional explicit `width`/`height`/`scale` on `MarkerImage`.
 - Remote URLs use a basic in-memory cache only (no disk persistence).
-- Custom React Native marker views (`<Marker><View /></Marker>`) are not supported.
+- For live JSX and internal animations, use [`MarkerView`](docs/custom-marker-views.md) with explicit width/height. Descriptor `Marker` children are not rendered.
 
 ### react-native-maps migration (markers)
 
@@ -544,6 +544,7 @@ On Google Maps providers, marker and cluster entering animations can reduce UI-t
 | ---------- | --------------------------------- |
 | `MapView`  | Root map container                |
 | `Marker`   | Point annotation                  |
+| `MarkerView` | Live JSX at a geographic coordinate |
 | `Polyline` | Line overlay                      |
 | `Polygon`  | Filled area overlay               |
 | `Circle`   | Circular area overlay             |
@@ -610,6 +611,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 - [Expo setup](docs/expo-setup.md)
 - [Architecture](docs/architecture.md)
 - [GeoJSON overlays](docs/geojson.md)
+- [Live custom marker views](docs/custom-marker-views.md)
 - [Roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
 - [ADRs](docs/adr)

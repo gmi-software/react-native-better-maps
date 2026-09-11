@@ -46,3 +46,6 @@ export type {
 } from './types';
 
 export { regionFromCoordinate, distanceBetween } from './utils';
+
+export { MarkerView } from './components/MarkerView';
+export type { MarkerViewProps } from './components/MarkerView';

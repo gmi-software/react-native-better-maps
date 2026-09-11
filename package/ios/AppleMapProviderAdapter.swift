@@ -149,6 +149,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
+  var onCameraMoved: (() -> Void)?
+
+  func projectMarker(_ coordinate: Coordinate) -> CGPoint? {
+    view.convert(coordinate.toCLLocationCoordinate2D(), toPointTo: view)
+  }
+
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
   var onMapReady: (() -> Void)? {
@@ -406,6 +412,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     isUserRegionChange = false
     isMapReady = false
     hasDeliveredMapReady = false
+    onCameraMoved = nil
     onRegionChange = nil
     onRegionChangeComplete = nil
     onMapReady = nil

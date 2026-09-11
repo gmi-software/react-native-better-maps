@@ -3,6 +3,8 @@ import UIKit
 
 protocol MapProviderAdapter: AnyObject {
   var contentView: UIView { get }
+  var onCameraMoved: (() -> Void)? { get set }
+  func projectMarker(_ coordinate: Coordinate) -> CGPoint?
 
   var mapType: MapType { get set }
   var region: Region? { get set }
@@ -51,6 +53,8 @@ protocol MapProviderAdapter: AnyObject {
 
 final class UnavailableMapProviderAdapter: MapProviderAdapter {
   let contentView: UIView
+  var onCameraMoved: (() -> Void)?
+  func projectMarker(_ coordinate: Coordinate) -> CGPoint? { nil }
   private let error: Error
 
   var mapType: MapType = .standard

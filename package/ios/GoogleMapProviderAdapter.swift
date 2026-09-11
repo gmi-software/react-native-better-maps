@@ -169,6 +169,12 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
+  var onCameraMoved: (() -> Void)?
+
+  func projectMarker(_ coordinate: Coordinate) -> CGPoint? {
+    view.projection.point(for: coordinate.toCLLocationCoordinate2D())
+  }
+
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
   var onMapReady: (() -> Void)? {
@@ -265,6 +271,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     hasDeliveredMapReady = false
     view.delegate = nil
     overlayController.reset()
+    onCameraMoved = nil
     onRegionChange = nil
     onRegionChangeComplete = nil
     onMapReady = nil
@@ -376,6 +383,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private func startGestureMarkerRefresh() {
     isUserGestureMoving = true
     lastLiveMarkerRefreshTime = 0
+    onCameraMoved?()
     refreshGestureMarkersIfNeeded()
   }
 
@@ -510,10 +518,12 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
+    onCameraMoved?()
     refreshGestureMarkersIfNeeded()
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
+    onCameraMoved?()
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
     handleRegionDidChange()
@@ -521,6 +531,7 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didTapAt coordinate: CLLocationCoordinate2D) {
+    if (mapView.superview as? NitroMapContainerView)?.containsMarker(at: mapView.projection.point(for: coordinate)) == true { return }
     onPress?(Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
   }
 
@@ -543,6 +554,7 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didLongPressAt coordinate: CLLocationCoordinate2D) {
+    if (mapView.superview as? NitroMapContainerView)?.containsMarker(at: mapView.projection.point(for: coordinate)) == true { return }
     onLongPress?(Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
   }
 

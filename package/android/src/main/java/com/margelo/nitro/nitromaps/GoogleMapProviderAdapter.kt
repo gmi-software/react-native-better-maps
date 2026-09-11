@@ -32,6 +32,10 @@ class GoogleMapProviderAdapter(
   LifecycleEventListener {
 
   private var googleMap: GoogleMap? = null
+  override var onCameraMoved: (() -> Unit)? = null
+
+  override fun projectMarker(coordinate: Coordinate): android.graphics.Point? =
+    googleMap?.projection?.toScreenLocation(LatLng(coordinate.latitude, coordinate.longitude))
   private var isUserGesture = false
   private var hasFiredMapReady = false
   private val overlayController = MapOverlayController(null, context)
@@ -87,6 +91,7 @@ class GoogleMapProviderAdapter(
     view.getMapAsync { map ->
       googleMap = map
       configureMap(map)
+      onCameraMoved?.invoke()
     }
 
     installViewportSizeListener(view)
@@ -425,9 +430,11 @@ class GoogleMapProviderAdapter(
       )
     }
     map.setOnCameraMoveListener {
+      onCameraMoved?.invoke()
       overlayController.onCameraMove()
     }
     map.setOnCameraIdleListener {
+      onCameraMoved?.invoke()
       overlayController.onCameraIdle()
       handleRegionDidChange()
     }
@@ -741,6 +748,7 @@ class GoogleMapProviderAdapter(
   override fun release() {
     // Drop the JS callbacks first: a map event still in flight must not reach a
     // view that is already gone.
+    onCameraMoved = null
     onRegionChange = null
     onRegionChangeComplete = null
     onMapReady = null

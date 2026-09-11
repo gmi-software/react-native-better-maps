@@ -39,7 +39,7 @@ class HybridMapView(private val context: ThemedReactContext) :
   private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
 
-  override val view: FrameLayout = FrameLayout(context)
+  override val view = NitroMapContainerView(context)
 
   override var provider: MapProvider?
     get() = _provider
@@ -359,6 +359,9 @@ class HybridMapView(private val context: ThemedReactContext) :
     adapter?.release()
     adapter?.view?.let(view::removeView)
     adapter = null
+    view.mapSurface = null
+    view.projectCoordinate = null
+    view.updateMarkerPositions()
   }
 
   private fun installAdapter(provider: MapProvider) {
@@ -367,6 +370,8 @@ class HybridMapView(private val context: ThemedReactContext) :
 
     releaseAdapter()
     adapter = nextAdapter
+    view.projectCoordinate = nextAdapter::projectMarker
+    nextAdapter.onCameraMoved = view::updateMarkerPositions
     attach(nextAdapter.view)
     syncState(nextAdapter)
   }
@@ -382,8 +387,10 @@ class HybridMapView(private val context: ThemedReactContext) :
   }
 
   private fun attach(contentView: View) {
+    view.mapSurface = contentView
     view.addView(
       contentView,
+      0,
       FrameLayout.LayoutParams(
         FrameLayout.LayoutParams.MATCH_PARENT,
         FrameLayout.LayoutParams.MATCH_PARENT,

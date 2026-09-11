@@ -2,7 +2,7 @@ import NitroModules
 import UIKit
 
 final class HybridMapView: HybridMapViewSpec {
-  private let containerView = UIView()
+  private let containerView = NitroMapContainerView()
   private let lifecycleLock = NSLock()
   private let stateLock = NSLock()
   private var adapter: MapProviderAdapter?
@@ -367,6 +367,12 @@ final class HybridMapView: HybridMapViewSpec {
 
     let nextAdapter = makeAdapter(for: provider)
     adapter = nextAdapter
+    containerView.projectCoordinate = { [weak nextAdapter] coordinate in
+      nextAdapter?.projectMarker(coordinate)
+    }
+    nextAdapter.onCameraMoved = { [weak containerView] in
+      containerView?.updateMarkerPositions()
+    }
     attach(contentView: nextAdapter.contentView)
     syncState(to: nextAdapter)
   }
@@ -396,7 +402,8 @@ final class HybridMapView: HybridMapViewSpec {
 
   private func attach(contentView: UIView) {
     contentView.translatesAutoresizingMaskIntoConstraints = false
-    containerView.addSubview(contentView)
+    containerView.mapSurface = contentView
+    containerView.insertSubview(contentView, at: 0)
     NSLayoutConstraint.activate([
       contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
       contentView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),

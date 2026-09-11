@@ -30,6 +30,7 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     let point = recognizer.location(in: parent.view)
+    if (parent.view.superview as? NitroMapContainerView)?.containsMarker(at: point) == true { return }
     if parent.notifyOverlayPress(at: point) {
       return
     }
@@ -58,6 +59,7 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     let point = recognizer.location(in: parent.view)
+    if (parent.view.superview as? NitroMapContainerView)?.containsMarker(at: point) == true { return }
     parent.notifyLongPress(at: point)
   }
 
@@ -79,11 +81,16 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     return false
   }
 
+  func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+    parent?.onCameraMoved?()
+  }
+
   func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
     parent?.handleRegionWillChange(userInteracting: mapView.isUserInteracting)
   }
 
   func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+    parent?.onCameraMoved?()
     parent?.handleRegionDidChange()
   }
 

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type {
   CircleDescriptor,
   MarkerDescriptor,
+  OverlayEnteringAnimationDescriptor,
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../../native/specs/overlays';
@@ -52,6 +53,13 @@ function describeFieldCoverage<Descriptor>(
   });
 }
 
+const baseEnteringAnimation = {
+  kind: 'fade',
+  duration: 200,
+  delay: 50,
+  reduceMotion: 'system',
+} as const satisfies OverlayEnteringAnimationDescriptor;
+
 const baseMarker: MarkerDescriptor = {
   id: 'marker-1',
   coordinate: { latitude: 52.2297, longitude: 21.0122 },
@@ -60,17 +68,14 @@ const baseMarker: MarkerDescriptor = {
   draggable: true,
   clusterable: true,
   image: { uri: 'asset:/pin.png', width: 32, height: 48, scale: 2 },
+  markerColor: '#FF9500',
   anchor: { x: 0.5, y: 1 },
   centerOffset: { x: 1, y: -2 },
   rotation: 45,
   flat: true,
   opacity: 0.9,
-  enteringAnimation: {
-    kind: 'fade',
-    duration: 200,
-    delay: 50,
-    reduceMotion: 'system',
-  },
+  zIndex: 3,
+  enteringAnimation: baseEnteringAnimation,
 };
 
 describeFieldCoverage(
@@ -115,6 +120,8 @@ describeFieldCoverage(
       (d) => ({ ...d, image: { ...d.image, uri: 'asset:/pin.png', scale: 3 } }),
     ],
     ['a cleared image', (d) => ({ ...d, image: undefined })],
+    ['markerColor', (d) => ({ ...d, markerColor: '#007AFF' })],
+    ['a cleared markerColor', (d) => ({ ...d, markerColor: undefined })],
     ['anchor.x', (d) => ({ ...d, anchor: { x: 0, y: 1 } })],
     ['anchor.y', (d) => ({ ...d, anchor: { x: 0.5, y: 0 } })],
     ['a cleared anchor', (d) => ({ ...d, anchor: undefined })],
@@ -124,29 +131,30 @@ describeFieldCoverage(
     ['rotation', (d) => ({ ...d, rotation: 90 })],
     ['flat', (d) => ({ ...d, flat: false })],
     ['opacity', (d) => ({ ...d, opacity: 0.5 })],
+    ['zIndex', (d) => ({ ...d, zIndex: 9 })],
+    ['a cleared zIndex', (d) => ({ ...d, zIndex: undefined })],
     [
       'enteringAnimation.kind',
       (d) => ({
         ...d,
-        enteringAnimation: { ...d.enteringAnimation, kind: 'fade-scale' },
+        enteringAnimation: {
+          ...baseEnteringAnimation,
+          kind: 'fade-scale' as const,
+        },
       }),
     ],
     [
       'enteringAnimation.duration',
       (d) => ({
         ...d,
-        enteringAnimation: {
-          ...d.enteringAnimation,
-          kind: 'fade',
-          duration: 400,
-        },
+        enteringAnimation: { ...baseEnteringAnimation, duration: 400 },
       }),
     ],
     [
       'enteringAnimation.delay',
       (d) => ({
         ...d,
-        enteringAnimation: { ...d.enteringAnimation, kind: 'fade', delay: 0 },
+        enteringAnimation: { ...baseEnteringAnimation, delay: 0 },
       }),
     ],
     [
@@ -154,9 +162,8 @@ describeFieldCoverage(
       (d) => ({
         ...d,
         enteringAnimation: {
-          ...d.enteringAnimation,
-          kind: 'fade',
-          reduceMotion: 'never',
+          ...baseEnteringAnimation,
+          reduceMotion: 'never' as const,
         },
       }),
     ],

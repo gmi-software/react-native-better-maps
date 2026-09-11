@@ -117,11 +117,13 @@ export function markerDescriptorsEqual(
       left.draggable === right.draggable &&
       left.clusterable === right.clusterable &&
       markerImagesEqual(left.image, right.image) &&
+      left.markerColor === right.markerColor &&
       pointsEqual(left.anchor, right.anchor) &&
       pointsEqual(left.centerOffset, right.centerOffset) &&
       left.rotation === right.rotation &&
       left.flat === right.flat &&
       left.opacity === right.opacity &&
+      left.zIndex === right.zIndex &&
       enteringAnimationsEqual(left.enteringAnimation, right.enteringAnimation))
   );
 }

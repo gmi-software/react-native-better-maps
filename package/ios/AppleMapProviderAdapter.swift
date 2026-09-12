@@ -7,6 +7,10 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   private var isUserRegionChange = false
   private var isMapReady = false
   private var hasDeliveredMapReady = false
+  private lazy var cameraStreamClock = FrameClock { [weak self] frame in
+    self?.cameraStreamTick(frame)
+  }
+  private var lastCameraEmitTime: CFTimeInterval = 0
   fileprivate lazy var overlayController = MapOverlayController(mapView: view)
 
   var contentView: UIView {
@@ -163,6 +167,14 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
+  var onCameraMove: ((Camera) -> Void)? {
+    didSet {
+      if onCameraMove == nil {
+        cameraStreamClock.stop()
+      }
+    }
+  }
+  var cameraMoveThrottleMs: Double?
   var onMapReady: (() -> Void)? {
     didSet {
       deliverMapReadyIfPossible()
@@ -301,6 +313,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   func handleRegionWillChange(userInteracting: Bool) {
     startLiveClustering()
+    startCameraStream()
     guard userInteracting, !isUserRegionChange else {
       return
     }
@@ -310,6 +323,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   func handleRegionDidChange() {
     stopLiveClustering()
+    stopCameraStream()
 
     guard isUserRegionChange else {
       return
@@ -330,6 +344,38 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     } else {
       onRegionChange?(region)
     }
+  }
+
+  /// Emits `onCameraMove` on a display link while the camera moves, at most
+  /// every `cameraMoveThrottleMs`, and once more with the final camera. Nothing
+  /// runs unless the callback is set.
+  private func startCameraStream() {
+    guard onCameraMove != nil, !cameraStreamClock.isRunning else {
+      return
+    }
+    lastCameraEmitTime = 0
+    cameraStreamClock.start()
+  }
+
+  private func stopCameraStream() {
+    guard cameraStreamClock.isRunning else {
+      return
+    }
+    cameraStreamClock.stop()
+    onCameraMove?(view.camera.toCamera())
+  }
+
+  private func cameraStreamTick(_ frame: FrameClock.Frame) {
+    guard let onCameraMove else {
+      cameraStreamClock.stop()
+      return
+    }
+    let interval = max(0, (cameraMoveThrottleMs ?? 100) / 1000)
+    guard frame.timestamp - lastCameraEmitTime >= interval else {
+      return
+    }
+    lastCameraEmitTime = frame.timestamp
+    onCameraMove(view.camera.toCamera())
   }
 
   func startLiveClustering() {
@@ -408,11 +454,14 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func prepareForRecycle() {
+    cameraStreamClock.stop()
     isUserRegionChange = false
     isMapReady = false
     hasDeliveredMapReady = false
     onRegionChange = nil
     onRegionChangeComplete = nil
+    onCameraMove = nil
+    cameraMoveThrottleMs = nil
     onMapReady = nil
     onPress = nil
     onPoiPress = nil

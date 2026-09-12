@@ -242,6 +242,8 @@ export default function BenchmarkApp() {
     polylines: mapProps.polylines,
     polygons: mapProps.polygons,
     clusteringEnabled: mapProps.clusteringEnabled,
+    onCameraMove: mapProps.onCameraMove,
+    cameraMoveThrottleMs: mapProps.cameraMoveThrottleMs,
     markerEnteringAnimation: false as const,
     clusterEnteringAnimation: false as const,
     onMapReady: handleMapReady,

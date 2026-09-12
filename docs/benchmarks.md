@@ -35,22 +35,24 @@ They are implemented in `benchmark/thresholds.ts` and unit-tested with
 
 ## Scenarios
 
-| ID  | Setup                              | Script                                                                            |
-| --- | ---------------------------------- | --------------------------------------------------------------------------------- |
-| A   | empty map                          | 3 s idle, short pan                                                               |
-| B   | 100 markers                        | pan                                                                               |
-| C   | 1,000 markers                      | pan                                                                               |
-| D   | 10,000 markers                     | pan                                                                               |
-| E   | 10,000 markers, clustering on      | zoom sweep across five levels, then pan                                           |
-| F   | 10,000 markers                     | ten-leg pan                                                                       |
-| G   | 10,000 markers                     | zoom sweep                                                                        |
-| H   | 10,000 markers                     | four heading changes                                                              |
-| I   | 1,000 markers in a collection      | 100 of them move at 10 Hz for 5 s through `updatePositions`; JS lag is checked    |
-| I2  | 1,000 markers                      | 100 of them move at 10 Hz for 5 s through new `markers` arrays; JS lag is checked |
-| K   | 5,000-point route and 200 polygons | five style changes, then pan                                                      |
-| L   | 10,000 markers                     | three pan legs, then 5 s idle                                                     |
-| M   | 10,000 markers in a collection     | one marker is upserted every 100 ms for 3 s; JS lag is checked                    |
-| N   | 10,000 markers inside the viewport | street-level zoom sweep, where the LOD cap allows 2,000 markers on screen         |
+| ID  | Setup                              | Script                                                                               |
+| --- | ---------------------------------- | ------------------------------------------------------------------------------------ |
+| A   | empty map                          | 3 s idle, short pan                                                                  |
+| B   | 100 markers                        | pan                                                                                  |
+| C   | 1,000 markers                      | pan                                                                                  |
+| D   | 10,000 markers                     | pan                                                                                  |
+| E   | 10,000 markers, clustering on      | zoom sweep across five levels, then pan                                              |
+| F   | 10,000 markers                     | ten-leg pan                                                                          |
+| G   | 10,000 markers                     | zoom sweep                                                                           |
+| H   | 10,000 markers                     | four heading changes                                                                 |
+| I   | 1,000 markers in a collection      | 100 of them move at 10 Hz for 5 s through `updatePositions`; JS lag is checked       |
+| I2  | 1,000 markers                      | 100 of them move at 10 Hz for 5 s through new `markers` arrays; JS lag is checked    |
+| K   | 5,000-point route and 200 polygons | five style changes, then pan                                                         |
+| L   | 10,000 markers                     | three pan legs, then 5 s idle                                                        |
+| M   | 10,000 markers in a collection     | one marker is upserted every 100 ms for 3 s; JS lag is checked                       |
+| N   | 10,000 markers inside the viewport | street-level zoom sweep, where the LOD cap allows 2,000 markers on screen            |
+| O   | 10,000 markers                     | pan while `onCameraMove` feeds a shared value at a 16 ms throttle; JS lag is checked |
+| P   | 100,000 markers, clustering on     | zoom sweep across five levels, then pan                                              |
 
 Scenario J (live location) is not scripted: it needs location permission and a
 GPS feed. Use the simulator's location menu with the manual recorder.
@@ -351,6 +353,98 @@ N keeps a 67 ms worst frame at the octave crossings.
 - I2-animated-prop: JS lag p95 18.88 ms > budget 17.50 ms
 - M-one-of-10k: JS lag p95 19.08 ms > budget 17.50 ms
 - N-dense-10k: p99 33.33 ms > 25.00 ms; worst frame 66.67 ms > 50.00 ms; jank 2.01% > 1%
+
+### Camera stream and 100k runs (not a device baseline)
+
+The same simulator and emulator after ADR 0007. Two scenarios are new:
+O pans a map of 10,000 markers with `onCameraMove` set and
+`cameraMoveThrottleMs: 16`, so the callback fires every frame into a
+Reanimated shared value; P mounts 100,000 clustered markers over Poland and
+runs a zoom sweep and a pan. The older scenarios moved within run-to-run
+noise of the previous section (F's p99 sits one frame over the threshold in
+this run and passed in the last one; N's worst frame is 50 ms against 46 ms).
+
+**iOS**, iPhone 17 Pro simulator, release build, MapKit, 60 Hz, started by
+hand, recorded 2026-09-08. O passes with a one-frame p99 and a JS-lag p95 of
+1.0 ms while the camera callback ran 266 times during the pan (counted in a separate
+run of O on the same build, after the note line was routed to the system log),
+so a per-frame stream that only writes a shared value costs nothing the
+harness can see. P holds one frame at p95 and two at p99 with 100,000 clustered markers, a
+46 ms worst frame at the first octave crossing, 1.5 % jank and 150 MB of RSS
+for the dataset.
+
+| Scenario              | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | RSS Δ   |
+| --------------------- | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ------- |
+| A-empty-idle          | fail (1) | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 51 ms | 0.9 % | 1.3 ms     | +75 MB  |
+| B-markers-100         | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 41 ms | 1.0 % | 1.1 ms     | +84 MB  |
+| C-markers-1k          | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 41 ms | 1.0 % | 1.0 ms     | +73 MB  |
+| D-markers-10k         | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 45 ms | 0.7 % | 1.0 ms     | +67 MB  |
+| E-clustered-10k       | pass     | 59  | 16.7 ms | 16.7 ms | 21.5 ms | 47 ms | 1.0 % | 1.0 ms     | +142 MB |
+| F-pan-10k             | fail (2) | 59  | 16.7 ms | 16.7 ms | 27.6 ms | 39 ms | 1.2 % | 1.0 ms     | +84 MB  |
+| G-zoom-10k            | fail (2) | 58  | 16.7 ms | 16.7 ms | 35.5 ms | 38 ms | 3.7 % | 1.0 ms     | +101 MB |
+| H-rotate-10k          | fail (2) | 58  | 16.7 ms | 16.7 ms | 43.7 ms | 48 ms | 2.1 % | 1.0 ms     | +56 MB  |
+| I-animated-collection | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 35 ms | 0.3 % | 1.3 ms     | +11 MB  |
+| I2-animated-prop      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.0 ms     | -1 MB   |
+| K-shapes              | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 47 ms | 1.4 % | 1.3 ms     | +73 MB  |
+| L-idle-after-pan      | pass     | 59  | 16.7 ms | 16.7 ms | 21.2 ms | 45 ms | 0.8 % | 1.0 ms     | +65 MB  |
+| M-one-of-10k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.0 ms     | -0 MB   |
+| O-camera-stream       | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 46 ms | 0.7 % | 1.0 ms     | +76 MB  |
+| P-clustered-100k      | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 46 ms | 1.5 % | 1.0 ms     | +150 MB |
+| N-dense-10k           | fail (3) | 56  | 16.7 ms | 33.3 ms | 41.6 ms | 50 ms | 7.3 % | 1.0 ms     | +122 MB |
+
+- A-empty-idle: worst frame 50.88 ms > 50.00 ms
+- F-pan-10k: p99 27.62 ms > 25.00 ms; jank 1.21% > 1%
+- G-zoom-10k: p99 35.46 ms > 25.00 ms; jank 3.69% > 1%
+- H-rotate-10k: p99 43.73 ms > 25.00 ms; jank 2.07% > 1%
+- K-shapes: p99 33.33 ms > 25.00 ms; jank 1.44% > 1%
+- P-clustered-100k: p99 33.33 ms > 25.00 ms; jank 1.54% > 1%
+- N-dense-10k: p95 33.33 ms > budget 17.50 ms; p99 41.56 ms > 25.00 ms; jank 7.34% > 1%
+
+The signposts recorded during the same run, per scenario, say where the time
+goes. Decoding and indexing the 100,000-marker batch took 26.6 ms once, on the
+store queue. Computing the viewport diff for P (the index query, clustering
+through the octave cache, the diff against the screen) ran 89 times on the
+background queue at a p50 of 0.85 ms, a p95 of 6.5 ms and a maximum of
+10.0 ms. Applying those diffs on the main thread, which is MapKit adding and
+removing annotation views under the frame budget, ran 110 times at a p50 of
+0.47 ms, a p95 of 3.2 ms and a maximum of 3.6 ms. In N, the scenario that
+still drops frames, the compute side stays under 3.1 ms while the main-thread
+apply reaches 15 ms: the frames go to MapKit laying out the views, not to
+Swift. At 10,000 markers every compute interval stays under 1 ms.
+
+**Android**, Pixel-class API 35 emulator (`TapNote_API35`), release build,
+Google Maps, 60 Hz, driven by the Maestro flow, recorded 2026-09-08. Every
+scenario holds one frame at p99. P keeps a 17 ms p99 and a 33 ms worst frame
+with 100,000 clustered markers, and O stays at 17 ms with the callback firing
+every frame (211 calls during the pan, counted in a second run of the flow on
+the same build). N, which failed with a 67 ms worst frame on the previous build's
+run, passes here at 17 ms; the 18 to 19 ms JS-lag column is the emulator's
+timer resolution, as in the previous sections, and is what fails I, I2, M and
+O.
+
+| Scenario              | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | RSS Δ  |
+| --------------------- | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ------ |
+| A-empty-idle          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.3 % | 18.8 ms    | -24 MB |
+| B-markers-100         | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.9 ms    | -16 MB |
+| C-markers-1k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.5 ms    | +28 MB |
+| D-markers-10k         | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.8 ms    | +35 MB |
+| E-clustered-10k       | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.2 % | 18.5 ms    | +24 MB |
+| F-pan-10k             | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.3 ms    | -29 MB |
+| G-zoom-10k            | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.4 ms    | +19 MB |
+| H-rotate-10k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 17.8 ms    | -31 MB |
+| I-animated-collection | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.7 ms    | -86 MB |
+| I2-animated-prop      | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.6 ms    | -56 MB |
+| K-shapes              | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.8 ms    | +58 MB |
+| L-idle-after-pan      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 19.3 ms    | -54 MB |
+| M-one-of-10k          | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.8 ms    | -18 MB |
+| O-camera-stream       | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 18.1 ms    | +58 MB |
+| P-clustered-100k      | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 1.0 % | 18.8 ms    | -35 MB |
+| N-dense-10k           | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 19.1 ms    | -17 MB |
+
+- I-animated-collection: JS lag p95 18.68 ms > budget 17.50 ms
+- I2-animated-prop: JS lag p95 18.60 ms > budget 17.50 ms
+- M-one-of-10k: JS lag p95 18.79 ms > budget 17.50 ms
+- O-camera-stream: JS lag p95 18.07 ms > budget 17.50 ms
 
 ## Profiling markers
 

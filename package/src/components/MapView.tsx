@@ -97,6 +97,8 @@ export function MapView({
   circles: circlesProp,
   onRegionChange,
   onRegionChangeComplete,
+  onCameraMove,
+  cameraMoveThrottleMs,
   onMapReady,
   onPress,
   onPoiPress,
@@ -304,6 +306,7 @@ export function MapView({
   const onRegionChangeCompleteCallback = useNitroCallback(
     onRegionChangeComplete,
   );
+  const onCameraMoveCallback = useNitroCallback(onCameraMove);
   const onMapReadyCallback = useNitroCallback(onMapReady);
   const onPressCallback = useNitroCallback(onPress);
   const onPoiPressNativeCallback = useNitroCallback(
@@ -382,6 +385,8 @@ export function MapView({
       circles={circles}
       onRegionChange={onRegionChangeCallback}
       onRegionChangeComplete={onRegionChangeCompleteCallback}
+      onCameraMove={onCameraMoveCallback}
+      cameraMoveThrottleMs={cameraMoveThrottleMs}
       onMapReady={onMapReadyCallback}
       onPress={onPressCallback}
       onPoiPress={onPoiPressNativeCallback}

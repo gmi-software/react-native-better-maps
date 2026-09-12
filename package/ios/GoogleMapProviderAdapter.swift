@@ -14,6 +14,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private var hasDeliveredMapReady = false
   private var isUserRegionChange = false
   private var isUserGestureMoving = false
+  private var isCameraStreaming = false
+  private var lastCameraEmitTime: CFTimeInterval = 0
   private var lastLiveMarkerRefreshTime: CFTimeInterval = 0
   private var myLocationObservation: NSKeyValueObservation?
   private weak var followedLocationMapView: GMSMapView?
@@ -176,6 +178,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
+  var onCameraMove: ((Camera) -> Void)?
+  var cameraMoveThrottleMs: Double?
   var onMapReady: (() -> Void)? {
     didSet {
       deliverMapReadyIfPossible()
@@ -269,6 +273,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   func prepareForRecycle() {
     isUserRegionChange = false
     isUserGestureMoving = false
+    isCameraStreaming = false
+    lastCameraEmitTime = 0
+    onCameraMove = nil
+    cameraMoveThrottleMs = nil
     lastLiveMarkerRefreshTime = 0
     lastAppliedRegion = nil
     lastAppliedRegionCamera = nil
@@ -426,6 +434,37 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     lastLiveMarkerRefreshTime = 0
   }
 
+  /// `onCameraMove` while the camera moves, at most every `cameraMoveThrottleMs`,
+  /// and once more with the final camera. Nothing runs unless it is set.
+  private func startCameraStream() {
+    guard onCameraMove != nil else {
+      return
+    }
+    isCameraStreaming = true
+    lastCameraEmitTime = 0
+  }
+
+  private func emitCameraMoveIfDue(_ position: GMSCameraPosition) {
+    guard isCameraStreaming, let onCameraMove else {
+      return
+    }
+    let now = CACurrentMediaTime()
+    let interval = max(0, (cameraMoveThrottleMs ?? 100) / 1000)
+    guard now - lastCameraEmitTime >= interval else {
+      return
+    }
+    lastCameraEmitTime = now
+    onCameraMove(position.toCamera())
+  }
+
+  private func stopCameraStream(at position: GMSCameraPosition) {
+    guard isCameraStreaming else {
+      return
+    }
+    isCameraStreaming = false
+    onCameraMove?(position.toCamera())
+  }
+
   private func animateToClusterRegion(_ region: MKCoordinateRegion) {
     let bounds = region.toRegion().toGMSCoordinateBounds()
     view.animate(with: GMSCameraUpdate.fit(bounds, withPadding: 72))
@@ -529,6 +568,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   func mapView(_ mapView: GMSMapView, willMove gesture: Bool) {
     handleRegionWillChange(userInteracting: gesture)
+    startCameraStream()
     if gesture {
       startGestureMarkerRefresh()
     }
@@ -536,11 +576,13 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
 
   func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
     refreshGestureMarkersIfNeeded()
+    emitCameraMoveIfDue(position)
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
+    stopCameraStream(at: position)
     handleRegionDidChange()
     notifyMapReadyIfNeeded()
   }

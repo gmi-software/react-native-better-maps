@@ -36,9 +36,12 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
+import { useCameraSharedValue } from 'react-native-better-maps/reanimated';
 import {
   MapView,
+  type Camera,
   type ClusterPressEvent,
   type Coordinate,
   type EdgePadding,
@@ -110,6 +113,32 @@ const springSnappy = { damping: 22, stiffness: 420 };
 const springSoft = { damping: 20, stiffness: 240 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** A north indicator that counter-rotates with the map heading. */
+function CameraCompass({
+  camera,
+  topInset,
+}: {
+  camera: SharedValue<Camera | null>;
+  topInset: number;
+}) {
+  const needleStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${-(camera.value?.heading ?? 0)}deg` }],
+  }));
+
+  return (
+    <View
+      pointerEvents="none"
+      style={[styles.compass, { top: topInset + 132 }]}
+      testID="camera-compass"
+    >
+      <Animated.Text style={[styles.compassNeedle, needleStyle]}>
+        ▲
+      </Animated.Text>
+      <Text style={styles.compassLabel}>N</Text>
+    </View>
+  );
+}
 
 function mergeMapPadding(
   padding: EdgePadding | undefined,
@@ -503,6 +532,7 @@ type MapSceneProps = {
   onClusterPress: (event: ClusterPressEvent) => void;
   onMarkerPress: (id: string) => void;
   onMarkerDragEnd: (id: string, coordinate: Coordinate) => void;
+  onCameraMove: (camera: Camera) => void;
   onOverlayPress: (label: string) => void;
   onPress: (coordinate: Coordinate) => void;
   onPoiPress: (event: PoiPressEvent) => void;
@@ -522,6 +552,7 @@ const MapScene = memo(function MapScene({
   onClusterPress,
   onMarkerPress,
   onMarkerDragEnd,
+  onCameraMove,
   onOverlayPress,
   onPress,
   onPoiPress,
@@ -551,6 +582,10 @@ const MapScene = memo(function MapScene({
     ),
     onMapReady,
     onClusterPress,
+    onMarkerPress,
+    onMarkerDragEnd,
+    onCameraMove,
+    cameraMoveThrottleMs: 16,
     onPress,
     onPoiPress,
     onLongPress,
@@ -859,6 +894,10 @@ export default function App() {
     );
   }, []);
 
+  // The camera stream feeds a shared value; the compass below follows the
+  // heading on the UI thread without a React render per update.
+  const { camera: cameraValue, onCameraMove } = useCameraSharedValue();
+
   return (
     <View style={styles.container}>
       <MapScene
@@ -878,7 +917,10 @@ export default function App() {
         onLongPress={handleMapLongPress}
         onRegionChange={handleRegionChange}
         onRegionChangeComplete={handleRegionChangeComplete}
+        onCameraMove={onCameraMove}
       />
+
+      <CameraCompass camera={cameraValue} topInset={insets.top} />
 
       <StatusHeader
         status={status}
@@ -991,6 +1033,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.24,
     shadowRadius: 16,
     elevation: 6,
+  },
+  compass: {
+    position: 'absolute',
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(18, 18, 20, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compassNeedle: {
+    color: '#FF453A',
+    fontSize: 18,
+    lineHeight: 20,
+  },
+  compassLabel: {
+    position: 'absolute',
+    bottom: 3,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 9,
+    fontWeight: '700',
   },
   statusDot: {
     width: 8,

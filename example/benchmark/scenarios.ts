@@ -1,3 +1,5 @@
+import { makeMutable } from 'react-native-reanimated';
+import { logBenchmarkLine } from '../modules/frame-stats';
 import {
   MarkerCollection,
   type Camera,
@@ -26,6 +28,23 @@ export interface BenchmarkMapProps {
   polylines?: PolylineDescriptor[];
   polygons?: PolygonDescriptor[];
   clusteringEnabled?: boolean;
+  onCameraMove?: (camera: Camera) => void;
+  cameraMoveThrottleMs?: number;
+}
+
+/** Where scenario O parks the camera stream: a shared value, as an overlay would. */
+const cameraSink = makeMutable<Camera | null>(null);
+/** A free-form line next to the results: Metro in debug, the system log always. */
+async function note(text: string): Promise<void> {
+  const line = `[benchmark-note] ${text}`;
+  console.log(line);
+  await logBenchmarkLine(line).catch(() => undefined);
+}
+
+let cameraMoveCount = 0;
+function sinkCameraMove(camera: Camera): void {
+  cameraSink.value = camera;
+  cameraMoveCount += 1;
 }
 
 /** What a scenario script can do while the recorder is running. */
@@ -310,6 +329,44 @@ export const SCENARIOS: BenchmarkScenario[] = [
     },
   },
 ];
+
+SCENARIOS.push(
+  {
+    id: 'O-camera-stream',
+    name: 'O · Camera stream',
+    description:
+      'Pan with 10,000 markers while onCameraMove feeds a shared value every frame (16 ms throttle).',
+    props: () => ({
+      region: WARSAW_REGION,
+      markers: markers(10_000),
+      onCameraMove: sinkCameraMove,
+      cameraMoveThrottleMs: 16,
+    }),
+    settleMs: 2500,
+    checkJsLag: true,
+    async run(context) {
+      cameraMoveCount = 0;
+      await pan(context, WARSAW_REGION);
+      await note(`O-camera-stream: ${cameraMoveCount} camera updates`);
+    },
+  },
+  {
+    id: 'P-clustered-100k',
+    name: 'P · 100,000 clustered',
+    description:
+      '100,000 markers with clustering: zoom sweep across octaves, then a pan.',
+    props: () => ({
+      region: POLAND_REGION,
+      markers: markers(100_000),
+      clusteringEnabled: true,
+    }),
+    settleMs: 6000,
+    async run(context) {
+      await zoomSweep(context, POLAND_REGION);
+      await pan(context, POLAND_REGION, 4, 0.4);
+    },
+  },
+);
 
 SCENARIOS.push({
   id: 'N-dense-10k',

@@ -1,11 +1,26 @@
-import { useCallback, useImperativeHandle, useMemo, useRef, type Ref, type RefObject } from 'react';
-import { callback } from 'react-native-nitro-modules';
+import {
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  type Ref,
+  type RefObject,
+} from 'react';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
+import { useNitroCallback } from '../hooks/useNitroCallback';
+import { useStableValue } from '../hooks/useStableValue';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
   NativePoiPressEvent,
 } from '../native/specs/MapView.nitro';
+import {
+  circleListsEqual,
+  enteringAnimationsEqual,
+  markerListsEqual,
+  polygonListsEqual,
+  polylineListsEqual,
+} from '../overlays/descriptorEquality';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
 import { resolveMapProvider } from '../providers';
@@ -82,18 +97,39 @@ export function MapView({
     hasCirclePress,
   } = useCollectedOverlays(children);
   const normalizedBulkMarkers = useMemo(
-    () => (markersProp != null ? normalizeMarkerDescriptors(markersProp) : null),
+    () =>
+      markersProp != null ? normalizeMarkerDescriptors(markersProp) : null,
     [markersProp],
   );
 
-  const markers =
-    normalizedBulkMarkers != null ? normalizedBulkMarkers : collectedMarkers;
-  const polylines =
-    polylinesProp != null ? polylinesProp : collectedPolylines;
-  const polygons =
-    polygonsProp != null ? polygonsProp : collectedPolygons;
-  const circles =
-    circlesProp != null ? circlesProp : collectedCircles;
+  // Everything below is rebuilt whenever `children`, a bulk prop or an animation
+  // prop changes identity - which for inline JSX is every render. Nitro would
+  // re-serialize each one across JSI, so hand back the previous value when
+  // nothing actually changed.
+  const markers = useStableValue(
+    normalizedBulkMarkers ?? collectedMarkers,
+    markerListsEqual,
+  );
+  const polylines = useStableValue(
+    polylinesProp ?? collectedPolylines,
+    polylineListsEqual,
+  );
+  const polygons = useStableValue(
+    polygonsProp ?? collectedPolygons,
+    polygonListsEqual,
+  );
+  const circles = useStableValue(
+    circlesProp ?? collectedCircles,
+    circleListsEqual,
+  );
+  const markerEntering = useStableValue(
+    normalizeEnteringAnimation(markerEnteringAnimation),
+    enteringAnimationsEqual,
+  );
+  const clusterEntering = useStableValue(
+    normalizeEnteringAnimation(clusterEnteringAnimation),
+    enteringAnimationsEqual,
+  );
 
   const hasMarkerPress =
     onMarkerPressProp != null || hasCollectedMarkerPress;
@@ -108,6 +144,10 @@ export function MapView({
   const onPoiPressCallback = onPoiPress as
     | ((event: PoiPressEvent) => void)
     | undefined;
+
+  const handleHybridRef = useCallback((nativeRef: NativeMapViewHybrid) => {
+    hybridRef.current = nativeRef;
+  }, []);
 
   const handleMarkerPress = useCallback(
     (id: string) => {
@@ -176,6 +216,37 @@ export function MapView({
     [onPoiPressCallback],
   );
 
+  // Nitro's `callback(...)` envelope is a fresh object per call, so each of
+  // these is memoized on the handler it wraps. An inline arrow passed by the
+  // caller still changes identity every render - that part is theirs to hoist.
+  const hybridRefCallback = useNitroCallback(handleHybridRef);
+  const onRegionChangeCallback = useNitroCallback(onRegionChange);
+  const onRegionChangeCompleteCallback = useNitroCallback(
+    onRegionChangeComplete,
+  );
+  const onMapReadyCallback = useNitroCallback(onMapReady);
+  const onPressCallback = useNitroCallback(onPress);
+  const onPoiPressNativeCallback = useNitroCallback(
+    onPoiPress == null ? undefined : handlePoiPress,
+  );
+  const onLongPressCallback = useNitroCallback(onLongPress);
+  const onClusterPressCallback = useNitroCallback(onClusterPress);
+  const onMarkerPressCallback = useNitroCallback(
+    hasMarkerPress ? handleMarkerPress : undefined,
+  );
+  const onMarkerDragEndCallback = useNitroCallback(
+    hasMarkerDragEnd ? handleMarkerDragEnd : undefined,
+  );
+  const onPolylinePressCallback = useNitroCallback(
+    hasPolylinePressHandler ? handlePolylinePress : undefined,
+  );
+  const onPolygonPressCallback = useNitroCallback(
+    hasPolygonPressHandler ? handlePolygonPress : undefined,
+  );
+  const onCirclePressCallback = useNitroCallback(
+    hasCirclePressHandler ? handleCirclePress : undefined,
+  );
+
   useImperativeHandle(
     ref,
     () => ({
@@ -201,9 +272,7 @@ export function MapView({
     <NativeMapView
       key={`${resolvedProvider}:${googleMapId ?? ''}`}
       style={style}
-      hybridRef={callback((nativeRef) => {
-        hybridRef.current = nativeRef;
-      })}
+      hybridRef={hybridRefCallback}
       provider={resolvedProvider}
       googleMapId={googleMapId}
       mapType={mapType}
@@ -220,42 +289,24 @@ export function MapView({
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
       mapPadding={mapPadding}
-      markerEnteringAnimation={normalizeEnteringAnimation(markerEnteringAnimation)}
-      clusterEnteringAnimation={normalizeEnteringAnimation(clusterEnteringAnimation)}
+      markerEnteringAnimation={markerEntering}
+      clusterEnteringAnimation={clusterEntering}
       markers={markers}
       polylines={polylines}
       polygons={polygons}
       circles={circles}
-      onRegionChange={
-        onRegionChange == null ? undefined : callback(onRegionChange)
-      }
-      onRegionChangeComplete={
-        onRegionChangeComplete == null
-          ? undefined
-          : callback(onRegionChangeComplete)
-      }
-      onMapReady={onMapReady == null ? undefined : callback(onMapReady)}
-      onPress={onPress == null ? undefined : callback(onPress)}
-      onPoiPress={onPoiPress == null ? undefined : callback(handlePoiPress)}
-      onLongPress={onLongPress == null ? undefined : callback(onLongPress)}
-      onClusterPress={
-        onClusterPress == null ? undefined : callback(onClusterPress)
-      }
-      onMarkerPress={
-        hasMarkerPress ? callback(handleMarkerPress) : undefined
-      }
-      onMarkerDragEnd={
-        hasMarkerDragEnd ? callback(handleMarkerDragEnd) : undefined
-      }
-      onPolylinePress={
-        hasPolylinePressHandler ? callback(handlePolylinePress) : undefined
-      }
-      onPolygonPress={
-        hasPolygonPressHandler ? callback(handlePolygonPress) : undefined
-      }
-      onCirclePress={
-        hasCirclePressHandler ? callback(handleCirclePress) : undefined
-      }
+      onRegionChange={onRegionChangeCallback}
+      onRegionChangeComplete={onRegionChangeCompleteCallback}
+      onMapReady={onMapReadyCallback}
+      onPress={onPressCallback}
+      onPoiPress={onPoiPressNativeCallback}
+      onLongPress={onLongPressCallback}
+      onClusterPress={onClusterPressCallback}
+      onMarkerPress={onMarkerPressCallback}
+      onMarkerDragEnd={onMarkerDragEndCallback}
+      onPolylinePress={onPolylinePressCallback}
+      onPolygonPress={onPolygonPressCallback}
+      onCirclePress={onCirclePressCallback}
     />
   );
 }

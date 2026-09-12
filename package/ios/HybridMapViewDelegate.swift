@@ -38,6 +38,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
       return
     }
 
+    if parent.notifySpritePress(at: point) {
+      return
+    }
+
     DispatchQueue.main.async { [weak self, weak parent] in
       guard let self, let parent else {
         return
@@ -194,10 +198,17 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
       return
     }
 
-    parent?.onMarkerPress?(marker.id)
+    // A sprite promoted for its callout reported its press when it was tapped.
+    if parent?.isPromotedSprite(marker) != true {
+      parent?.onMarkerPress?(marker.id)
+    }
     if marker.title == nil && marker.subtitle == nil {
       mapView.deselectAnnotation(view.annotation, animated: true)
     }
+  }
+
+  func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+    parent?.handleAnnotationDeselect(view.annotation)
   }
 
   func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {

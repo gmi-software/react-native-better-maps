@@ -4,6 +4,7 @@ export type { Region, EdgePadding, VisibleRegion } from './region';
 export type {
   ApplePoiCategory,
   MarkerPinStyle,
+  MarkerRendering,
 } from '../native/specs/MapView.nitro';
 export type {
   ApplePoiPressEvent,

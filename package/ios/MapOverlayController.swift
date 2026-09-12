@@ -18,10 +18,31 @@ final class MapOverlayController {
     let tappable: Bool
   }
 
+  /// What a tap on the sprite layer hit, and what the adapter should do about it.
+  enum SpritePress {
+    case marker(id: String)
+    /// The marker was promoted to a selected annotation view for its callout.
+    /// The press fires now, like `marker`; the annotation's later `didSelect`
+    /// is not a second press.
+    case promoted(id: String)
+    case cluster(id: String, coordinate: CLLocationCoordinate2D, count: Int, region: MKCoordinateRegion)
+  }
+
   private weak var mapView: MKMapView?
-  /// All currently shown annotations (singles and clusters), keyed by render key.
+  /// Annotations on the map (singles and clusters), keyed by render key.
   private var displayedAnnotations: [MarkerRenderKey: MKAnnotation] = [:]
+  /// Versions of everything shown, annotations and sprites alike; the pipeline diffs against it.
   private var displayedAnnotationVersions: [MarkerRenderKey: Int] = [:]
+  /// What the sprite layer draws, keyed like the annotations.
+  private var displayedSprites: [MarkerRenderKey: MarkerSprite] = [:]
+  private let spriteOverlay = MarkerSpriteOverlay()
+  private weak var spriteRenderer: MarkerSpriteRenderer?
+  private var isSpritePublishScheduled = false
+  /// One image load per image key, fanned out to every sprite waiting for it.
+  private var pendingSpriteImageLoads: [NSString: [MarkerRenderKey]] = [:]
+  /// The sprite shown as a selected annotation view for its callout, if any.
+  private var promotedSprite: (entry: MarkerRenderEntry, annotation: MapMarkerAnnotation)?
+  private(set) var markerRendering: MarkerRendering = .views
   private let markerPipeline = MarkerRenderPipeline()
   private lazy var applyScheduler = MarkerApplyScheduler(sink: MarkerApplyScheduler.Sink(
     remove: { [weak self] keys in self?.applyRemovals(keys) },
@@ -59,12 +80,19 @@ final class MapOverlayController {
     liveRefreshClock.stop()
     markerPipeline.store?.removeListener(self)
     markerPipeline.reset()
+    promotedSprite = nil
+    pendingSpriteImageLoads.removeAll()
+    displayedSprites.removeAll()
+    spriteOverlay.snapshots.replace(.empty)
     guard let mapView else {
       return
     }
 
     mapView.removeAnnotations(Array(displayedAnnotations.values))
     mapView.removeOverlays(Array(shapeOverlays.values))
+    if markerRendering == .sprites {
+      mapView.removeOverlay(spriteOverlay)
+    }
     displayedAnnotations.removeAll()
     displayedAnnotationVersions.removeAll()
     shapeOverlays.removeAll()
@@ -84,13 +112,46 @@ final class MapOverlayController {
     reapplyMarkers()
   }
 
+  /// Switches between annotation views and the sprite layer. Everything shown
+  /// is taken down and re-added through the new path.
+  func setMarkerRendering(_ mode: MarkerRendering) {
+    guard mode != markerRendering else {
+      return
+    }
+    markerRendering = mode
+    applyScheduler.cancel()
+    promotedSprite = nil
+    pendingSpriteImageLoads.removeAll()
+    displayedSprites.removeAll()
+    spriteOverlay.snapshots.replace(.empty)
+    guard let mapView else {
+      return
+    }
+
+    mapView.removeAnnotations(Array(displayedAnnotations.values))
+    displayedAnnotations.removeAll()
+    displayedAnnotationVersions.removeAll()
+    if mode == .sprites {
+      mapView.addOverlay(spriteOverlay, level: .aboveLabels)
+    } else {
+      mapView.removeOverlay(spriteOverlay)
+    }
+    reapplyMarkers()
+  }
+
   /// Ids of the markers inside a displayed cluster; empty once it is gone.
   func clusterMembers(id: String) -> [String] {
-    guard let cluster = displayedAnnotations[.cluster(id: id)] as? MapClusterAnnotation,
-          let store = markerPipeline.store else {
+    guard let store = markerPipeline.store else {
       return []
     }
-    return store.ids(for: cluster.memberHandles)
+    if let cluster = displayedAnnotations[.cluster(id: id)] as? MapClusterAnnotation {
+      return store.ids(for: cluster.memberHandles)
+    }
+    if let sprite = displayedSprites[.cluster(id: id)],
+       case let .cluster(_, _, _, memberHandles, _) = sprite.element {
+      return store.ids(for: memberHandles)
+    }
+    return []
   }
 
   func reapplyMarkers() {
@@ -190,12 +251,349 @@ final class MapOverlayController {
     guard let mapView else {
       return
     }
+    let viewDiff = markerRendering == .sprites ? applySpriteDiff(diff) : diff
     applyScheduler.schedule(PendingMarkerApply(
-      diff: diff,
+      diff: viewDiff,
       center: mapView.region.center,
       animateEntering: true,
       animationBudget: .max
     ))
+  }
+
+  // MARK: - Sprite layer
+
+  /// Applies the sprite part of a diff at once and returns what still needs an
+  /// annotation view: draggable markers, and the marker promoted for its
+  /// callout. Sprites are a dictionary update and one bitmap re-render off the
+  /// main thread, so they need no frame budget.
+  private func applySpriteDiff(_ diff: MarkerRenderDiff) -> MarkerRenderDiff {
+    var viewRemovals = Set<MarkerRenderKey>()
+    var viewAdds: [MarkerRenderEntry] = []
+    var viewRetained: [MarkerRenderEntry] = []
+    var changed = false
+    // Union of the sprites that changed, so a pan re-renders the edge tiles only.
+    var dirty = MKMapRect.null
+    func touch(_ sprite: MarkerSprite) {
+      dirty = dirty.union(MKMapRect(x: sprite.mapPoint.x, y: sprite.mapPoint.y, width: 0, height: 0))
+    }
+
+    for key in diff.removedKeys {
+      if let removed = displayedSprites.removeValue(forKey: key) {
+        displayedAnnotationVersions.removeValue(forKey: key)
+        touch(removed)
+        changed = true
+      } else {
+        if promotedSprite?.entry.key == key {
+          promotedSprite = nil
+        }
+        viewRemovals.insert(key)
+      }
+    }
+
+    for entry in diff.added {
+      if Self.needsAnnotationView(entry) {
+        viewAdds.append(entry)
+      } else {
+        let sprite = makeSprite(for: entry)
+        displayedSprites[entry.key] = sprite
+        displayedAnnotationVersions[entry.key] = entry.version
+        touch(sprite)
+        changed = true
+      }
+    }
+
+    for entry in diff.retained {
+      if let current = displayedSprites[entry.key] {
+        touch(current)
+        if Self.needsAnnotationView(entry) {
+          displayedSprites.removeValue(forKey: entry.key)
+          displayedAnnotationVersions.removeValue(forKey: entry.key)
+          viewAdds.append(entry)
+        } else {
+          let sprite = makeSprite(for: entry, reusing: current)
+          displayedSprites[entry.key] = sprite
+          displayedAnnotationVersions[entry.key] = entry.version
+          touch(sprite)
+        }
+        changed = true
+      } else if promotedSprite?.entry.key == entry.key {
+        promotedSprite?.entry = entry
+        viewRetained.append(entry)
+      } else if Self.needsAnnotationView(entry) {
+        viewRetained.append(entry)
+      } else {
+        // No longer draggable: the view goes and a sprite takes its place.
+        applyRemovals([entry.key])
+        let sprite = makeSprite(for: entry)
+        displayedSprites[entry.key] = sprite
+        displayedAnnotationVersions[entry.key] = entry.version
+        touch(sprite)
+        changed = true
+      }
+    }
+
+    if changed {
+      publishSprites(invalidating: dirty)
+    }
+    return MarkerRenderDiff(removedKeys: viewRemovals, added: viewAdds, retained: viewRetained)
+  }
+
+  /// Dragging needs touch handling that only an annotation view has.
+  private static func needsAnnotationView(_ entry: MarkerRenderEntry) -> Bool {
+    if case let .single(descriptor) = entry.element {
+      return descriptor.draggable == true
+    }
+    return false
+  }
+
+  private func makeSprite(for entry: MarkerRenderEntry, reusing current: MarkerSprite? = nil) -> MarkerSprite {
+    let scale = mapView?.traitCollection.displayScale ?? UIScreen.main.scale
+    switch entry.element {
+    case let .single(descriptor):
+      let coordinate = descriptor.coordinate.toCLLocationCoordinate2D()
+      let rotation = descriptor.rotation ?? 0
+      let radians: CGFloat = descriptor.flat != true && rotation != 0 ? CGFloat(rotation * .pi / 180) : 0
+      var image: CGImage?
+      var size = CGSize.zero
+      if let imageDescriptor = descriptor.image {
+        let token = MarkerImageLoader.cacheKey(for: imageDescriptor)
+        if let current,
+           case let .single(previous) = current.element,
+           let previousImage = previous.image,
+           MarkerImageLoader.cacheKey(for: previousImage) == token,
+           let loaded = current.image {
+          image = loaded
+          size = current.size
+        } else if let cached = MarkerImageLoader.cachedImage(for: imageDescriptor) {
+          image = cached.cgImage
+          size = cached.size
+        } else {
+          loadSpriteImage(imageDescriptor, token: token, key: entry.key)
+        }
+      } else {
+        let pin = PinImageRenderer.pin(scale: scale)
+        image = pin.cgImage
+        size = pin.size
+      }
+      return MarkerSprite(
+        key: entry.key,
+        element: entry.element,
+        coordinate: coordinate,
+        mapPoint: MKMapPoint(coordinate),
+        image: image,
+        size: size,
+        hitSize: size,
+        centerOffset: MapMarkerAnnotation.centerOffset(
+          anchor: descriptor.anchor,
+          centerOffset: descriptor.centerOffset,
+          imageSize: size
+        ),
+        rotation: radians,
+        opacity: CGFloat(descriptor.opacity ?? 1)
+      )
+    case let .cluster(_, coordinate, count, _, _):
+      let badge = ClusterBadgeImageRenderer.badge(count: count, scale: scale)
+      let diameter = ClusterBadgeMetrics.diameter(for: count)
+      return MarkerSprite(
+        key: entry.key,
+        element: entry.element,
+        coordinate: coordinate,
+        mapPoint: MKMapPoint(coordinate),
+        image: badge.cgImage,
+        size: badge.size,
+        hitSize: CGSize(width: diameter, height: diameter),
+        centerOffset: .zero,
+        rotation: 0,
+        opacity: 1
+      )
+    }
+  }
+
+  private func loadSpriteImage(_ image: MarkerImage, token: NSString, key: MarkerRenderKey) {
+    if pendingSpriteImageLoads[token] != nil {
+      pendingSpriteImageLoads[token]?.append(key)
+      return
+    }
+    pendingSpriteImageLoads[token] = [key]
+    MarkerImageLoader.load(image) { [weak self] loaded in
+      guard let self else {
+        return
+      }
+      let keys = self.pendingSpriteImageLoads.removeValue(forKey: token) ?? []
+      guard let loaded else {
+        return
+      }
+      var changed = false
+      for key in keys {
+        guard var sprite = self.displayedSprites[key],
+              case let .single(descriptor) = sprite.element,
+              let current = descriptor.image,
+              MarkerImageLoader.cacheKey(for: current) == token else {
+          continue
+        }
+        sprite.image = loaded.cgImage
+        sprite.size = loaded.size
+        sprite.hitSize = loaded.size
+        sprite.centerOffset = MapMarkerAnnotation.centerOffset(
+          anchor: descriptor.anchor,
+          centerOffset: descriptor.centerOffset,
+          imageSize: loaded.size
+        )
+        self.displayedSprites[key] = sprite
+        changed = true
+      }
+      if changed {
+        self.scheduleSpritePublish()
+      }
+    }
+  }
+
+  /// Hands the sprites to the renderer and asks MapKit for a redraw: of the
+  /// tiles around `dirty` when the change is local, of everything when it is
+  /// nil or covers most of the view.
+  private func publishSprites(invalidating dirty: MKMapRect? = nil) {
+    isSpritePublishScheduled = false
+    let signpost = MapTrace.begin("publishSprites")
+    defer { MapTrace.end("publishSprites", signpost) }
+    let snapshot = MarkerSpriteSnapshot.ordered(Array(displayedSprites.values))
+    spriteOverlay.snapshots.replace(snapshot)
+    guard let renderer = spriteRenderer else {
+      return
+    }
+    guard let mapView, let dirty, !dirty.isNull, mapView.bounds.width > 0 else {
+      renderer.setNeedsDisplay()
+      return
+    }
+    // Sprites reach past their coordinate by `maxReach` points; pad in map points.
+    let mapPointsPerPoint = mapView.visibleMapRect.width / Double(mapView.bounds.width)
+    let padding = Double(snapshot.maxReach + 2) * mapPointsPerPoint
+    let area = dirty.insetBy(dx: -padding, dy: -padding)
+    let visible = mapView.visibleMapRect
+    if area.contains(visible) || area.intersection(visible).width * area.intersection(visible).height > visible.width * visible.height * 0.6 {
+      renderer.setNeedsDisplay()
+    } else {
+      renderer.setNeedsDisplay(area)
+    }
+  }
+
+  /// Coalesces publishes from image loads that complete in the same turn.
+  private func scheduleSpritePublish() {
+    guard !isSpritePublishScheduled else {
+      return
+    }
+    isSpritePublishScheduled = true
+    DispatchQueue.main.async { [weak self] in
+      guard let self, self.isSpritePublishScheduled else {
+        return
+      }
+      self.publishSprites()
+    }
+  }
+
+  /// Hit-tests the sprites under a tap, topmost first. A marker with a title
+  /// or subtitle is promoted to an annotation view and selected so MapKit shows
+  /// its callout; its sprite comes back when the callout closes.
+  func pressSprite(at point: CGPoint) -> SpritePress? {
+    guard let mapView, markerRendering == .sprites else {
+      return nil
+    }
+    let snapshot = spriteOverlay.snapshots.current
+    let slop: CGFloat = 6
+    let probeHalfSize = snapshot.maxReach + slop
+    let probe = mapView.convert(
+      CGRect(x: point.x - probeHalfSize, y: point.y - probeHalfSize, width: probeHalfSize * 2, height: probeHalfSize * 2),
+      toRegionFrom: mapView
+    )
+    let probeBounds = MarkerViewportFilter.PaddedBounds(region: probe, padding: 0)
+
+    for sprite in snapshot.sprites.reversed() {
+      guard sprite.image != nil,
+            probeBounds.contains(latitude: sprite.coordinate.latitude, longitude: sprite.coordinate.longitude) else {
+        continue
+      }
+      let center = mapView.convert(sprite.coordinate, toPointTo: mapView)
+      let frame = CGRect(
+        x: center.x + sprite.centerOffset.x - sprite.hitSize.width / 2 - slop,
+        y: center.y + sprite.centerOffset.y - sprite.hitSize.height / 2 - slop,
+        width: sprite.hitSize.width + slop * 2,
+        height: sprite.hitSize.height + slop * 2
+      )
+      guard frame.contains(point) else {
+        continue
+      }
+      switch sprite.element {
+      case let .single(descriptor):
+        guard descriptor.title != nil || descriptor.subtitle != nil else {
+          return .marker(id: descriptor.id)
+        }
+        promoteSprite(sprite)
+        return .promoted(id: descriptor.id)
+      case let .cluster(id, coordinate, count, _, region):
+        return .cluster(id: id, coordinate: coordinate, count: count, region: region)
+      }
+    }
+    return nil
+  }
+
+  private func promoteSprite(_ sprite: MarkerSprite) {
+    guard let mapView,
+          case let .single(descriptor) = sprite.element,
+          let version = displayedAnnotationVersions[sprite.key] else {
+      return
+    }
+    demotePromotedSprite(restoringSprite: true)
+
+    let annotation = MapMarkerAnnotation(
+      descriptor: descriptor,
+      enteringAnimation: OverlayEnteringAnimationResolver.resolve(nil)
+    )
+    displayedSprites.removeValue(forKey: sprite.key)
+    displayedAnnotations[sprite.key] = annotation
+    promotedSprite = (
+      entry: MarkerRenderEntry(key: sprite.key, element: sprite.element, version: version),
+      annotation: annotation
+    )
+    publishSprites()
+    mapView.addAnnotation(annotation)
+    DispatchQueue.main.async { [weak self, weak mapView] in
+      guard let self, let mapView, self.promotedSprite?.annotation === annotation else {
+        return
+      }
+      mapView.selectAnnotation(annotation, animated: true)
+    }
+  }
+
+  /// Whether `annotation` is the view standing in for a tapped sprite, whose
+  /// press has already been reported.
+  func isPromotedSprite(_ annotation: MKAnnotation?) -> Bool {
+    guard let promoted = promotedSprite, let marker = annotation as? MapMarkerAnnotation else {
+      return false
+    }
+    return marker === promoted.annotation
+  }
+
+  /// Puts the promoted marker's sprite back once its callout is dismissed.
+  func demoteSprite(matching annotation: MKAnnotation?) {
+    guard let promoted = promotedSprite,
+          let marker = annotation as? MapMarkerAnnotation,
+          marker === promoted.annotation else {
+      return
+    }
+    demotePromotedSprite(restoringSprite: true)
+  }
+
+  private func demotePromotedSprite(restoringSprite: Bool) {
+    guard let promoted = promotedSprite else {
+      return
+    }
+    promotedSprite = nil
+    displayedAnnotations.removeValue(forKey: promoted.entry.key)
+    mapView?.removeAnnotation(promoted.annotation)
+    guard restoringSprite, displayedAnnotationVersions[promoted.entry.key] != nil else {
+      return
+    }
+    displayedSprites[promoted.entry.key] = makeSprite(for: promoted.entry)
+    publishSprites()
   }
 
   private func applyRemovals(_ keys: [MarkerRenderKey]) {
@@ -341,6 +739,12 @@ final class MapOverlayController {
   }
 
   func renderer(for overlay: MKOverlay) -> MKOverlayRenderer? {
+    if overlay === spriteOverlay {
+      let renderer = MarkerSpriteRenderer(overlay: spriteOverlay)
+      spriteRenderer = renderer
+      return renderer
+    }
+
     guard let style = overlayStyles[ObjectIdentifier(overlay)] else {
       return nil
     }

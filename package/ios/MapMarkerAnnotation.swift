@@ -104,6 +104,15 @@ final class MapMarkerAnnotation: NSObject, MKAnnotation {
   }
 
   func centerOffset(forImageSize imageSize: CGSize) -> CGPoint {
+    Self.centerOffset(anchor: anchor, centerOffset: centerOffset, imageSize: imageSize)
+  }
+
+  /// Where the image centre sits relative to the coordinate, in points, y down.
+  static func centerOffset(
+    anchor: MarkerAnchor?,
+    centerOffset: MarkerPoint?,
+    imageSize: CGSize
+  ) -> CGPoint {
     let anchorX = anchor?.x ?? 0.5
     let anchorY = anchor?.y ?? 1.0
     var offsetX = (0.5 - anchorX) * imageSize.width

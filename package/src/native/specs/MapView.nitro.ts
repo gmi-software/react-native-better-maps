@@ -100,6 +100,14 @@ export type ApplePoiCategory =
  */
 export type MarkerPinStyle = 'flat' | 'system';
 
+/**
+ * How Apple MapKit puts markers on screen. `views` is one `MKAnnotationView`
+ * per displayed marker; `sprites` draws the displayed markers and cluster
+ * badges into map tiles through an `MKOverlayRenderer`, one bitmap per tile
+ * instead of one view per marker.
+ */
+export type MarkerRendering = 'views' | 'sprites';
+
 export interface NativePoiPressEvent {
   provider: MapProvider;
   coordinate: Coordinate;
@@ -191,6 +199,9 @@ export interface MapViewProps extends HybridViewProps {
 
   /** Apple MapKit pin rendering for markers without an image. */
   pinStyle?: MarkerPinStyle;
+
+  /** Apple MapKit marker rendering path: annotation views or the sprite layer. */
+  markerRendering?: MarkerRendering;
 
   /** Called once when a user-initiated region change begins. */
   onRegionChange?: (region: Region) => void;

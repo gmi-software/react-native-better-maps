@@ -124,7 +124,7 @@ enum MarkerClusterEngine {
   private static let mergeGap = ClusterBadgeMetrics.mergeGap
 
   private struct Bucket {
-    var key = ""
+    let key: String
     var count = 0
     var sumLat = 0.0
     var sumLon = 0.0
@@ -134,6 +134,26 @@ enum MarkerClusterEngine {
     var maxLon = -Double.greatestFiniteMagnitude
     var memberIds: [String] = []
     var first: MarkerDescriptor?
+
+    init(key: String) {
+      self.key = key
+    }
+
+    /// Adds one marker. Called through `Dictionary.subscript(_:default:)` so
+    /// the bucket is mutated in place and `memberIds` keeps a unique buffer.
+    mutating func include(_ descriptor: MarkerDescriptor, lat: Double, lon: Double) {
+      count += 1
+      sumLat += lat
+      sumLon += lon
+      minLat = min(minLat, lat)
+      maxLat = max(maxLat, lat)
+      minLon = min(minLon, lon)
+      maxLon = max(maxLon, lon)
+      if first == nil {
+        first = descriptor
+      }
+      memberIds.append(descriptor.id)
+    }
 
     /// Folds another bucket's members in. The receiver keeps its own key/first,
     /// so callers should seed groups with the dominant (largest) bucket.
@@ -194,20 +214,10 @@ enum MarkerClusterEngine {
       let col = Int((lon / cellLon).rounded(.down))
       let key = "\(row):\(col)"
 
-      var bucket = buckets[key] ?? Bucket()
-      bucket.key = key
-      bucket.count += 1
-      bucket.sumLat += lat
-      bucket.sumLon += lon
-      bucket.minLat = min(bucket.minLat, lat)
-      bucket.maxLat = max(bucket.maxLat, lat)
-      bucket.minLon = min(bucket.minLon, lon)
-      bucket.maxLon = max(bucket.maxLon, lon)
-      if bucket.first == nil {
-        bucket.first = descriptor
-      }
-      bucket.memberIds.append(descriptor.id)
-      buckets[key] = bucket
+      // Copying the bucket out, appending, and writing it back shared the
+      // member array with the dictionary's copy, so every append copied the
+      // whole array (O(k²) per cell). The default subscript mutates in place.
+      buckets[key, default: Bucket(key: key)].include(descriptor, lat: lat, lon: lon)
     }
 
     let merged = mergeOverlapping(
@@ -356,13 +366,92 @@ final class MarkerRenderPipeline {
   private static let asyncThreshold = 500
   static let liveRefreshInterval: TimeInterval = 0.1
 
+  /// The inputs of one refresh: what to show for a viewport, diffed against
+  /// what is shown, and where to deliver the result.
+  private struct RefreshParameters {
+    let displayedVersions: [String: Int]
+    let region: MKCoordinateRegion
+    let viewSize: CGSize
+    let apply: (MarkerRenderDiff) -> Void
+  }
+
+  /// One viewport query, cluster or filter pass, and diff, computed off the
+  /// main thread against an immutable spatial index.
+  private struct ViewportRefreshRequest {
+    let generation: Int
+    let index: MarkerSpatialIndex
+    let clustering: Bool
+    let parameters: RefreshParameters
+  }
+
+  /// Coalesces refresh requests between the main thread (producer) and the
+  /// compute queue (consumer). At most one compute block is queued at a time; a
+  /// request posted while one is queued replaces the pending request instead of
+  /// adding another block, so a long gesture cannot build a backlog of stale
+  /// work. The latest generations are mirrored here so queued work can bail
+  /// out before computing.
+  private final class RefreshInbox {
+    private let lock = NSLock()
+    private var pending: ViewportRefreshRequest?
+    private var isComputeQueued = false
+    private var latestDatasetGeneration = 0
+
+    func record(datasetGeneration: Int) {
+      lock.lock()
+      latestDatasetGeneration = datasetGeneration
+      lock.unlock()
+    }
+
+    func isCurrent(datasetGeneration: Int) -> Bool {
+      lock.lock()
+      defer { lock.unlock() }
+      return datasetGeneration == latestDatasetGeneration
+    }
+
+    /// Stores `request` as the latest one. Returns true when the caller must
+    /// enqueue a compute block, false when a queued block will pick it up.
+    func post(_ request: ViewportRefreshRequest) -> Bool {
+      lock.lock()
+      defer { lock.unlock() }
+      pending = request
+      if isComputeQueued {
+        return false
+      }
+      isComputeQueued = true
+      return true
+    }
+
+    /// Hands the latest request to the compute block and frees the slot.
+    func take() -> ViewportRefreshRequest? {
+      lock.lock()
+      defer { lock.unlock() }
+      isComputeQueued = false
+      let request = pending
+      pending = nil
+      return request
+    }
+
+    func discardPending() {
+      lock.lock()
+      pending = nil
+      lock.unlock()
+    }
+  }
+
   private let clusterCellPoints: Double
   private var allMarkerDescriptors: [MarkerDescriptor] = []
   private var spatialIndex: MarkerSpatialIndex?
   private var viewportRefreshWorkItem: DispatchWorkItem?
   private var markersFingerprint = 0
+  /// Invalidates in-flight refresh results (viewport diffs).
   private var refreshGeneration = 0
+  /// Invalidates in-flight index builds. Kept apart from `refreshGeneration`
+  /// so a burst of refreshes during a gesture cannot keep discarding the index
+  /// build for a dataset that has not changed.
+  private var datasetGeneration = 0
+  private var latestRefreshParameters: RefreshParameters?
   private var clusteringEnabled = false
+  private let refreshInbox = RefreshInbox()
   private let computeQueue = DispatchQueue(
     label: "com.nitromaps.markerCompute",
     qos: .userInitiated
@@ -380,6 +469,9 @@ final class MarkerRenderPipeline {
     viewportRefreshWorkItem?.cancel()
     viewportRefreshWorkItem = nil
     refreshGeneration += 1
+    advanceDatasetGeneration()
+    refreshInbox.discardPending()
+    latestRefreshParameters = nil
     allMarkerDescriptors.removeAll()
     spatialIndex = nil
     markersFingerprint = 0
@@ -405,6 +497,7 @@ final class MarkerRenderPipeline {
     markersFingerprint = fingerprint
     allMarkerDescriptors = next
     spatialIndex = nil
+    advanceDatasetGeneration()
     return true
   }
 
@@ -414,17 +507,20 @@ final class MarkerRenderPipeline {
     viewSize: CGSize,
     apply: @escaping (MarkerRenderDiff) -> Void
   ) {
+    let parameters = RefreshParameters(
+      displayedVersions: displayedVersions,
+      region: region,
+      viewSize: viewSize,
+      apply: apply
+    )
     if usesViewportPipeline {
-      rebuildIndexAndRefresh(
-        displayedVersions: displayedVersions,
-        region: region,
-        viewSize: viewSize,
-        apply: apply
-      )
+      rebuildIndexAndRefresh(parameters)
     } else {
       viewportRefreshWorkItem?.cancel()
       viewportRefreshWorkItem = nil
       refreshGeneration += 1
+      refreshInbox.discardPending()
+      latestRefreshParameters = parameters
       apply(Self.computeDiff(
         target: allMarkerDescriptors.map { .single($0) },
         displayed: displayedVersions
@@ -476,72 +572,104 @@ final class MarkerRenderPipeline {
       return
     }
 
+    let parameters = RefreshParameters(
+      displayedVersions: displayedVersions,
+      region: region,
+      viewSize: viewSize,
+      apply: apply
+    )
     guard let index = spatialIndex else {
-      rebuildIndexAndRefresh(
-        displayedVersions: displayedVersions,
-        region: region,
-        viewSize: viewSize,
-        apply: apply
-      )
+      rebuildIndexAndRefresh(parameters)
       return
     }
 
-    let clustering = clusteringEnabled
-    refreshGeneration += 1
-    let generation = refreshGeneration
-    let clusterCellPoints = self.clusterCellPoints
+    refreshNow(parameters, index: index)
+  }
 
+  private func refreshNow(_ parameters: RefreshParameters, index: MarkerSpatialIndex) {
+    latestRefreshParameters = parameters
+    refreshGeneration += 1
+    let request = ViewportRefreshRequest(
+      generation: refreshGeneration,
+      index: index,
+      clustering: clusteringEnabled,
+      parameters: parameters
+    )
+    guard refreshInbox.post(request) else {
+      // A compute block is already queued and will pick this request up.
+      return
+    }
+
+    let clusterCellPoints = self.clusterCellPoints
     computeQueue.async { [weak self] in
-      let candidates = index.candidates(in: region)
-      let elements: [MarkerClusterEngine.Element]
-      if clustering {
-        elements = MarkerClusterEngine.clusters(
-          candidates: candidates,
-          region: region,
-          viewSize: viewSize,
-          cellPoints: clusterCellPoints
-        )
-      } else {
-        elements = MarkerViewportFilter
-          .displaySubset(candidates: candidates, region: region)
-          .map { .single($0) }
+      guard let self, let request = self.refreshInbox.take() else {
+        return
       }
 
-      let diff = Self.computeDiff(target: elements, displayed: displayedVersions)
-      DispatchQueue.main.async {
-        guard let self, generation == self.refreshGeneration else {
+      let diff = Self.computeViewportDiff(request, clusterCellPoints: clusterCellPoints)
+      DispatchQueue.main.async { [weak self] in
+        guard let self, request.generation == self.refreshGeneration else {
           return
         }
-        apply(diff)
+        request.parameters.apply(diff)
       }
     }
   }
 
-  private func rebuildIndexAndRefresh(
-    displayedVersions: [String: Int],
-    region: MKCoordinateRegion,
-    viewSize: CGSize,
-    apply: @escaping (MarkerRenderDiff) -> Void
-  ) {
-    let descriptors = allMarkerDescriptors
+  private func rebuildIndexAndRefresh(_ parameters: RefreshParameters) {
+    latestRefreshParameters = parameters
+    // Diffs computed against the previous index are stale from here on.
     refreshGeneration += 1
-    let generation = refreshGeneration
+    let descriptors = allMarkerDescriptors
+    let builtForDataset = datasetGeneration
 
     computeQueue.async { [weak self] in
+      guard let self, self.refreshInbox.isCurrent(datasetGeneration: builtForDataset) else {
+        // A newer dataset superseded this build before it started.
+        return
+      }
+
       let index = MarkerSpatialIndex(markers: descriptors)
-      DispatchQueue.main.async {
-        guard let self, generation == self.refreshGeneration else {
+      DispatchQueue.main.async { [weak self] in
+        guard let self, builtForDataset == self.datasetGeneration else {
           return
         }
         self.spatialIndex = index
-        self.refreshNow(
-          displayedVersions: displayedVersions,
-          region: region,
-          viewSize: viewSize,
-          apply: apply
-        )
+        // Refresh for the viewport that was requested most recently, not the
+        // one that was current when the build was queued.
+        if let latest = self.latestRefreshParameters, self.usesViewportPipeline {
+          self.refreshNow(latest, index: index)
+        }
       }
     }
+  }
+
+  private func advanceDatasetGeneration() {
+    datasetGeneration += 1
+    refreshInbox.record(datasetGeneration: datasetGeneration)
+  }
+
+  private static func computeViewportDiff(
+    _ request: ViewportRefreshRequest,
+    clusterCellPoints: Double
+  ) -> MarkerRenderDiff {
+    let parameters = request.parameters
+    let candidates = request.index.candidates(in: parameters.region)
+    let elements: [MarkerClusterEngine.Element]
+    if request.clustering {
+      elements = MarkerClusterEngine.clusters(
+        candidates: candidates,
+        region: parameters.region,
+        viewSize: parameters.viewSize,
+        cellPoints: clusterCellPoints
+      )
+    } else {
+      elements = MarkerViewportFilter
+        .displaySubset(candidates: candidates, region: parameters.region)
+        .map { .single($0) }
+    }
+
+    return computeDiff(target: elements, displayed: parameters.displayedVersions)
   }
 
   private static func computeDiff(

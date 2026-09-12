@@ -2,12 +2,16 @@ require 'json'
 
 package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
-def better_maps_podfile_properties
+# Helpers are lambdas in local variables rather than top-level `def`s: CocoaPods
+# evaluates a podspec with `eval`, and a method defined that way is not visible
+# from inside the `Pod::Spec.new` block on every Ruby / CocoaPods combination
+# (Ruby 4.0 + CocoaPods 1.17 raises `undefined method ... for module Pod`).
+better_maps_podfile_properties = lambda do
   installation_root = Pod::Config.instance.installation_root
-  return {} if installation_root.nil?
+  next {} if installation_root.nil?
 
   podfile_properties_path = File.join(installation_root, 'Podfile.properties.json')
-  return {} unless File.exist?(podfile_properties_path)
+  next {} unless File.exist?(podfile_properties_path)
 
   JSON.parse(File.read(podfile_properties_path))
 rescue StandardError => e
@@ -15,10 +19,9 @@ rescue StandardError => e
   {}
 end
 
-def better_maps_ios_google_provider_enabled?
-  # Must match IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY in plugin/src/ios.ts
-  better_maps_podfile_properties['betterMaps.iosGoogleProvider'] == 'true'
-end
+# Must match IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY in plugin/src/ios.ts
+better_maps_ios_google_provider_enabled =
+  better_maps_podfile_properties.call['betterMaps.iosGoogleProvider'] == 'true'
 
 Pod::Spec.new do |s|
   s.name         = 'react-native-better-maps'
@@ -48,7 +51,7 @@ Pod::Spec.new do |s|
 
   s.dependency 'React-jsi'
   s.dependency 'React-callinvoker'
-  if better_maps_ios_google_provider_enabled?
+  if better_maps_ios_google_provider_enabled
     s.dependency 'GoogleMaps'
   end
 

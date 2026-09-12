@@ -34,7 +34,10 @@ final class NitroPinAnnotationView: MKMarkerAnnotationView {
       MKAnnotationViewZPriority(rawValue: Float($0))
     } ?? .defaultUnselected
 
-    layoutIfNeeded()
+    // No forced layout here: this runs inside MapKit's `viewFor` callback for
+    // every pin entering the viewport. The marker view keeps one size across
+    // reuse, so a zero size only happens before the first layout, and the
+    // default covers that.
     let pinSize = bounds.size == .zero ? Self.defaultPinSize : bounds.size
     centerOffset = marker.centerOffset(forImageSize: pinSize)
 

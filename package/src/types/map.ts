@@ -8,6 +8,7 @@ import type {
   PolylineDescriptor,
 } from '../native/specs/overlays';
 import type { ApplePoiCategory } from '../native/specs/MapView.nitro';
+import type { MarkerCollection } from '../markers/MarkerCollection';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
 import type { EdgePadding, Region } from './region';
 
@@ -37,6 +38,21 @@ export interface GooglePoiPressEvent {
 }
 
 export type PoiPressEvent = ApplePoiPressEvent | GooglePoiPressEvent;
+
+/**
+ * Payload of `onClusterPress`. The member ids are not part of the event;
+ * fetch them with `MapViewRef.getClusterMembers(event.clusterId)` when needed.
+ */
+export interface ClusterPressEvent {
+  /** Identity of the pressed cluster while it stays displayed. */
+  clusterId: string;
+
+  /** Number of markers in the cluster. */
+  count: number;
+
+  /** Position of the cluster badge. */
+  coordinate: Coordinate;
+}
 
 /**
  * Props shared by all map providers.
@@ -74,9 +90,20 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
 
   /**
    * Bulk marker descriptors. Prefer this over {@linkcode Marker} children
-   * when rendering hundreds or thousands of markers.
+   * when rendering hundreds or thousands of markers. Compiled to deltas: a new
+   * array only sends the markers that changed since the previous one.
+   *
+   * Ignored when {@linkcode markerCollection} is set.
    */
   markers?: MarkerDescriptor[];
+
+  /**
+   * A {@linkcode MarkerCollection} updated imperatively through `set`,
+   * `upsert`, `remove` and `updatePositions`. The right choice for live or
+   * animated markers and for datasets that change often, because each call
+   * ships only its own changes. Replaces `markers` and `<Marker>` children.
+   */
+  markerCollection?: MarkerCollection;
 
   /** Bulk polyline descriptors. */
   polylines?: PolylineDescriptor[];
@@ -121,7 +148,7 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   onLongPress?: (coordinate: Coordinate) => void;
 
   /** Called when a marker cluster is pressed. */
-  onClusterPress?: (markerIds: string[], coordinate: Coordinate) => void;
+  onClusterPress?: (event: ClusterPressEvent) => void;
 
   /** Default entering animation for marker overlays. */
   markerEnteringAnimation?: OverlayEnteringAnimation;

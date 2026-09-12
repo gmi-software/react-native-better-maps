@@ -1,21 +1,21 @@
 package com.margelo.nitro.nitromaps
 
 internal data class MarkerRenderDiff(
-  val removedKeys: Set<String>,
+  val removedKeys: Set<MarkerRenderKey>,
   val added: List<ClusterElement>,
   val retained: List<ClusterElement>,
 )
 
 internal fun computeMarkerRenderDiff(
   target: List<ClusterElement>,
-  displayed: Map<String, Long>,
+  displayed: Map<MarkerRenderKey, Long>,
 ): MarkerRenderDiff {
-  val nextKeys = HashSet<String>(target.size)
+  val nextKeys = HashSet<MarkerRenderKey>(target.size)
   val added = ArrayList<ClusterElement>()
   val retained = ArrayList<ClusterElement>()
 
   for (element in target) {
-    val key = element.diffKey
+    val key = element.key
     if (!nextKeys.add(key)) {
       continue
     }

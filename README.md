@@ -32,6 +32,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Map providers](#map-providers)
 - [Native POI press events](#native-poi-press-events)
 - [Custom marker images](#custom-marker-images)
+- [Marker collections](#marker-collections)
 - [GeoJSON overlays](#geojson-overlays)
 - [Google Maps setup](#google-maps-setup)
 - [Marker entering animations](#marker-entering-animations)
@@ -51,6 +52,8 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - **Unified map API** - One typed React API for Apple MapKit and Google Maps SDK.
 - **Provider-aware props** - TypeScript narrows provider-specific props with `MapViewPropsForProvider<P>`.
 - **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, circles, and GeoJSON FeatureCollections.
+- **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, and circles.
+- **Delta marker updates** - The marker dataset lives natively. `markers` and `<Marker>` compile to deltas, and `MarkerCollection` updates it directly: one packed batch per change, `updatePositions` for animated markers, nothing re-serialized for markers that did not change.
 - **Native POI taps** - `onPoiPress` reports provider-owned places from Apple Maps and Google Maps without confusing them with app-owned markers.
 - **Camera control** - Declarative region/camera props plus imperative camera helpers.
 - **Marker clustering** - Native marker clustering for large point sets.
@@ -371,6 +374,65 @@ Platform notes:
 | `opacity`              | `opacity`                          |
 | Custom RN child views  | Not supported (use bitmap `image`) |
 
+## Marker collections
+
+The marker dataset is owned by native code and updated through deltas. `markers` and `<Marker>` children are compiled to those deltas for you: `MapView` remembers the last descriptor it sent for every id and a new array only ships the markers that changed, as one packed batch across JSI. For live or animated markers, or datasets that change often, own the collection and update it directly:
+
+```tsx
+import { useEffect } from 'react';
+import { MapView, useMarkerCollection } from 'react-native-better-maps';
+
+function Fleet({ vehicles }: { vehicles: Vehicle[] }) {
+  const markers = useMarkerCollection();
+
+  useEffect(() => {
+    markers.set(
+      vehicles.map((vehicle) => ({
+        id: vehicle.id,
+        coordinate: vehicle.position,
+        title: vehicle.name,
+      })),
+    );
+  }, [markers, vehicles]);
+
+  useEffect(() => {
+    // A 10 Hz position feed: one 24-byte record per moved vehicle, no strings.
+    const subscription = positionFeed.subscribe((updates) => {
+      markers.updatePositions(updates); // [{ id, coordinate }]
+    });
+    return () => subscription.unsubscribe();
+  }, [markers]);
+
+  return <MapView style={{ flex: 1 }} markerCollection={markers} clusteringEnabled />;
+}
+```
+
+| Method                      | What crosses JSI                                                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------- |
+| `set(markers)`              | Upserts for new or changed markers and removals for missing ones. An unchanged marker costs one comparison. |
+| `upsert(markers)`           | Adds new markers and updates existing ones by id.                                                   |
+| `remove(ids)`               | Removals by id.                                                                                     |
+| `updatePositions(updates)`  | Coordinates only, for markers already in the collection.                                            |
+| `clear()`                   | One call.                                                                                           |
+| `size`, `has(id)`, `ids()`  | Nothing; answered from the JS-side copy.                                                            |
+
+A collection outlives renders and can be shared by several maps. Batches are decoded on a native background thread and the map picks them up on its next refresh, so an update never blocks the UI thread on the size of the dataset. `markers` and `<Marker>` children are ignored while `markerCollection` is set.
+
+### Cluster presses
+
+`onClusterPress` receives `{ clusterId, count, coordinate }`. Member ids are fetched on demand, so a press on a 50,000-marker cluster does not ship 50,000 strings:
+
+```tsx
+<MapView
+  ref={mapRef}
+  clusteringEnabled
+  onClusterPress={async (event) => {
+    const ids = await mapRef.current?.getClusterMembers(event.clusterId);
+    console.log(`${event.count} markers`, ids);
+  }}
+/>
+```
+
 ## GeoJSON overlays
 
 `<Geojson>` converts a GeoJSON object (or JSON string) into the existing marker, polyline, and polygon overlay pipeline. There is no native GeoJSON parser — conversion happens in JavaScript so overlay diffing stays shared.
@@ -517,6 +579,7 @@ On Google Maps providers, marker and cluster entering animations can reduce UI-t
 Nitro compares view props by reference identity, so a prop rebuilt from unchanged data would still be re-serialized across JSI and re-applied to the native map. `MapView` guards against that on your behalf:
 
 - Overlay arrays - whether they come from `<Marker />` children or the bulk `markers` / `polylines` / `polygons` / `circles` props - are compared field by field. Passing a freshly built array with identical content costs one comparison and nothing else.
+- Markers go one step further: a changed array is compiled to a delta, so only the markers that differ from the previous array reach native. See [Marker collections](#marker-collections).
 - `markerEnteringAnimation` and `clusterEnteringAnimation` are compared the same way, so an inline `{ preset: 'fade' }` object is fine.
 - Event handlers are wrapped once per handler identity rather than once per render, and the internal `hybridRef` wrapper is created once per mount.
 
@@ -552,6 +615,7 @@ setMarkers((current) =>
 | Compass                    | Supported                                                   | Supported                                  | Supported                                  |
 | Scale control              | Supported                                                   | Unsupported                                | Unsupported                                |
 | Markers / overlays         | Supported                                                   | Supported                                  | Supported                                  |
+| Marker collections (deltas) | Supported                                                  | Supported                                  | Supported                                  |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |
 | Overlay press events       | Supported                                                   | Supported                                  | Supported                                  |
@@ -576,31 +640,40 @@ setMarkers((current) =>
 | `Circle`   | Circular area overlay             |
 | `Geojson`  | GeoJSON FeatureCollection overlay |
 
+### Classes and hooks
+
+| Export                | Description                                                              |
+| --------------------- | ------------------------------------------------------------------------ |
+| `MarkerCollection`    | Native-owned marker dataset updated through `set` / `upsert` / `remove` / `updatePositions` |
+| `useMarkerCollection` | Creates one `MarkerCollection` for the lifetime of a component            |
+
 ### Types
 
-| Type                        | Description                                          |
-| --------------------------- | ---------------------------------------------------- |
-| `Coordinate`                | `{ latitude, longitude }`                            |
-| `Region`                    | Center + span                                        |
-| `Camera`                    | Position, zoom, heading, pitch                       |
-| `MapType`                   | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
-| `MapProvider`               | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
-| `PoiPressEvent`             | Provider-discriminated native POI press payload      |
-| `ApplePoiPressEvent`        | Apple Maps POI payload with category                 |
-| `GooglePoiPressEvent`       | Google Maps POI payload with place ID                |
-| `ApplePoiCategory`          | Known MapKit POI categories plus `unknown`           |
-| `MapViewRef`                | Imperative handle for camera control                 |
-| `MapViewProps`              | Props for `MapView`                                  |
-| `MapViewPropsForProvider`   | Provider-specific `MapView` props                    |
-| `MarkerDescriptor`          | Bulk marker descriptor                               |
-| `MarkerProps`               | Props for `Marker`                                   |
-| `MarkerImage`               | Resolved marker image descriptor                     |
-| `MarkerAnchor`              | Anchor point on marker image (0..1)                  |
-| `MarkerPoint`               | Point offset in dp                                   |
-| `OverlayEnteringAnimation`  | Marker / marker-cluster entering animation config    |
-| `PolylineProps`             | Props for `Polyline`                                 |
-| `PolygonProps`              | Props for `Polygon`                                  |
-| `CircleProps`               | Props for `Circle`                                   |
+| Type                       | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| `ClusterPressEvent`        | `{ clusterId, count, coordinate }` passed to `onClusterPress` |
+| `MarkerPositionUpdate`     | `{ id, coordinate }` accepted by `updatePositions`   |
+| `Coordinate`               | `{ latitude, longitude }`                            |
+| `Region`                   | Center + span                                        |
+| `Camera`                   | Position, zoom, heading, pitch                       |
+| `MapType`                  | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
+| `MapProvider`              | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
+| `PoiPressEvent`            | Provider-discriminated native POI press payload             |
+| `ApplePoiPressEvent`       | Apple Maps POI payload with category                        |
+| `GooglePoiPressEvent`      | Google Maps POI payload with place ID                       |
+| `ApplePoiCategory`         | Known MapKit POI categories plus `unknown`                  |
+| `MapViewRef`               | Imperative handle for camera control and `getClusterMembers` |
+| `MapViewProps`             | Props for `MapView`                                  |
+| `MapViewPropsForProvider`  | Provider-specific `MapView` props                    |
+| `MarkerDescriptor`         | Bulk marker descriptor                               |
+| `MarkerProps`              | Props for `Marker`                                   |
+| `MarkerImage`              | Resolved marker image descriptor                     |
+| `MarkerAnchor`             | Anchor point on marker image (0..1)                  |
+| `MarkerPoint`              | Point offset in dp                                   |
+| `OverlayEnteringAnimation` | Marker / marker-cluster entering animation config    |
+| `PolylineProps`            | Props for `Polyline`                                 |
+| `PolygonProps`             | Props for `Polygon`                                  |
+| `CircleProps`              | Props for `Circle`                                   |
 | `GeojsonProps`              | Props for `Geojson`                                  |
 | `GeojsonFeature`            | Feature passed to `Geojson` `onPress`                |
 | `GeojsonOverlayDescriptors` | Result of `geojsonToOverlayDescriptors`              |
@@ -651,6 +724,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 | Provider throws before rendering            | Check the [supported platforms](#supported-platforms) table. `openstreetmap` and `mapbox` are reserved for future support but do not render yet.               |
 | Expo Go does not load native maps           | Use a development build after `expo prebuild`; native Nitro modules are not available in Expo Go.                                                              |
 | Marker animations affect gesture smoothness | For very large marker sets, prefer clustering, shorter durations, or disable marker/cluster entering animations.                                               |
+| `markers` or `<Marker>` do not render       | They are ignored while `markerCollection` is set; put those markers into the collection instead.                                                               |
 
 ## Development
 

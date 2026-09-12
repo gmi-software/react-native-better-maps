@@ -25,7 +25,7 @@ struct MapViewState {
   var onPress: ((Coordinate) -> Void)?
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
   var onLongPress: ((Coordinate) -> Void)?
-  var markers: [MarkerDescriptor]?
+  var markerCollection: (any HybridMarkerCollectionSpec)?
   var polylines: [PolylineDescriptor]?
   var polygons: [PolygonDescriptor]?
   var circles: [CircleDescriptor]?
@@ -34,7 +34,7 @@ struct MapViewState {
   var onPolylinePress: ((String) -> Void)?
   var onPolygonPress: ((String) -> Void)?
   var onCirclePress: ((String) -> Void)?
-  var onClusterPress: (([String], Coordinate) -> Void)?
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)?
 
   func apply(to adapter: MapProviderAdapter) {
     adapter.mapType = mapType
@@ -60,7 +60,7 @@ struct MapViewState {
     adapter.onPress = onPress
     adapter.onPoiPress = onPoiPress
     adapter.onLongPress = onLongPress
-    adapter.markers = markers
+    adapter.markerCollection = markerCollection as? HybridMarkerCollection
     adapter.polylines = polylines
     adapter.polygons = polygons
     adapter.circles = circles

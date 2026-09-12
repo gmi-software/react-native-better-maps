@@ -22,32 +22,34 @@ that passed with nothing drawn.
 
 Thresholds scale with the display's refresh rate (`budget = 1000 / Hz`):
 
-| Metric                                     | Limit                                                            |
-| ------------------------------------------ | ---------------------------------------------------------------- |
-| p50, p95                                   | ≤ budget + 5 % (display-link jitter around the nominal interval) |
-| p99                                        | ≤ 1.5 × budget                                                   |
-| worst frame                                | ≤ 3 × budget (25 ms at 120 Hz, 50 ms at 60 Hz)                   |
-| jank frames                                | ≤ 1 %                                                            |
-| JS lag p95 (animated-marker scenario only) | ≤ budget                                                         |
+| Metric                                                    | Limit                                                            |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
+| p50, p95                                                  | ≤ budget + 5 % (display-link jitter around the nominal interval) |
+| p99                                                       | ≤ 1.5 × budget                                                   |
+| worst frame                                               | ≤ 3 × budget (25 ms at 120 Hz, 50 ms at 60 Hz)                   |
+| jank frames                                               | ≤ 1 %                                                            |
+| JS lag p95 (scenarios that say "JS lag is checked" below) | ≤ budget                                                         |
 
 They are implemented in `benchmark/thresholds.ts` and unit-tested with
 `cd example && bun test`.
 
 ## Scenarios
 
-| ID  | Setup                              | Script                                                                    |
-| --- | ---------------------------------- | ------------------------------------------------------------------------- |
-| A   | empty map                          | 3 s idle, short pan                                                       |
-| B   | 100 markers                        | pan                                                                       |
-| C   | 1,000 markers                      | pan                                                                       |
-| D   | 10,000 markers                     | pan                                                                       |
-| E   | 10,000 markers, clustering on      | zoom sweep across five levels, then pan                                   |
-| F   | 10,000 markers                     | ten-leg pan                                                               |
-| G   | 10,000 markers                     | zoom sweep                                                                |
-| H   | 10,000 markers                     | four heading changes                                                      |
-| I   | 1,000 markers                      | 100 of them move at 10 Hz for 5 s through prop updates; JS lag is checked |
-| K   | 5,000-point route and 200 polygons | five style changes, then pan                                              |
-| L   | 10,000 markers                     | three pan legs, then 5 s idle                                             |
+| ID  | Setup                              | Script                                                                            |
+| --- | ---------------------------------- | --------------------------------------------------------------------------------- |
+| A   | empty map                          | 3 s idle, short pan                                                               |
+| B   | 100 markers                        | pan                                                                               |
+| C   | 1,000 markers                      | pan                                                                               |
+| D   | 10,000 markers                     | pan                                                                               |
+| E   | 10,000 markers, clustering on      | zoom sweep across five levels, then pan                                           |
+| F   | 10,000 markers                     | ten-leg pan                                                                       |
+| G   | 10,000 markers                     | zoom sweep                                                                        |
+| H   | 10,000 markers                     | four heading changes                                                              |
+| I   | 1,000 markers in a collection      | 100 of them move at 10 Hz for 5 s through `updatePositions`; JS lag is checked    |
+| I2  | 1,000 markers                      | 100 of them move at 10 Hz for 5 s through new `markers` arrays; JS lag is checked |
+| K   | 5,000-point route and 200 polygons | five style changes, then pan                                                      |
+| L   | 10,000 markers                     | three pan legs, then 5 s idle                                                     |
+| M   | 10,000 markers in a collection     | one marker is upserted every 100 ms for 3 s; JS lag is checked                    |
 
 Scenario J (live location) is not scripted: it needs location permission and a
 GPS feed. Use the simulator's location menu with the manual recorder.
@@ -98,6 +100,14 @@ maestro test example/maestro/benchmark-pan.yaml       # real-gesture pan on scen
 
 The flow selects scenario D, starts the manual recorder, performs four swipes
 and stops. Maestro has no pinch gesture, so zoom runs stay manual.
+
+Use the flows on Android only. On iOS, Maestro waits for the summary by
+polling the accessibility tree, and XCTest builds each snapshot on the app's
+main thread, in time proportional to the number of annotation views on the
+map. That polling shows up as dropped frames in every scenario with many
+markers on screen and doubled the reported jank on a static map with one
+marker changing per tick. Start "Run all" by hand on iOS (or through
+`xcrun simctl`) and harvest the system log.
 
 ### 120 Hz on iPhone
 
@@ -174,10 +184,80 @@ the 10k scenarios are the diff applies after each camera move.
 - K-shapes: p99 33.33 ms > 25.00 ms; worst frame 50.00 ms > 50.00 ms; jank 1.33% > 1%
 - L-idle-after-pan: p95 50.00 ms > budget 17.50 ms; p99 166.67 ms > 25.00 ms; worst frame 300.00 ms > 50.00 ms; jank 9.01% > 1%
 
+### Marker store runs (not a device baseline)
+
+The same emulator and simulator after markers moved to the native store (ADR
+0005). Numbers from a Mac that is also running the build tooling; treat them as
+a before/after on identical hardware, not as device numbers.
+
+Android emulator, API 35, arm64, Google Maps provider, 60 Hz, **release build**
+(the earlier Android table was a debug build served by Metro, so its JS-lag
+column is not comparable; frame intervals are). Recorded 2026-09-08. The
+emulator's JS-lag floor is about 20 ms even on the empty map, which is what the
+two `(1)` failures on the collection scenarios are.
+
+| Scenario              | Result   | FPS | p50     | p95     | p99     | Worst  | Jank  | JS lag p95 | RSS Δ  |
+| --------------------- | -------- | --- | ------- | ------- | ------- | ------ | ----- | ---------- | ------ |
+| A-empty-idle          | fail (1) | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 67 ms  | 0.6 % | 21.5 ms    | -8 MB  |
+| B-markers-100         | fail (3) | 58  | 16.7 ms | 16.7 ms | 33.3 ms | 50 ms  | 3.4 % | 34.1 ms    | -5 MB  |
+| C-markers-1k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms  | 0.3 % | 21.9 ms    | -4 MB  |
+| D-markers-10k         | fail (3) | 58  | 16.7 ms | 16.7 ms | 50.0 ms | 67 ms  | 1.7 % | 26.4 ms    | -2 MB  |
+| E-clustered-10k       | fail (3) | 58  | 16.7 ms | 16.7 ms | 33.3 ms | 183 ms | 1.4 % | 23.1 ms    | -21 MB |
+| F-pan-10k             | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms  | 0.0 % | 22.9 ms    | -10 MB |
+| G-zoom-10k            | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 33 ms  | 1.3 % | 29.7 ms    | +14 MB |
+| H-rotate-10k          | fail (2) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 33 ms  | 1.0 % | 24.1 ms    | -18 MB |
+| I-animated-collection | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms  | 0.3 % | 18.9 ms    | -50 MB |
+| I2-animated-prop      | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms  | 0.0 % | 20.2 ms    | -1 MB  |
+| K-shapes              | fail (3) | 59  | 16.7 ms | 16.7 ms | 33.3 ms | 50 ms  | 1.4 % | 22.4 ms    | +8 MB  |
+| L-idle-after-pan      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms  | 0.2 % | 19.9 ms    | -1 MB  |
+| M-one-of-10k          | fail (1) | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms  | 0.0 % | 18.6 ms    | +9 MB  |
+
+- A-empty-idle: worst frame 66.67 ms > 50.00 ms
+- B-markers-100: p99 33.33 ms > 25.00 ms; worst frame 50.00 ms > 50.00 ms; jank 3.37% > 1%
+- D-markers-10k: p99 50.00 ms > 25.00 ms; worst frame 66.67 ms > 50.00 ms; jank 1.68% > 1%
+- E-clustered-10k: p99 33.33 ms > 25.00 ms; worst frame 183.33 ms > 50.00 ms; jank 1.38% > 1%
+- G-zoom-10k: p99 33.33 ms > 25.00 ms; jank 1.31% > 1%
+- H-rotate-10k: p99 33.33 ms > 25.00 ms; jank 1.01% > 1%
+- I-animated-collection: JS lag p95 18.86 ms > budget 17.50 ms
+- I2-animated-prop: JS lag p95 20.19 ms > budget 17.50 ms
+- K-shapes: p99 33.33 ms > 25.00 ms; worst frame 50.00 ms > 50.00 ms; jank 1.43% > 1%
+- M-one-of-10k: JS lag p95 18.58 ms > budget 17.50 ms
+
+iPhone 17 Pro simulator, iOS 26.5, release build, MapKit provider, 60 Hz,
+"Run all" started by hand (see the Maestro note above). Recorded 2026-09-08.
+Against the phase-1 table on the same simulator: the clustered zoom sweep (E)
+now passes with a worst frame of 33 ms instead of 34 ms and a p99 of one
+frame instead of two, rotation (H) lost its 80 ms worst frame, and the two new
+scenarios show what the store is for: moving 100 markers at 10 Hz (I) and
+changing one marker of 10,000 (M) both keep every frame at 16.7 ms with a JS
+lag around 1 ms and no measurable memory growth. The zoom sweep without
+clustering (G) still drops frames at octave crossings, where MapKit creates
+hundreds of `MKMarkerAnnotationView`s at once; that is the phase-3 work
+(time-sliced apply, lighter annotation views), not the transport.
+
+| Scenario              | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | RSS Δ  |
+| --------------------- | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ------ |
+| A-empty-idle          | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 45 ms | 0.6 % | 1.1 ms     | +65 MB |
+| B-markers-100         | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 45 ms | 0.3 % | 1.2 ms     | +78 MB |
+| C-markers-1k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 46 ms | 0.3 % | 1.1 ms     | +66 MB |
+| D-markers-10k         | pass     | 59  | 16.7 ms | 16.7 ms | 20.6 ms | 46 ms | 1.0 % | 1.1 ms     | +66 MB |
+| E-clustered-10k       | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 33 ms | 0.8 % | 1.1 ms     | +90 MB |
+| F-pan-10k             | pass     | 59  | 16.7 ms | 16.7 ms | 23.6 ms | 43 ms | 1.0 % | 1.1 ms     | +89 MB |
+| G-zoom-10k            | fail (2) | 58  | 16.7 ms | 16.7 ms | 33.3 ms | 36 ms | 3.3 % | 1.1 ms     | +99 MB |
+| H-rotate-10k          | fail (2) | 59  | 16.7 ms | 16.7 ms | 35.6 ms | 36 ms | 1.0 % | 1.1 ms     | +50 MB |
+| I-animated-collection | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.4 ms     | -5 MB  |
+| I2-animated-prop      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.1 ms     | -0 MB  |
+| K-shapes              | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 49 ms | 0.3 % | 1.1 ms     | +67 MB |
+| L-idle-after-pan      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 46 ms | 0.4 % | 1.2 ms     | +48 MB |
+| M-one-of-10k          | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 17 ms | 0.0 % | 1.1 ms     | +1 MB  |
+
+- G-zoom-10k: p99 33.33 ms > 25.00 ms; jank 3.33% > 1%
+- H-rotate-10k: p99 35.56 ms > 25.00 ms; jank 1.01% > 1%
+
 ## Profiling markers
 
 The library emits `os_signpost` intervals (iOS, subsystem `com.nitromaps`,
 category `MarkerPipeline`) and `android.os.Trace` sections (Android, prefix
-`NitroMaps.`) around the marker fingerprint, the spatial index build, the
-viewport compute and the diff apply. They show up in Instruments' Points of
-Interest track and in Perfetto, and cost nothing when no tracer is attached.
+`NitroMaps.`) around the marker batch apply, the viewport compute and the diff
+apply. They show up in Instruments' Points of Interest track and in Perfetto,
+and cost nothing when no tracer is attached.

@@ -1,63 +1,150 @@
 import MapKit
 
-/// Uniform grid spatial index over a marker dataset.
+/// Uniform grid spatial index over marker handles.
 ///
-/// Built once per dataset so viewport queries cost O(cells in view + markers in
-/// those cells) instead of O(all markers). Immutable after init, so instances
-/// are safe to query from a background queue.
+/// Cells hold handles, not descriptors, and the grid is updated in place as
+/// markers are inserted, moved and removed, so a moving marker costs one cell
+/// swap instead of a rebuild. The grid bounds are computed over the dataset
+/// with a margin; a marker that lands outside them flags a rebuild, which the
+/// store runs once at the end of the batch that caused it.
+///
+/// Not thread-safe on its own: the owning `MarkerStore` serializes access.
 final class MarkerSpatialIndex {
-  let count: Int
   private let cellsPerSide: Int
-  private let minLat: Double
-  private let minLon: Double
-  private let latStep: Double
-  private let lonStep: Double
-  private var cells: [[MarkerDescriptor]]
+  private var minLat = 0.0
+  private var maxLat = 0.0
+  private var minLon = 0.0
+  private var maxLon = 0.0
+  private var latStep = 1.0
+  private var lonStep = 1.0
+  private var hasBounds = false
+  private var needsRebuild = false
+  private var cells: [[Int32]]
+  /// Cell index per handle, -1 when the handle is not indexed.
+  private var cellOf: [Int32] = []
+  private(set) var count = 0
 
-  init(markers: [MarkerDescriptor], cellsPerSide: Int = 96) {
-    count = markers.count
+  init(cellsPerSide: Int = 96) {
     let side = max(1, cellsPerSide)
     self.cellsPerSide = side
+    cells = Array(repeating: [], count: side * side)
+  }
+
+  func insert(_ handle: Int, latitude: Double, longitude: Double) {
+    ensureCapacity(handle)
+    guard cellOf[handle] < 0 else {
+      move(handle, latitude: latitude, longitude: longitude)
+      return
+    }
+
+    count += 1
+    if !hasBounds || !contains(latitude: latitude, longitude: longitude) {
+      needsRebuild = true
+    }
+    let cell = clampedCellIndex(latitude: latitude, longitude: longitude)
+    cells[cell].append(Int32(handle))
+    cellOf[handle] = Int32(cell)
+  }
+
+  func move(_ handle: Int, latitude: Double, longitude: Double) {
+    guard handle < cellOf.count, cellOf[handle] >= 0 else {
+      insert(handle, latitude: latitude, longitude: longitude)
+      return
+    }
+
+    if !contains(latitude: latitude, longitude: longitude) {
+      needsRebuild = true
+    }
+    let current = Int(cellOf[handle])
+    let next = clampedCellIndex(latitude: latitude, longitude: longitude)
+    guard next != current else {
+      return
+    }
+    removeFromCell(handle, cell: current)
+    cells[next].append(Int32(handle))
+    cellOf[handle] = Int32(next)
+  }
+
+  func remove(_ handle: Int) {
+    guard handle < cellOf.count, cellOf[handle] >= 0 else {
+      return
+    }
+    removeFromCell(handle, cell: Int(cellOf[handle]))
+    cellOf[handle] = -1
+    count -= 1
+  }
+
+  func removeAll() {
+    for index in cells.indices {
+      cells[index].removeAll(keepingCapacity: false)
+    }
+    cellOf.removeAll()
+    count = 0
+    hasBounds = false
+    needsRebuild = false
+  }
+
+  /// Recomputes the grid over every live marker if one fell outside the
+  /// current bounds. Called once per applied batch, before any query.
+  func rebuildIfNeeded(latitudes: [Double], longitudes: [Double], flags: [UInt8]) {
+    guard needsRebuild else {
+      return
+    }
+    needsRebuild = false
 
     var minLatV = Double.greatestFiniteMagnitude
     var maxLatV = -Double.greatestFiniteMagnitude
     var minLonV = Double.greatestFiniteMagnitude
     var maxLonV = -Double.greatestFiniteMagnitude
-
-    for marker in markers {
-      let lat = marker.coordinate.latitude
-      let lon = marker.coordinate.longitude
-      minLatV = min(minLatV, lat)
-      maxLatV = max(maxLatV, lat)
-      minLonV = min(minLonV, lon)
-      maxLonV = max(maxLonV, lon)
+    var alive = 0
+    for handle in 0..<flags.count where flags[handle] & MarkerStore.Flag.alive != 0 {
+      alive += 1
+      minLatV = min(minLatV, latitudes[handle])
+      maxLatV = max(maxLatV, latitudes[handle])
+      minLonV = min(minLonV, longitudes[handle])
+      maxLonV = max(maxLonV, longitudes[handle])
     }
 
-    if markers.isEmpty {
-      minLatV = 0
-      maxLatV = 0
-      minLonV = 0
-      maxLonV = 0
+    for index in cells.indices {
+      cells[index].removeAll(keepingCapacity: true)
+    }
+    guard alive > 0 else {
+      hasBounds = false
+      for handle in cellOf.indices {
+        cellOf[handle] = -1
+      }
+      count = 0
+      return
     }
 
-    minLat = minLatV
-    minLon = minLonV
-    latStep = max(1e-9, (maxLatV - minLatV) / Double(side))
-    lonStep = max(1e-9, (maxLonV - minLonV) / Double(side))
-    cells = Array(repeating: [], count: side * side)
+    // A margin keeps ordinary movement inside the grid; only a marker that
+    // leaves the dataset's neighbourhood triggers the next rebuild.
+    let latPad = max((maxLatV - minLatV) * 0.15, 1e-6)
+    let lonPad = max((maxLonV - minLonV) * 0.15, 1e-6)
+    minLat = minLatV - latPad
+    maxLat = maxLatV + latPad
+    minLon = minLonV - lonPad
+    maxLon = maxLonV + lonPad
+    latStep = max(1e-9, (maxLat - minLat) / Double(cellsPerSide))
+    lonStep = max(1e-9, (maxLon - minLon) / Double(cellsPerSide))
+    hasBounds = true
 
-    for marker in markers {
-      let index = cellIndex(
-        lat: marker.coordinate.latitude,
-        lon: marker.coordinate.longitude
-      )
-      cells[index].append(marker)
+    ensureCapacity(flags.count - 1)
+    for handle in 0..<flags.count {
+      if flags[handle] & MarkerStore.Flag.alive != 0 {
+        let cell = clampedCellIndex(latitude: latitudes[handle], longitude: longitudes[handle])
+        cells[cell].append(Int32(handle))
+        cellOf[handle] = Int32(cell)
+      } else if handle < cellOf.count {
+        cellOf[handle] = -1
+      }
     }
+    count = alive
   }
 
-  /// Markers whose grid cells overlap the padded region.
-  func candidates(in region: MKCoordinateRegion, padding: Double = 0.2) -> [MarkerDescriptor] {
-    guard count > 0 else {
+  /// Handles whose grid cells overlap the padded region.
+  func candidates(in region: MKCoordinateRegion, padding: Double = 0.2) -> [Int32] {
+    guard count > 0, hasBounds else {
       return []
     }
 
@@ -67,20 +154,58 @@ final class MarkerSpatialIndex {
     let maxLatQ = region.center.latitude + region.span.latitudeDelta / 2 + latPad
     let minLonQ = region.center.longitude - region.span.longitudeDelta / 2 - lonPad
     let maxLonQ = region.center.longitude + region.span.longitudeDelta / 2 + lonPad
+    guard maxLatQ >= minLat, minLatQ <= maxLat, overlapsLongitude(minLonQ, maxLonQ) else {
+      return []
+    }
 
     let rowStart = clampedRow(minLatQ)
     let rowEnd = clampedRow(maxLatQ)
+    let columns = longitudeColumnRange(minLon: minLonQ, maxLon: maxLonQ)
 
-    var result: [MarkerDescriptor] = []
+    var result: [Int32] = []
     var row = rowStart
     while row <= rowEnd {
       let base = row * cellsPerSide
-      for column in longitudeColumnRange(minLon: minLonQ, maxLon: maxLonQ) {
+      for column in columns {
         result.append(contentsOf: cells[base + column])
       }
       row += 1
     }
     return result
+  }
+
+  /// Whether a query's longitude range, which may cross the antimeridian,
+  /// meets the grid's. Without this a query east or west of the dataset would
+  /// clamp to the outermost column and return everything in it.
+  private func overlapsLongitude(_ minLonQ: Double, _ maxLonQ: Double) -> Bool {
+    if maxLonQ - minLonQ >= 360 {
+      return true
+    }
+    let wrappedMin = wrapLongitude(minLonQ)
+    let wrappedMax = wrapLongitude(maxLonQ)
+    if wrappedMin <= wrappedMax {
+      return wrappedMax >= minLon && wrappedMin <= maxLon
+    }
+    return maxLon >= wrappedMin || minLon <= wrappedMax
+  }
+
+  private func ensureCapacity(_ handle: Int) {
+    guard handle >= cellOf.count else {
+      return
+    }
+    cellOf.append(contentsOf: repeatElement(-1, count: handle + 1 - cellOf.count))
+  }
+
+  private func removeFromCell(_ handle: Int, cell: Int) {
+    guard let position = cells[cell].firstIndex(of: Int32(handle)) else {
+      return
+    }
+    cells[cell].swapAt(position, cells[cell].count - 1)
+    cells[cell].removeLast()
+  }
+
+  private func contains(latitude: Double, longitude: Double) -> Bool {
+    latitude >= minLat && latitude <= maxLat && longitude >= minLon && longitude <= maxLon
   }
 
   private func longitudeColumnRange(minLon: Double, maxLon: Double) -> [Int] {
@@ -108,8 +233,8 @@ final class MarkerSpatialIndex {
     return wrapped
   }
 
-  private func cellIndex(lat: Double, lon: Double) -> Int {
-    clampedRow(lat) * cellsPerSide + clampedColumn(lon)
+  private func clampedCellIndex(latitude: Double, longitude: Double) -> Int {
+    clampedRow(latitude) * cellsPerSide + clampedColumn(longitude)
   }
 
   private func clampedRow(_ lat: Double) -> Int {

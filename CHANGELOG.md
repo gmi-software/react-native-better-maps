@@ -5,6 +5,48 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Breaking changes
+
+**`onClusterPress` receives an event instead of the member ids**
+
+The callback used to be called with `(markerIds, coordinate)`, which shipped every
+member id across JSI on each press. It now receives `{ clusterId, count, coordinate }`;
+fetch the ids on demand when you need them:
+
+```tsx
+// Before
+<MapView onClusterPress={(ids, coordinate) => showList(ids)} />
+
+// After
+<MapView
+  ref={mapRef}
+  onClusterPress={async (event) => {
+    const ids = await mapRef.current?.getClusterMembers(event.clusterId);
+    showList(ids ?? []);
+  }}
+/>
+```
+
+### Added
+
+- `MarkerCollection` and `useMarkerCollection`: a native-owned marker dataset updated
+  through `set`, `upsert`, `remove` and `updatePositions`, passed to `MapView` with the
+  new `markerCollection` prop. Each call ships one packed batch that only carries what
+  changed.
+- `MapViewRef.getClusterMembers(clusterId)`.
+- `ClusterPressEvent` and `MarkerPositionUpdate` types.
+
+### Changed
+
+- The `markers` prop and `<Marker>` children now compile to the same delta batches: a new
+  array only sends the markers that changed since the previous one, instead of
+  re-serializing the whole dataset on every change. Native code keeps one copy of the
+  dataset, addressed by integer handles, with a spatial index that is updated in place.
+- Cluster badges keep member handles instead of id strings, so a cluster of 100,000
+  markers no longer carries 100,000 strings through the render pipeline.
+
 ## 1.1.0
 
 ### Behavior changes

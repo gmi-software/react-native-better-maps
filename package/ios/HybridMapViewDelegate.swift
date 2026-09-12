@@ -166,10 +166,11 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
     if let cluster = view.annotation as? MapClusterAnnotation {
       let coordinate = cluster.coordinate
-      parent?.onClusterPress?(
-        cluster.memberIds,
-        Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude)
-      )
+      parent?.onClusterPress?(NativeClusterPressEvent(
+        clusterId: cluster.id,
+        count: Double(cluster.count),
+        coordinate: Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude)
+      ))
       parent?.animateToClusterRegion(cluster.region)
       mapView.deselectAnnotation(cluster, animated: false)
       return

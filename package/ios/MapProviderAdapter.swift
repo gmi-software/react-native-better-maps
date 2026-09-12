@@ -29,7 +29,7 @@ protocol MapProviderAdapter: AnyObject {
   var onPoiPress: ((NativePoiPressEvent) -> Void)? { get set }
   var onLongPress: ((Coordinate) -> Void)? { get set }
 
-  var markers: [MarkerDescriptor]? { get set }
+  var markerCollection: HybridMarkerCollection? { get set }
   var polylines: [PolylineDescriptor]? { get set }
   var polygons: [PolygonDescriptor]? { get set }
   var circles: [CircleDescriptor]? { get set }
@@ -39,13 +39,14 @@ protocol MapProviderAdapter: AnyObject {
   var onPolylinePress: ((String) -> Void)? { get set }
   var onPolygonPress: ((String) -> Void)? { get set }
   var onCirclePress: ((String) -> Void)? { get set }
-  var onClusterPress: (([String], Coordinate) -> Void)? { get set }
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)? { get set }
 
   func fetchCamera() throws -> Promise<Camera>
   func applyCamera(camera: Camera) throws
   func animateCamera(camera: Camera, duration: Double?) throws
   func getVisibleRegion() throws -> Promise<VisibleRegion>
   func fitToCoordinates(coordinates: [Coordinate], padding: EdgePadding?, animated: Bool?) throws
+  func getClusterMembers(clusterId: String) throws -> Promise<[String]>
   func prepareForRecycle()
 }
 
@@ -78,7 +79,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
   var onLongPress: ((Coordinate) -> Void)?
 
-  var markers: [MarkerDescriptor]?
+  var markerCollection: HybridMarkerCollection?
   var polylines: [PolylineDescriptor]?
   var polygons: [PolygonDescriptor]?
   var circles: [CircleDescriptor]?
@@ -88,7 +89,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var onPolylinePress: ((String) -> Void)?
   var onPolygonPress: ((String) -> Void)?
   var onCirclePress: ((String) -> Void)?
-  var onClusterPress: (([String], Coordinate) -> Void)?
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)?
 
   init(error: Error) {
     self.error = error
@@ -136,6 +137,10 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     animated: Bool?
   ) throws {
     throw error
+  }
+
+  func getClusterMembers(clusterId: String) throws -> Promise<[String]> {
+    Promise.rejected(withError: error)
   }
 
   func prepareForRecycle() {}

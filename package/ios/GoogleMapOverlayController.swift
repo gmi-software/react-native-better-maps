@@ -20,7 +20,7 @@ final class GoogleMapOverlayController {
 
   private enum MarkerPayload {
     case marker(String)
-    case cluster(memberIds: [String], region: MKCoordinateRegion)
+    case cluster(id: String, count: Int, memberHandles: [Int32], region: MKCoordinateRegion)
   }
 
   private struct MarkerAnimationBatch {
@@ -29,8 +29,8 @@ final class GoogleMapOverlayController {
   }
 
   private weak var mapView: GMSMapView?
-  private var markers: [String: GMSMarker] = [:]
-  private var markerVersions: [String: Int] = [:]
+  private var markers: [MarkerRenderKey: GMSMarker] = [:]
+  private var markerVersions: [MarkerRenderKey: Int] = [:]
   private var polylines: [String: GMSPolyline] = [:]
   private var polygons: [String: GMSPolygon] = [:]
   private var circles: [String: GMSCircle] = [:]
@@ -46,7 +46,7 @@ final class GoogleMapOverlayController {
   var onPolylinePress: ((String) -> Void)?
   var onPolygonPress: ((String) -> Void)?
   var onCirclePress: ((String) -> Void)?
-  var onClusterPress: (([String], Coordinate) -> Void)?
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)?
   var animateToClusterRegion: ((MKCoordinateRegion) -> Void)?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
@@ -61,6 +61,7 @@ final class GoogleMapOverlayController {
   }
 
   func reset() {
+    markerPipeline.store?.removeListener(self)
     markerPipeline.reset()
     clearMarkers()
     clearShapes()
@@ -73,11 +74,26 @@ final class GoogleMapOverlayController {
     reapplyMarkers()
   }
 
-  func setMarkers(_ descriptors: [MarkerDescriptor]?) {
-    guard markerPipeline.setMarkers(descriptors) else {
+  /// Renders markers from `store` and follows its changes until another store
+  /// (or nil) is attached.
+  func attach(store: MarkerStore?) {
+    guard markerPipeline.store !== store else {
       return
     }
+    markerPipeline.store?.removeListener(self)
+    markerPipeline.attach(store: store)
+    store?.addListener(self)
     reapplyMarkers()
+  }
+
+  /// Ids of the markers inside a displayed cluster; empty once it is gone.
+  func clusterMembers(id: String) -> [String] {
+    guard let store = markerPipeline.store,
+          case let .cluster(_, _, memberHandles, _)? = markers[.cluster(id: id)]?.userData as? MarkerPayload
+    else {
+      return []
+    }
+    return store.ids(for: memberHandles)
   }
 
   func refreshViewportMarkers(
@@ -131,11 +147,12 @@ final class GoogleMapOverlayController {
     case let .marker(id):
       onMarkerPress?(id)
       return marker.title == nil && marker.snippet == nil
-    case let .cluster(memberIds, region):
-      onClusterPress?(
-        memberIds,
-        Coordinate(latitude: marker.position.latitude, longitude: marker.position.longitude)
-      )
+    case let .cluster(id, count, _, region):
+      onClusterPress?(NativeClusterPressEvent(
+        clusterId: id,
+        count: Double(count),
+        coordinate: Coordinate(latitude: marker.position.latitude, longitude: marker.position.longitude)
+      ))
       animateToClusterRegion?(region)
       return true
     case .none:
@@ -281,7 +298,7 @@ final class GoogleMapOverlayController {
   }
 
   private func enteringAnimation(
-    for element: MarkerClusterEngine.Element
+    for element: MarkerRenderElement
   ) -> ResolvedOverlayEnteringAnimation {
     switch element {
     case let .single(descriptor):
@@ -294,7 +311,7 @@ final class GoogleMapOverlayController {
     }
   }
 
-  private func updateMarker(_ marker: GMSMarker, with element: MarkerClusterEngine.Element) {
+  private func updateMarker(_ marker: GMSMarker, with element: MarkerRenderElement) {
     switch element {
     case let .single(descriptor):
       marker.position = descriptor.coordinate.toCLLocationCoordinate2D()
@@ -304,7 +321,7 @@ final class GoogleMapOverlayController {
       marker.zIndex = Self.nativeZIndex(descriptor.zIndex)
       marker.userData = MarkerPayload.marker(descriptor.id)
       visualApplier.apply(descriptor, to: marker)
-    case let .cluster(_, coordinate, count, memberIds, region):
+    case let .cluster(id, coordinate, count, memberHandles, region):
       marker.position = coordinate
       marker.title = nil
       marker.snippet = nil
@@ -315,7 +332,12 @@ final class GoogleMapOverlayController {
         marker.icon = icon
       }
       marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
-      marker.userData = MarkerPayload.cluster(memberIds: memberIds, region: region)
+      marker.userData = MarkerPayload.cluster(
+        id: id,
+        count: count,
+        memberHandles: memberHandles,
+        region: region
+      )
     }
   }
 
@@ -487,6 +509,15 @@ final class GoogleMapOverlayController {
       current.removeValue(forKey: id)?.map = nil
       versions.removeValue(forKey: id)
     }
+  }
+}
+
+extension GoogleMapOverlayController: MarkerStoreListener {
+  func markerStoreDidChange(_ store: MarkerStore) {
+    guard markerPipeline.store === store else {
+      return
+    }
+    reapplyMarkers()
   }
 }
 

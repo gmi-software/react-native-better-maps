@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
 internal class MarkerIconFactory(
   private val context: Context,
   private val density: Float,
-  private val markerRegistry: () -> Map<String, Marker>,
+  private val markerRegistry: () -> Map<MarkerRenderKey, Marker>,
 ) {
   private val cache = object : LruCache<String, CachedIcon>(iconCacheBytes()) {
     override fun sizeOf(key: String, value: CachedIcon): Int = value.byteCount
@@ -47,7 +47,7 @@ internal class MarkerIconFactory(
   fun applyVisualProps(
     descriptor: MarkerDescriptor,
     marker: Marker,
-    key: String,
+    key: MarkerRenderKey,
   ) {
     applyAnchor(descriptor, marker)
     marker.rotation = descriptor.rotation?.toFloat() ?: 0f
@@ -74,7 +74,7 @@ internal class MarkerIconFactory(
     marker.setAnchor(anchorX, anchorY)
   }
 
-  private fun isMarkerCurrent(key: String, marker: Marker): Boolean =
+  private fun isMarkerCurrent(key: MarkerRenderKey, marker: Marker): Boolean =
     markerRegistry()[key] === marker
 
   private fun applyIcon(

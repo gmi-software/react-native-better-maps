@@ -19,9 +19,9 @@ final class MapOverlayController {
   }
 
   private weak var mapView: MKMapView?
-  /// All currently shown annotations (singles and clusters), keyed by diff key.
-  private var displayedAnnotations: [String: MKAnnotation] = [:]
-  private var displayedAnnotationVersions: [String: Int] = [:]
+  /// All currently shown annotations (singles and clusters), keyed by render key.
+  private var displayedAnnotations: [MarkerRenderKey: MKAnnotation] = [:]
+  private var displayedAnnotationVersions: [MarkerRenderKey: Int] = [:]
   private let markerPipeline = MarkerRenderPipeline()
   private var shapeOverlays: [String: MKOverlay] = [:]
   private var shapeVersions: [String: ShapeRenderVersion] = [:]
@@ -46,6 +46,7 @@ final class MapOverlayController {
   }
 
   func reset() {
+    markerPipeline.store?.removeListener(self)
     markerPipeline.reset()
     guard let mapView else {
       return
@@ -60,14 +61,28 @@ final class MapOverlayController {
     overlayStyles.removeAll()
   }
 
-  func setMarkers(_ descriptors: [MarkerDescriptor]?) {
-    guard markerPipeline.setMarkers(descriptors) else {
+  /// Renders markers from `store` and follows its changes until another store
+  /// (or nil) is attached.
+  func attach(store: MarkerStore?) {
+    guard markerPipeline.store !== store else {
       return
     }
+    markerPipeline.store?.removeListener(self)
+    markerPipeline.attach(store: store)
+    store?.addListener(self)
     reapplyMarkers()
   }
 
-  private func reapplyMarkers() {
+  /// Ids of the markers inside a displayed cluster; empty once it is gone.
+  func clusterMembers(id: String) -> [String] {
+    guard let cluster = displayedAnnotations[.cluster(id: id)] as? MapClusterAnnotation,
+          let store = markerPipeline.store else {
+      return []
+    }
+    return store.ids(for: cluster.memberHandles)
+  }
+
+  func reapplyMarkers() {
     guard let mapView else {
       return
     }
@@ -158,13 +173,13 @@ final class MapOverlayController {
             refreshMarkerView(for: marker)
           }
         }
-      case let .cluster(key, coordinate, count, memberIds, region):
+      case let .cluster(id, coordinate, count, memberHandles, region):
         if let cluster = existing as? MapClusterAnnotation {
           cluster.update(
-            id: key,
+            id: id,
             coordinate: coordinate,
             count: count,
-            memberIds: memberIds,
+            memberHandles: memberHandles,
             region: region
           )
           if let view = mapView.view(for: cluster) as? NitroClusterAnnotationView {
@@ -390,5 +405,14 @@ final class MapOverlayController {
       overlayStyles.removeValue(forKey: ObjectIdentifier(overlay))
       mapView.removeOverlay(overlay)
     }
+  }
+}
+
+extension MapOverlayController: MarkerStoreListener {
+  func markerStoreDidChange(_ store: MarkerStore) {
+    guard markerPipeline.store === store else {
+      return
+    }
+    reapplyMarkers()
   }
 }

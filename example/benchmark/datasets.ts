@@ -1,6 +1,7 @@
 import type {
   MapViewProps,
   MarkerDescriptor,
+  MarkerPositionUpdate,
   Region,
 } from 'react-native-better-maps';
 import { generatePolandMarkers } from '../examples/advancedFeatures';
@@ -56,6 +57,38 @@ export function stepMarkers(
         }
       : marker,
   );
+}
+
+/**
+ * The same motion as `stepMarkers`, as coordinate-only updates for a
+ * collection: `stepMarkers` adds one step to the previous array on every tick,
+ * so the position after `tick` ticks is the base plus the steps 1 through
+ * `tick` summed.
+ */
+export function stepPositions(
+  base: MarkerDescriptor[],
+  movingCount: number,
+  tick: number,
+): MarkerPositionUpdate[] {
+  let dLat = 0;
+  let dLon = 0;
+  for (let step = 1; step <= tick; step += 1) {
+    const angle = step * 0.35;
+    dLat += Math.sin(angle) * 0.0006;
+    dLon += Math.cos(angle) * 0.0009;
+  }
+  const updates: MarkerPositionUpdate[] = [];
+  for (let index = 0; index < movingCount && index < base.length; index += 1) {
+    const marker = base[index];
+    updates.push({
+      id: marker.id,
+      coordinate: {
+        latitude: marker.coordinate.latitude + dLat,
+        longitude: marker.coordinate.longitude + dLon,
+      },
+    });
+  }
+  return updates;
 }
 
 /** A sinuous 5,000-point route from Gdańsk down to Kraków. */

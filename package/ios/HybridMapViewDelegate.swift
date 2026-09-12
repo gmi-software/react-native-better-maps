@@ -128,17 +128,31 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
       return imageView
     }
 
-    let pinView = mapView.dequeueReusableAnnotationView(
-      withIdentifier: NitroPinAnnotationView.reuseIdentifier,
-      for: marker
-    ) as! NitroPinAnnotationView
+    if parent?.pinStyle == .system {
+      let pinView = mapView.dequeueReusableAnnotationView(
+        withIdentifier: NitroPinAnnotationView.reuseIdentifier,
+        for: marker
+      ) as! NitroPinAnnotationView
 
-    pinView.configure(for: marker)
-    return pinView
+      pinView.configure(for: marker)
+      return pinView
+    }
+
+    let flatView = mapView.dequeueReusableAnnotationView(
+      withIdentifier: NitroFlatPinAnnotationView.reuseIdentifier,
+      for: marker
+    ) as! NitroFlatPinAnnotationView
+
+    flatView.configure(for: marker)
+    return flatView
   }
 
   func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
     for view in views {
+      if let marker = view.annotation as? MapMarkerAnnotation, marker.suppressesNextEnteringAnimation {
+        marker.suppressesNextEnteringAnimation = false
+        continue
+      }
       if let marker = view.annotation as? MapMarkerAnnotation,
          marker.enteringAnimation.kind != .system {
         OverlayEnteringAnimationResolver.animateAnnotationView(

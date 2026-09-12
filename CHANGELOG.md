@@ -29,8 +29,33 @@ fetch the ids on demand when you need them:
 />
 ```
 
+### Behavior changes
+
+**Image-less markers on Apple Maps are flat pins by default**
+
+MapKit used to draw every marker as an `MKMarkerAnnotationView`, the balloon marker with
+a drop and selection animation. Those views are a small view tree each, and MapKit lays
+all of them out on the main thread every frame, which is what limited a map to a few
+hundred visible markers at 120 Hz. Markers without an `image` are now one pre-rendered
+image on a plain `MKAnnotationView`. Pass `pinStyle="system"` to get the balloon back:
+
+```tsx
+<MapView provider="apple" pinStyle="system" />
+```
+
+With flat pins the `system` entering animation is a plain appearance; `fade` and
+`fade-scale` still animate.
+
+**Marker changes reach the map over several frames**
+
+Adds and removals from a viewport refresh used to be applied in one main-thread pass, so a
+zoom into a dense area cost one long frame. They are now spread over frames within a
+budget, nearest to the camera first. During a large change the outer markers appear a few
+frames after the inner ones; no frame waits for all of them.
+
 ### Added
 
+- `pinStyle` prop (`'flat' | 'system'`) for the Apple provider.
 - `MarkerCollection` and `useMarkerCollection`: a native-owned marker dataset updated
   through `set`, `upsert`, `remove` and `updatePositions`, passed to `MapView` with the
   new `markerCollection` prop. Each call ships one packed batch that only carries what
@@ -46,6 +71,9 @@ fetch the ids on demand when you need them:
   dataset, addressed by integer handles, with a spatial index that is updated in place.
 - Cluster badges keep member handles instead of id strings, so a cluster of 100,000
   markers no longer carries 100,000 strings through the render pipeline.
+- The MapKit live refresh during gestures is driven by `CADisplayLink` instead of a
+  wall-clock timer, and clustering reuses the grid cells that stay in view across a pan
+  within one zoom octave.
 
 ## 1.1.0
 

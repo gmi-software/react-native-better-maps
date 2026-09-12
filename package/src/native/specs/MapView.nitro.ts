@@ -93,6 +93,13 @@ export type ApplePoiCategory =
   | 'zoo'
   | 'unknown';
 
+/**
+ * How Apple MapKit draws markers that have no image. `flat` is one pre-rendered
+ * image per pin, `system` is `MKMarkerAnnotationView` with its balloon and
+ * selection animation.
+ */
+export type MarkerPinStyle = 'flat' | 'system';
+
 export interface NativePoiPressEvent {
   provider: MapProvider;
   coordinate: Coordinate;
@@ -181,6 +188,9 @@ export interface MapViewProps extends HybridViewProps {
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimationDescriptor;
+
+  /** Apple MapKit pin rendering for markers without an image. */
+  pinStyle?: MarkerPinStyle;
 
   /** Called once when a user-initiated region change begins. */
   onRegionChange?: (region: Region) => void;

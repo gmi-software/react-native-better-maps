@@ -38,6 +38,11 @@ final class GoogleMapOverlayController {
   private var polygonVersions: [String: ShapeRenderVersion] = [:]
   private var circleVersions: [String: ShapeRenderVersion] = [:]
   private let markerPipeline: MarkerRenderPipeline
+  private lazy var applyScheduler = MarkerApplyScheduler(sink: MarkerApplyScheduler.Sink(
+    remove: { [weak self] keys in self?.applyRemovals(keys) },
+    add: { [weak self] entries, pending in self?.applyAdds(entries, pending: pending) },
+    update: { [weak self] entry in self?.applyRetained(entry) }
+  ))
   private let visualApplier = GoogleMarkerVisualApplier()
   private var clusterIconCache: [String: UIImage] = [:]
 
@@ -61,6 +66,7 @@ final class GoogleMapOverlayController {
   }
 
   func reset() {
+    applyScheduler.cancel()
     markerPipeline.store?.removeListener(self)
     markerPipeline.reset()
     clearMarkers()
@@ -105,12 +111,11 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.refreshNow(
-      displayedVersions: markerVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
-      apply: { [weak self] diff in
-        self?.applyDiff(
-          diff,
+      apply: { [weak self] target in
+        self?.applyTarget(
+          target,
           animateEntering: animateEntering,
           animationBudget: animationBudget
         )
@@ -128,13 +133,12 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.scheduleViewportRefresh(
-      displayedVersions: markerVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       immediate: immediate,
-      apply: { [weak self] diff in
-        self?.applyDiff(
-          diff,
+      apply: { [weak self] target in
+        self?.applyTarget(
+          target,
           animateEntering: animateEntering,
           animationBudget: animationBudget
         )
@@ -221,15 +225,32 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.reapply(
-      displayedVersions: markerVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
-      apply: { [weak self] diff in
-        self?.applyDiff(diff)
+      apply: { [weak self] target in
+        self?.applyTarget(target)
       }
     )
   }
 
+  /// Diffs a computed target against what is on the map now. The scheduler
+  /// may have applied adds from the previous diff while the target was being
+  /// computed, and a diff against an older snapshot would add those twice.
+  private func applyTarget(
+    _ target: [MarkerRenderEntry],
+    animateEntering: Bool = true,
+    animationBudget: Int = maximumAnimatedMarkersPerDiff
+  ) {
+    applyDiff(
+      MarkerRenderPipeline.computeDiff(target: target, displayed: markerVersions),
+      animateEntering: animateEntering,
+      animationBudget: animationBudget
+    )
+  }
+
+  /// Hands a diff to the frame scheduler: removals now, adds spread over
+  /// frames nearest to the camera first, retained updates in the remaining
+  /// budget. The entering-animation budget spans the whole diff.
   private func applyDiff(
     _ diff: MarkerRenderDiff,
     animateEntering: Bool = true,
@@ -238,23 +259,34 @@ final class GoogleMapOverlayController {
     guard let mapView else {
       return
     }
+    applyScheduler.schedule(PendingMarkerApply(
+      diff: diff,
+      center: mapView.camera.target,
+      animateEntering: animateEntering,
+      animationBudget: animateEntering ? max(0, animationBudget) : 0
+    ))
+  }
 
-    let signpost = MapTrace.begin("applyMarkerDiff")
-    defer { MapTrace.end("applyMarkerDiff", signpost) }
-
-    for key in diff.removedKeys {
+  private func applyRemovals(_ keys: [MarkerRenderKey]) {
+    for key in keys {
       markers.removeValue(forKey: key)?.map = nil
       markerVersions.removeValue(forKey: key)
     }
+  }
+
+  private func applyAdds(_ entries: [MarkerRenderEntry], pending: PendingMarkerApply) {
+    guard let mapView else {
+      return
+    }
 
     var animationBatches: [MarkerAnimationBatch] = []
-    var remainingAnimationBudget = animateEntering ? max(0, animationBudget) : 0
+    var remainingAnimationBudget = pending.animationBudget
 
-    for entry in diff.added {
+    for entry in entries {
       let marker = GMSMarker()
       updateMarker(marker, with: entry.element)
       let animation = enteringAnimation(for: entry.element)
-      let shouldAnimate = animateEntering
+      let shouldAnimate = pending.animateEntering
         && remainingAnimationBudget > 0
         && OverlayEnteringAnimationResolver.canAnimateGoogleMarker(animation)
 
@@ -271,18 +303,19 @@ final class GoogleMapOverlayController {
       markers[entry.key] = marker
       markerVersions[entry.key] = entry.version
     }
+    pending.animationBudget = remainingAnimationBudget
 
     for batch in animationBatches {
       OverlayEnteringAnimationResolver.animateGoogleMarkers(batch.markers, animation: batch.animation)
     }
+  }
 
-    for entry in diff.retained {
-      guard let marker = markers[entry.key] else {
-        continue
-      }
-      updateMarker(marker, with: entry.element)
-      markerVersions[entry.key] = entry.version
+  private func applyRetained(_ entry: MarkerRenderEntry) {
+    guard let marker = markers[entry.key] else {
+      return
     }
+    updateMarker(marker, with: entry.element)
+    markerVersions[entry.key] = entry.version
   }
 
   private func append(
@@ -517,6 +550,7 @@ extension GoogleMapOverlayController: MarkerStoreListener {
     guard markerPipeline.store === store else {
       return
     }
+    markerPipeline.invalidateClusterCache()
     reapplyMarkers()
   }
 }

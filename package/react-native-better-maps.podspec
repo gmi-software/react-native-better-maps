@@ -13,8 +13,14 @@ better_maps_podfile_properties = lambda do
   podfile_properties_path = File.join(installation_root, 'Podfile.properties.json')
   next {} unless File.exist?(podfile_properties_path)
 
-  JSON.parse(File.read(podfile_properties_path))
-rescue StandardError => e
+  properties = JSON.parse(File.read(podfile_properties_path))
+  next properties if properties.is_a?(Hash)
+
+  Pod::UI.warn "[react-native-better-maps] Podfile.properties.json is not a JSON object. iOS Google Maps provider will be disabled."
+  {}
+# `::` is required: this file is evaluated inside module `Pod`, where a bare
+# `StandardError` resolves to `Pod::StandardError` and would not catch JSON errors.
+rescue ::StandardError => e
   Pod::UI.warn "[react-native-better-maps] Failed to read Podfile.properties.json: #{e.message}. iOS Google Maps provider will be disabled."
   {}
 end

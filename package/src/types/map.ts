@@ -10,6 +10,7 @@ import type {
 import type {
   ApplePoiCategory,
   MarkerPinStyle,
+  MarkerRendering,
 } from '../native/specs/MapView.nitro';
 import type { MarkerCollection } from '../markers/MarkerCollection';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
@@ -196,6 +197,16 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
    */
   pinStyle?: MarkerPinStyle;
 
+  /**
+   * How Apple MapKit puts markers on screen. `views` (default) is one
+   * annotation view per displayed marker, with callouts, dragging and
+   * entering animations. `sprites` draws the displayed markers and cluster
+   * badges into map tiles, one bitmap per tile, so a viewport change costs
+   * no main-thread layout; taps still work, a tapped marker with a title
+   * shows its callout, draggable markers stay views. Google Maps ignores it.
+   */
+  markerRendering?: MarkerRendering;
+
   /** Custom map style as a JSON string (full support on Google Maps; curated subset on Apple MapKit iOS 16+). */
   customMapStyle?: string;
 
@@ -222,6 +233,14 @@ interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
    */
   pinStyle?: MarkerPinStyle;
 
+  /**
+   * `views` (default) is one annotation view per displayed marker; `sprites`
+   * draws the displayed markers and cluster badges into map tiles through an
+   * overlay renderer: no per-marker views, taps and callouts still work,
+   * draggable markers stay views.
+   */
+  markerRendering?: MarkerRendering;
+
   /** Custom map style as a JSON string. Apple MapKit applies a curated subset on iOS 16+. */
   customMapStyle?: string;
 
@@ -244,6 +263,9 @@ interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
   /** Google Maps draws its own default marker. */
   pinStyle?: never;
 
+  /** Google Maps draws markers its own way. */
+  markerRendering?: never;
+
   /** Custom Google Maps style JSON. */
   customMapStyle?: string;
 
@@ -259,6 +281,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   googleMapId?: never;
   showsScale?: never;
   pinStyle?: never;
+  markerRendering?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
@@ -270,6 +293,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   googleMapId?: never;
   showsScale?: never;
   pinStyle?: never;
+  markerRendering?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;

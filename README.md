@@ -619,6 +619,18 @@ Markers without an `image` are drawn by MapKit. By default they are `flat` pins:
 
 The prop is accepted for the `apple` provider and the default provider on iOS; Google Maps draws its own default marker. With flat pins the `system` entering animation is a plain appearance; use `fade` or `fade-scale` for motion.
 
+## Sprites on Apple Maps
+
+Even flat pins are one `MKAnnotationView` each, and MapKit lays every one of them out on the main thread when the set on screen changes. `markerRendering="sprites"` takes the views out of the picture: the displayed markers and cluster badges are drawn into the map's tiles through an `MKOverlayRenderer`, one bitmap per tile, on MapKit's own threads.
+
+```tsx
+<MapView provider="apple" markerRendering="sprites" clusteringEnabled />
+```
+
+What stays the same: which markers are shown (the viewport filter and the clustering are the same pipeline), marker images, anchors, offsets, rotation and opacity, `onMarkerPress` and `onClusterPress`, and `getClusterMembers`. A tapped marker with a `title` or `subtitle` is promoted to a real annotation view while its callout is open, and draggable markers are always views. What changes: sprites do not run entering animations, `pinStyle` does not apply to them (they draw the flat pin), and during a pinch MapKit scales the tiles it has until it has drawn new ones, so pins grow or shrink for a moment, as every overlay renderer's content does.
+
+Reach for it when a viewport holds hundreds of markers and the zoom sweeps drop frames; below that, views are fine and animate.
+
 ## Re-renders
 
 Nitro compares view props by reference identity, so a prop rebuilt from unchanged data would still be re-serialized across JSI and re-applied to the native map. `MapView` guards against that on your behalf:
@@ -663,6 +675,7 @@ setMarkers((current) =>
 | Marker collections (deltas) | Supported                                                  | Supported                                  | Supported                                  |
 | Camera stream (`onCameraMove`) | Supported                                               | Supported                                  | Supported                                  |
 | Pin style                  | `flat` (default) or `system`                                | Google default marker                      | Google default marker                      |
+| Marker rendering           | `views` (default) or `sprites`                              | Views                                      | Views                                      |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |
 | Overlay press events       | Supported                                                   | Supported                                  | Supported                                  |
@@ -707,6 +720,7 @@ setMarkers((current) =>
 | `MapType`                  | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
 | `MapProvider`              | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
 | `MarkerPinStyle`           | `'flat' \| 'system'`, Apple MapKit pin rendering     |
+| `MarkerRendering`          | `'views' \| 'sprites'`, Apple MapKit marker rendering path |
 | `PoiPressEvent`            | Provider-discriminated native POI press payload             |
 | `ApplePoiPressEvent`       | Apple Maps POI payload with category                        |
 | `GooglePoiPressEvent`      | Google Maps POI payload with place ID                       |

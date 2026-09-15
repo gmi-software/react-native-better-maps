@@ -19,6 +19,7 @@ struct MapViewState {
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
+  var pinStyle: MarkerPinStyle?
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
   var onMapReady: (() -> Void)?
@@ -54,6 +55,7 @@ struct MapViewState {
     adapter.mapPadding = mapPadding
     adapter.markerEnteringAnimation = markerEnteringAnimation
     adapter.clusterEnteringAnimation = clusterEnteringAnimation
+    adapter.pinStyle = pinStyle
     adapter.onRegionChange = onRegionChange
     adapter.onRegionChangeComplete = onRegionChangeComplete
     adapter.onMapReady = onMapReady

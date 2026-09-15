@@ -7,7 +7,6 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   private var isUserRegionChange = false
   private var isMapReady = false
   private var hasDeliveredMapReady = false
-  private var liveClusterTimer: Timer?
   fileprivate lazy var overlayController = MapOverlayController(mapView: view)
 
   var contentView: UIView {
@@ -31,6 +30,10 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     mapView.register(
       NitroPinAnnotationView.self,
       forAnnotationViewWithReuseIdentifier: NitroPinAnnotationView.reuseIdentifier
+    )
+    mapView.register(
+      NitroFlatPinAnnotationView.self,
+      forAnnotationViewWithReuseIdentifier: NitroFlatPinAnnotationView.reuseIdentifier
     )
     mapView.register(
       NitroImageAnnotationView.self,
@@ -146,6 +149,15 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? {
     didSet {
       overlayController.clusterEnteringAnimation = clusterEnteringAnimation
+    }
+  }
+
+  var pinStyle: MarkerPinStyle? {
+    didSet {
+      guard pinStyle != oldValue else {
+        return
+      }
+      overlayController.reloadMarkerViews()
     }
   }
 
@@ -321,20 +333,11 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func startLiveClustering() {
-    guard liveClusterTimer == nil else {
-      return
-    }
-    let timer = Timer(timeInterval: MarkerRenderPipeline.liveRefreshInterval, repeats: true) { [weak self] _ in
-      self?.overlayController.refreshNow()
-    }
-    RunLoop.main.add(timer, forMode: .common)
-    liveClusterTimer = timer
+    overlayController.beginLiveRefresh()
   }
 
   func stopLiveClustering() {
-    liveClusterTimer?.invalidate()
-    liveClusterTimer = nil
-    overlayController.scheduleViewportRefresh(immediate: true)
+    overlayController.endLiveRefresh()
   }
 
   func notifyMapReadyIfNeeded() {
@@ -405,8 +408,6 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func prepareForRecycle() {
-    liveClusterTimer?.invalidate()
-    liveClusterTimer = nil
     isUserRegionChange = false
     isMapReady = false
     hasDeliveredMapReady = false
@@ -444,6 +445,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil
+    pinStyle = nil
     view.mapType = .standard
     view.isScrollEnabled = true
     view.isZoomEnabled = true

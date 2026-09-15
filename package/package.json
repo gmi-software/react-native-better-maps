@@ -41,7 +41,8 @@
   ],
   "scripts": {
     "prebuild": "bun run nitrogen",
-    "build": "bob build && bun run build:plugin",
+    "build": "bob build && bun run build:lib-nitrogen && bun run build:plugin",
+    "build:lib-nitrogen": "mkdir -p lib/nitrogen/generated/shared/json && cp nitrogen/generated/shared/json/*.json lib/nitrogen/generated/shared/json/",
     "clean:plugin": "rm -rf plugin/build",
     "build:plugin": "bun run clean:plugin && tsc --project tsconfig.plugin.json",
     "prepack": "cp ../README.md ./README.md && bun run build",

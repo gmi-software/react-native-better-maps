@@ -23,5 +23,6 @@ fun PolylineDescriptor.applyTo(polyline: Polyline) {
   polyline.points = coordinates.map { LatLng(it.latitude, it.longitude) }
   polyline.color = strokeColor?.toColorInt() ?: Color.BLACK
   polyline.width = (strokeWidth ?: 4.0).toFloat()
+  polyline.zIndex = (zIndex ?: 0.0).toFloat()
   polyline.isClickable = tappable == true
 }

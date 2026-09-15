@@ -157,6 +157,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var mapPadding: EdgePadding? {
     didSet {
+      // Padding changes the camera that a region fit produces, so drop the
+      // skip-cache and let the next same-region apply recompute.
+      lastAppliedRegion = nil
+      lastAppliedRegionCamera = nil
       applyMapPadding(to: view)
     }
   }

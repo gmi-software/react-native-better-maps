@@ -16,6 +16,21 @@ private fun Array<Coordinate>.geometrySignature(): Long {
   return hash
 }
 
+/** Distinct from a content hash of an empty holes list. */
+private const val ABSENT_HOLES_HASH = 0x2_0000_0000L
+
+private fun Array<Array<Coordinate>>?.holesSignature(): Long {
+  if (this == null) {
+    return ABSENT_HOLES_HASH
+  }
+
+  var hash = size.toLong()
+  for (hole in this) {
+    hash = 1099511628211L * hash + hole.geometrySignature()
+  }
+  return hash
+}
+
 internal fun PolylineDescriptor.renderVersion(): Long =
   renderSignature(
     "polyline",
@@ -23,6 +38,7 @@ internal fun PolylineDescriptor.renderVersion(): Long =
     coordinates.geometrySignature(),
     strokeColor,
     strokeWidth,
+    zIndex,
     tappable,
   )
 
@@ -31,9 +47,11 @@ internal fun PolygonDescriptor.renderVersion(): Long =
     "polygon",
     id,
     coordinates.geometrySignature(),
+    holes.holesSignature(),
     fillColor,
     strokeColor,
     strokeWidth,
+    zIndex,
     tappable,
   )
 

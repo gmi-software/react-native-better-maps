@@ -165,7 +165,7 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
     if #available(iOS 16.0, *),
       let mapFeature = view.annotation as? MKMapFeatureAnnotation,
-      handleMapFeatureSelection(mapFeature)
+      handleMapFeatureSelection(mapFeature, in: mapView)
     {
       return
     }
@@ -195,12 +195,34 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     if #available(iOS 16.0, *),
       let mapFeature = annotation as? MKMapFeatureAnnotation
     {
-      _ = handleMapFeatureSelection(mapFeature)
+      _ = handleMapFeatureSelection(mapFeature, in: mapView)
     }
   }
 
+  /// Supplies MapKit's native place details for selected POIs when
+  /// `applePoiDetailPresentation` is configured. MapKit keeps rendering its own
+  /// feature annotation view; only the selection accessory is provided here.
+  @available(iOS 18.0, *)
+  func mapView(
+    _ mapView: MKMapView,
+    selectionAccessoryFor annotation: MKAnnotation
+  ) -> MKSelectionAccessory? {
+    guard let mapFeature = annotation as? MKMapFeatureAnnotation,
+      mapFeature.featureType == .pointOfInterest
+    else {
+      return nil
+    }
+
+    return parent?.applePoiDetailPresentation?.toMKSelectionAccessory(
+      presentedFrom: mapView.nearestViewController
+    )
+  }
+
   @available(iOS 16.0, *)
-  private func handleMapFeatureSelection(_ mapFeature: MKMapFeatureAnnotation) -> Bool {
+  private func handleMapFeatureSelection(
+    _ mapFeature: MKMapFeatureAnnotation,
+    in mapView: MKMapView
+  ) -> Bool {
     guard mapFeature.featureType == .pointOfInterest else {
       return false
     }
@@ -218,6 +240,13 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     parent?.notifyPoiPress(annotation: mapFeature)
+
+    // MapKit shows the native details through the selection accessory (iOS 18+), which
+    // needs the POI to stay selected. Otherwise there is nothing to show, so clear it.
+    if #available(iOS 18.0, *), parent?.applePoiDetailPresentation != nil {
+      return true
+    }
+    mapView.deselectAnnotation(mapFeature, animated: false)
     return true
   }
 

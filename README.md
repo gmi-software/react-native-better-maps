@@ -52,6 +52,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - **Provider-aware props** - TypeScript narrows provider-specific props with `MapViewPropsForProvider<P>`.
 - **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, circles, and GeoJSON FeatureCollections.
 - **Native POI taps** - `onPoiPress` reports provider-owned places from Apple Maps and Google Maps without confusing them with app-owned markers.
+- **Native POI details** - `applePoiDetailPresentation` opens MapKit's own place details (callout, sheet, or Open in Maps) on Apple Maps, iOS 18+.
 - **Camera control** - Declarative region/camera props plus imperative camera helpers.
 - **Marker clustering** - Native marker clustering for large point sets.
 - **Native entering animations** - Configurable marker and cluster entrance animations.
@@ -308,6 +309,33 @@ Provider-specific props narrow the callback payload:
 | `google` | `{ provider: 'google', coordinate, name, placeId }`                                         |
 | omitted  | `ApplePoiPressEvent \| GooglePoiPressEvent` because the runtime default depends on platform |
 
+### Native POI details on Apple Maps
+
+Apple MapKit can present its own place details for a selected point of interest through `MKSelectionAccessory.mapItemDetail(...)` on iOS 18+. Set `applePoiDetailPresentation` to opt in. The prop is accepted for `provider="apple"` and when the provider is omitted, and rejected for `google`, `openstreetmap`, and `mapbox`.
+
+```tsx
+<MapView
+  provider="apple"
+  style={{ flex: 1 }}
+  applePoiDetailPresentation="callout"
+  onPoiPress={(event) => {
+    console.log(event.name, event.category);
+  }}
+/>
+```
+
+| Value          | MapKit presentation                                   |
+| -------------- | ----------------------------------------------------- |
+| `'automatic'`  | MapKit picks the presentation for the current context |
+| `'callout'`    | Callout anchored to the selected place                |
+| `'sheet'`      | Sheet presented from the map's view controller        |
+| `'openInMaps'` | Affordance that opens the place in the Maps app       |
+
+- Setting the prop enables selectable points of interest on its own; `onPoiPress` is optional. When both are set, the event fires immediately and the native details open for the same tap.
+- Without the prop, a POI tap emits `onPoiPress` and the native selection is cleared right away. With the prop, the place stays selected while its details are shown.
+- On iOS 16 and 17 the prop is a no-op: POI taps still emit `onPoiPress` and the selection is cleared, but no native details appear.
+- The Google Maps SDK (iOS and Android) has no equivalent native place-detail surface, so Google POI taps remain event-only.
+
 ## Custom marker images
 
 Markers support custom bitmap icons with positioning and styling options:
@@ -557,6 +585,7 @@ setMarkers((current) =>
 | Overlay press events       | Supported                                                   | Supported                                  | Supported                                  |
 | GeoJSON overlays           | Supported (JS conversion)                                   | Supported (JS conversion)                  | Supported (JS conversion)                  |
 | Native POI press events    | Supported on iOS 16+                                        | Supported                                  | Supported                                  |
+| Native POI details         | Supported on iOS 18+ (callout, sheet, Open in Maps)         | Unsupported; taps stay event-only          | Unsupported; taps stay event-only          |
 | Marker entering animation  | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Cluster entering animation | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Clustering                 | Supported                                                   | Supported                                  | Supported                                  |
@@ -578,32 +607,33 @@ setMarkers((current) =>
 
 ### Types
 
-| Type                        | Description                                          |
-| --------------------------- | ---------------------------------------------------- |
-| `Coordinate`                | `{ latitude, longitude }`                            |
-| `Region`                    | Center + span                                        |
-| `Camera`                    | Position, zoom, heading, pitch                       |
-| `MapType`                   | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
-| `MapProvider`               | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
-| `PoiPressEvent`             | Provider-discriminated native POI press payload      |
-| `ApplePoiPressEvent`        | Apple Maps POI payload with category                 |
-| `GooglePoiPressEvent`       | Google Maps POI payload with place ID                |
-| `ApplePoiCategory`          | Known MapKit POI categories plus `unknown`           |
-| `MapViewRef`                | Imperative handle for camera control                 |
-| `MapViewProps`              | Props for `MapView`                                  |
-| `MapViewPropsForProvider`   | Provider-specific `MapView` props                    |
-| `MarkerDescriptor`          | Bulk marker descriptor                               |
-| `MarkerProps`               | Props for `Marker`                                   |
-| `MarkerImage`               | Resolved marker image descriptor                     |
-| `MarkerAnchor`              | Anchor point on marker image (0..1)                  |
-| `MarkerPoint`               | Point offset in dp                                   |
-| `OverlayEnteringAnimation`  | Marker / marker-cluster entering animation config    |
-| `PolylineProps`             | Props for `Polyline`                                 |
-| `PolygonProps`              | Props for `Polygon`                                  |
-| `CircleProps`               | Props for `Circle`                                   |
-| `GeojsonProps`              | Props for `Geojson`                                  |
-| `GeojsonFeature`            | Feature passed to `Geojson` `onPress`                |
-| `GeojsonOverlayDescriptors` | Result of `geojsonToOverlayDescriptors`              |
+| Type                         | Description                                           |
+| ---------------------------- | ----------------------------------------------------- |
+| `Coordinate`                 | `{ latitude, longitude }`                             |
+| `Region`                     | Center + span                                         |
+| `Camera`                     | Position, zoom, heading, pitch                        |
+| `MapType`                    | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'`  |
+| `MapProvider`                | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'`  |
+| `PoiPressEvent`              | Provider-discriminated native POI press payload       |
+| `ApplePoiPressEvent`         | Apple Maps POI payload with category                  |
+| `GooglePoiPressEvent`        | Google Maps POI payload with place ID                 |
+| `ApplePoiCategory`           | Known MapKit POI categories plus `unknown`            |
+| `ApplePoiDetailPresentation` | `'automatic' \| 'callout' \| 'sheet' \| 'openInMaps'` |
+| `MapViewRef`                 | Imperative handle for camera control                  |
+| `MapViewProps`               | Props for `MapView`                                   |
+| `MapViewPropsForProvider`    | Provider-specific `MapView` props                     |
+| `MarkerDescriptor`           | Bulk marker descriptor                                |
+| `MarkerProps`                | Props for `Marker`                                    |
+| `MarkerImage`                | Resolved marker image descriptor                      |
+| `MarkerAnchor`               | Anchor point on marker image (0..1)                   |
+| `MarkerPoint`                | Point offset in dp                                    |
+| `OverlayEnteringAnimation`   | Marker / marker-cluster entering animation config     |
+| `PolylineProps`              | Props for `Polyline`                                  |
+| `PolygonProps`               | Props for `Polygon`                                   |
+| `CircleProps`                | Props for `Circle`                                    |
+| `GeojsonProps`               | Props for `Geojson`                                   |
+| `GeojsonFeature`             | Feature passed to `Geojson` `onPress`                 |
+| `GeojsonOverlayDescriptors`  | Result of `geojsonToOverlayDescriptors`               |
 
 ### Utilities
 

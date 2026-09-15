@@ -13,6 +13,7 @@ struct MapViewState {
   var followsUserLocation: Bool?
   var showsCompass: Bool?
   var showsScale: Bool?
+  var applePoiDetailPresentation: ApplePoiDetailPresentation?
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Bool?
@@ -48,6 +49,7 @@ struct MapViewState {
     adapter.followsUserLocation = followsUserLocation
     adapter.showsCompass = showsCompass
     adapter.showsScale = showsScale
+    adapter.applePoiDetailPresentation = applePoiDetailPresentation
     adapter.customMapStyle = customMapStyle
     adapter.googleMapId = googleMapId
     adapter.clusteringEnabled = clusteringEnabled

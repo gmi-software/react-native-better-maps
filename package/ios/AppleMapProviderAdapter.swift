@@ -162,6 +162,14 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       applySelectablePoiFeatures(to: view)
     }
   }
+
+  /// Native MapKit detail presentation for selected POIs (iOS 18+). Enables selectable
+  /// points of interest on its own, independently of `onPoiPress`.
+  var applePoiDetailPresentation: ApplePoiDetailPresentation? {
+    didSet {
+      applySelectablePoiFeatures(to: view)
+    }
+  }
   var onLongPress: ((Coordinate) -> Void)?
 
   var markers: [MarkerDescriptor]? {
@@ -411,6 +419,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     onMapReady = nil
     onPress = nil
     onPoiPress = nil
+    applePoiDetailPresentation = nil
     onLongPress = nil
     onMarkerPress = nil
     onMarkerDragEnd = nil
@@ -484,7 +493,8 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   private func applySelectablePoiFeatures(to mapView: MKMapView) {
     if #available(iOS 16.0, *) {
-      mapView.selectableMapFeatures = onPoiPress == nil ? [] : .pointsOfInterest
+      let wantsSelectablePois = onPoiPress != nil || applePoiDetailPresentation != nil
+      mapView.selectableMapFeatures = wantsSelectablePois ? .pointsOfInterest : []
     }
   }
 

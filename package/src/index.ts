@@ -15,6 +15,7 @@ export type {
   EdgePadding,
   VisibleRegion,
   ApplePoiCategory,
+  ApplePoiDetailPresentation,
   ApplePoiPressEvent,
   GooglePoiPressEvent,
   MapProvider,

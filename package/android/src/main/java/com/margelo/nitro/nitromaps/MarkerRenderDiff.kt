@@ -4,6 +4,12 @@ internal data class MarkerRenderDiff(
   val removedKeys: Set<MarkerRenderKey>,
   val added: List<ClusterElement>,
   val retained: List<ClusterElement>,
+  /**
+   * Clusters still on screen whose pin did not change. Membership can change
+   * without bumping [ClusterElement.Cluster.renderVersion], so these need a
+   * membership refresh even when the marker itself is left alone.
+   */
+  val activeClusters: List<ClusterElement.Cluster> = emptyList(),
 )
 
 internal fun computeMarkerRenderDiff(
@@ -13,6 +19,7 @@ internal fun computeMarkerRenderDiff(
   val nextKeys = HashSet<MarkerRenderKey>(target.size)
   val added = ArrayList<ClusterElement>()
   val retained = ArrayList<ClusterElement>()
+  val activeClusters = ArrayList<ClusterElement.Cluster>()
 
   for (element in target) {
     val key = element.key
@@ -24,6 +31,8 @@ internal fun computeMarkerRenderDiff(
       added.add(element)
     } else if (displayedVersion != element.renderVersion) {
       retained.add(element)
+    } else if (element is ClusterElement.Cluster) {
+      activeClusters.add(element)
     }
   }
 
@@ -31,5 +40,6 @@ internal fun computeMarkerRenderDiff(
     removedKeys = displayed.keys - nextKeys,
     added = added,
     retained = retained,
+    activeClusters = activeClusters,
   )
 }

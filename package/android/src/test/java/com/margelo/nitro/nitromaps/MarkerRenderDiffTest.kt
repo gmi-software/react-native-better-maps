@@ -104,4 +104,18 @@ class MarkerRenderDiffTest {
     assertEquals(base.renderVersion, cluster(count = 3, memberHandles = intArrayOf(7, 8, 9)).renderVersion)
     assertEquals(MarkerRenderKey.Cluster("3:4"), base.key)
   }
+
+  @Test
+  fun `unchanged cluster pin still refreshes membership`() {
+    val shown = cluster(count = 3, memberHandles = intArrayOf(1, 2, 3))
+    val next = cluster(count = 3, memberHandles = intArrayOf(7, 8, 9))
+    val diff = computeMarkerRenderDiff(
+      listOf(next),
+      mapOf(shown.key to shown.renderVersion),
+    )
+
+    assertTrue(diff.added.isEmpty())
+    assertTrue(diff.retained.isEmpty())
+    assertEquals(listOf(next), diff.activeClusters)
+  }
 }

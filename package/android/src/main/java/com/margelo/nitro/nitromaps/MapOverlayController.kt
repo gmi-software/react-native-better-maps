@@ -387,6 +387,10 @@ class MapOverlayController(
       markerVersions[key] = element.renderVersion
     }
 
+    for (cluster in diff.activeClusters) {
+      clustersById[cluster.id] = cluster
+    }
+
     animateEntering(addedMarkers)
   }
 

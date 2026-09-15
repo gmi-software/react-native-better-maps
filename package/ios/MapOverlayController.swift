@@ -189,6 +189,21 @@ final class MapOverlayController {
       }
       displayedAnnotationVersions[entry.key] = entry.version
     }
+
+    for entry in diff.activeClusters {
+      guard case let .cluster(id, coordinate, count, memberHandles, region) = entry.element,
+        let cluster = displayedAnnotations[entry.key] as? MapClusterAnnotation
+      else {
+        continue
+      }
+      cluster.update(
+        id: id,
+        coordinate: coordinate,
+        count: count,
+        memberHandles: memberHandles,
+        region: region
+      )
+    }
   }
 
   private func refreshMarkerView(for marker: MapMarkerAnnotation) {

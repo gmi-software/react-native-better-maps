@@ -2,6 +2,7 @@ package com.margelo.nitro.nitromaps
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
@@ -150,6 +151,11 @@ class MarkerStore {
         // The header was validated on the JS thread and the bytes are our own
         // copy; anything that still fails here is a corrupt batch, which is
         // dropped rather than taking the store thread with it.
+        Log.e(
+          TAG,
+          "Dropped corrupt marker batch (${bytes.size} bytes, ${strings.size} strings)",
+          error,
+        )
         return@synchronized
       }
       index.rebuildIfNeeded(latitudes, longitudes, flags)
@@ -243,6 +249,8 @@ class MarkerStore {
   }
 
   companion object {
+    private const val TAG = "NitroMaps"
+
     const val FLAG_ALIVE: Int = 1 shl 0
     const val FLAG_CLUSTERABLE: Int = 1 shl 1
 

@@ -284,6 +284,20 @@ final class GoogleMapOverlayController {
       updateMarker(marker, with: entry.element)
       markerVersions[entry.key] = entry.version
     }
+
+    for entry in diff.activeClusters {
+      guard let marker = markers[entry.key],
+        case let .cluster(id, _, count, memberHandles, region) = entry.element
+      else {
+        continue
+      }
+      marker.userData = MarkerPayload.cluster(
+        id: id,
+        count: count,
+        memberHandles: memberHandles,
+        region: region
+      )
+    }
   }
 
   private func append(

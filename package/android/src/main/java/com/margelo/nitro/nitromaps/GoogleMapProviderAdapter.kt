@@ -341,7 +341,10 @@ class GoogleMapProviderAdapter(
 
   override fun getVisibleRegion(): Promise<VisibleRegion> =
     promiseOnMain {
-      googleMap?.projection?.toNitroVisibleRegion() ?: emptyVisibleRegion()
+      val projection =
+        googleMap?.projection
+          ?: error("Map is not ready yet")
+      projection.toNitroVisibleRegion()
     }
 
   override fun fitToCoordinates(
@@ -792,8 +795,3 @@ class GoogleMapProviderAdapter(
 }
 
 private fun normalizeGoogleMapId(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
-
-private fun emptyVisibleRegion(): VisibleRegion {
-  val zero = Coordinate(latitude = 0.0, longitude = 0.0)
-  return VisibleRegion(nearLeft = zero, nearRight = zero, farLeft = zero, farRight = zero)
-}

@@ -138,4 +138,28 @@ class MarkerStoreTest {
       assertArrayEquals(intArrayOf(1000), access.aliveHandles())
     }
   }
+
+  @Test
+  fun `absolute handle ceiling is rejected on an empty store`() {
+    val store = MarkerStore()
+    store.apply(
+      MarkerBatchBuilder().upsert(handle = 1 shl 22, id = "ceiling", latitude = 1.0, longitude = 1.0),
+    )
+    assertEquals(0, store.markerCount)
+    store.read { access ->
+      assertEquals(0, access.flags.size)
+    }
+  }
+
+  @Test
+  fun `handle growth step is rejected on an empty store`() {
+    val store = MarkerStore()
+    store.apply(
+      MarkerBatchBuilder().upsert(handle = (1 shl 16) + 1, id = "step", latitude = 1.0, longitude = 1.0),
+    )
+    assertEquals(0, store.markerCount)
+    store.read { access ->
+      assertEquals(0, access.flags.size)
+    }
+  }
 }

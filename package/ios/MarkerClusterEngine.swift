@@ -356,6 +356,9 @@ struct MarkerRenderDiff {
   let removedKeys: Set<MarkerRenderKey>
   let added: [MarkerRenderEntry]
   let retained: [MarkerRenderEntry]
+  /// Clusters still on screen whose pin did not change. Membership can change
+  /// without bumping the render version, so these need a membership refresh.
+  let activeClusters: [MarkerRenderEntry]
 }
 
 /// Drives one map's marker rendering from a `MarkerStore`: the synchronous
@@ -676,6 +679,7 @@ final class MarkerRenderPipeline {
     nextKeys.reserveCapacity(target.count)
     var added: [MarkerRenderEntry] = []
     var retained: [MarkerRenderEntry] = []
+    var activeClusters: [MarkerRenderEntry] = []
 
     for entry in target {
       guard nextKeys.insert(entry.key).inserted else {
@@ -684,6 +688,8 @@ final class MarkerRenderPipeline {
       if let displayedVersion = displayed[entry.key] {
         if displayedVersion != entry.version {
           retained.append(entry)
+        } else if case .cluster = entry.element {
+          activeClusters.append(entry)
         }
       } else {
         added.append(entry)
@@ -693,7 +699,8 @@ final class MarkerRenderPipeline {
     return MarkerRenderDiff(
       removedKeys: Set(displayed.keys).subtracting(nextKeys),
       added: added,
-      retained: retained
+      retained: retained,
+      activeClusters: activeClusters
     )
   }
 }

@@ -160,6 +160,9 @@ final class MarkerStore {
     } catch {
       // The header was validated on the JS thread; a failure here means the
       // bytes changed underneath us, which the copy rules out.
+      NSLog(
+        "Dropped corrupt marker batch (\(bytes.count) bytes, \(strings.count) strings): \(error)"
+      )
       return
     }
     index.rebuildIfNeeded(latitudes: latitudes, longitudes: longitudes, flags: flags)

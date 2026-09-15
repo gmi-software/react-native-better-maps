@@ -50,7 +50,8 @@ replaceOnce(
 );
 
 for (const fileName of [
-  'Func_void_std__vector_std__string__Coordinate.swift',
+  // getClusterMembers returns string[]; older specs used Coordinate too.
+  'Func_void_std__vector_std__string_.swift',
   'HybridMapViewSpec_cxx.swift',
   'PolygonDescriptor.swift',
   'PolylineDescriptor.swift',

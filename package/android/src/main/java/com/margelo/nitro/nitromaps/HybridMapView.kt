@@ -334,6 +334,7 @@ class HybridMapView(
     _followsUserLocation = null
     _showsCompass = null
     _showsScale = null
+    _applePoiDetailPresentation = null
     _customMapStyle = null
     _googleMapId = null
     _clusteringEnabled = null

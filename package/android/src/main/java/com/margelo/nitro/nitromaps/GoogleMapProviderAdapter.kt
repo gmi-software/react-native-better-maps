@@ -34,7 +34,6 @@ class GoogleMapProviderAdapter(
   private var isUserGesture = false
   private var hasFiredMapReady = false
   private val overlayController = MapOverlayController(null, context)
-  private var pendingMarkers: Array<MarkerDescriptor>? = null
   private var pendingPolylines: Array<PolylineDescriptor>? = null
   private var pendingPolygons: Array<PolygonDescriptor>? = null
   private var pendingCircles: Array<CircleDescriptor>? = null
@@ -202,22 +201,6 @@ class GoogleMapProviderAdapter(
       _clusteringEnabled = value
       updateOverlayViewportSize()
       overlayController.setClusteringEnabled(value == true)
-      googleMap?.let { map ->
-        if (value == true) {
-          map.setOnMarkerClickListener { marker ->
-            overlayController.onMarkerClick(marker)
-          }
-        } else {
-          map.setOnMarkerClickListener { marker ->
-            val id = marker.tag as? String
-            if (id != null) {
-              onMarkerPress?.invoke(id)
-            }
-            false
-          }
-        }
-      }
-      overlayController.setMarkers(_markers)
     }
 
   private var _mapPadding: EdgePadding? = null
@@ -257,17 +240,13 @@ class GoogleMapProviderAdapter(
   override var onPoiPress: ((event: NativePoiPressEvent) -> Unit)? = null
   override var onLongPress: ((coordinate: Coordinate) -> Unit)? = null
 
-  private var _markers: Array<MarkerDescriptor>? = null
-  override var markers: Array<MarkerDescriptor>?
-    get() = _markers
+  private var _markerCollection: HybridMarkerCollection? = null
+  override var markerCollection: HybridMarkerCollection?
+    get() = _markerCollection
     set(value) {
-      _markers = value
-      if (googleMap != null) {
-        updateOverlayViewportSize()
-        overlayController.setMarkers(value)
-      } else {
-        pendingMarkers = value
-      }
+      _markerCollection = value
+      updateOverlayViewportSize()
+      overlayController.attachStore(value?.store)
     }
 
   private var _polylines: Array<PolylineDescriptor>? = null
@@ -317,7 +296,7 @@ class GoogleMapProviderAdapter(
   override var onPolygonPress: ((id: String) -> Unit)? = null
   override var onCirclePress: ((id: String) -> Unit)? = null
 
-  override var onClusterPress: ((markerIds: Array<String>, coordinate: Coordinate) -> Unit)? = null
+  override var onClusterPress: ((event: NativeClusterPressEvent) -> Unit)? = null
     set(value) {
       field = value
       syncMarkerPressHandlers()
@@ -362,7 +341,10 @@ class GoogleMapProviderAdapter(
 
   override fun getVisibleRegion(): Promise<VisibleRegion> =
     promiseOnMain {
-      googleMap?.projection?.toNitroVisibleRegion() ?: emptyVisibleRegion()
+      val projection =
+        googleMap?.projection
+          ?: error("Map is not ready yet")
+      projection.toNitroVisibleRegion()
     }
 
   override fun fitToCoordinates(
@@ -394,6 +376,10 @@ class GoogleMapProviderAdapter(
 
       runWhenMapViewLaidOut(runUpdate)
     }
+  }
+
+  override fun getClusterMembers(clusterId: String): Promise<Array<String>> {
+    return promiseOnMain { overlayController.clusterMembers(clusterId) }
   }
 
   override fun onHostResume() {
@@ -469,18 +455,8 @@ class GoogleMapProviderAdapter(
     map.setOnMapLoadedCallback {
       notifyMapReadyIfNeeded()
     }
-    if (_clusteringEnabled != true) {
-      map.setOnMarkerClickListener { marker ->
-        val id = marker.tag as? String
-        if (id != null) {
-          onMarkerPress?.invoke(id)
-        }
-        false
-      }
-    } else {
-      map.setOnMarkerClickListener { marker ->
-        overlayController.onMarkerClick(marker)
-      }
+    map.setOnMarkerClickListener { marker ->
+      overlayController.onMarkerClick(marker)
     }
     map.setOnMarkerDragListener(
       object : GoogleMap.OnMarkerDragListener {
@@ -489,7 +465,7 @@ class GoogleMapProviderAdapter(
         override fun onMarkerDrag(marker: com.google.android.gms.maps.model.Marker) = Unit
 
         override fun onMarkerDragEnd(marker: com.google.android.gms.maps.model.Marker) {
-          val id = marker.tag as? String ?: return
+          val id = overlayController.markerId(marker) ?: return
           onMarkerDragEnd?.invoke(
             id,
             Coordinate(
@@ -519,11 +495,10 @@ class GoogleMapProviderAdapter(
       }
     }
 
-    overlayController.setMarkers(pendingMarkers ?: _markers)
+    overlayController.reapplyMarkers()
     overlayController.updatePolylines(pendingPolylines ?: _polylines)
     overlayController.updatePolygons(pendingPolygons ?: _polygons)
     overlayController.updateCircles(pendingCircles ?: _circles)
-    pendingMarkers = null
     pendingPolylines = null
     pendingPolygons = null
     pendingCircles = null
@@ -539,10 +514,7 @@ class GoogleMapProviderAdapter(
   private fun syncMarkerPressHandlers() {
     overlayController.setMarkerPressHandlers(
       onMarkerPress = onMarkerPress,
-      onClusterPress =
-        onClusterPress?.let { callback ->
-          { ids, coordinate -> callback(ids.toTypedArray(), coordinate) }
-        },
+      onClusterPress = onClusterPress,
     )
   }
 
@@ -799,6 +771,8 @@ class GoogleMapProviderAdapter(
     onCirclePress = null
     onClusterPress = null
 
+    _markerCollection = null
+    overlayController.attachStore(null)
     overlayController.clear()
     destroyMapView()
   }
@@ -821,8 +795,3 @@ class GoogleMapProviderAdapter(
 }
 
 private fun normalizeGoogleMapId(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
-
-private fun emptyVisibleRegion(): VisibleRegion {
-  val zero = Coordinate(latitude = 0.0, longitude = 0.0)
-  return VisibleRegion(nearLeft = zero, nearRight = zero, farLeft = zero, farRight = zero)
-}

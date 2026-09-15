@@ -39,6 +39,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   MapView,
+  type ClusterPressEvent,
   type Coordinate,
   type EdgePadding,
   type MapProvider,
@@ -499,7 +500,7 @@ type MapSceneProps = {
   mapPadding?: EdgePadding;
   animationOption: AnimationOption;
   onMapReady: () => void;
-  onClusterPress: (markerIds: string[], coordinate: Coordinate) => void;
+  onClusterPress: (event: ClusterPressEvent) => void;
   onMarkerPress: (id: string) => void;
   onMarkerDragEnd: (id: string, coordinate: Coordinate) => void;
   onOverlayPress: (label: string) => void;
@@ -646,6 +647,7 @@ const StatusHeader = memo(function StatusHeader({
 export default function App() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapViewRef>(null);
+  const latestClusterRequest = useRef(0);
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [mapTypeIndex, setMapTypeIndex] = useState(0);
   const [providerIndex, setProviderIndex] = useState(0);
@@ -784,14 +786,25 @@ export default function App() {
     setStatus(label);
   }, []);
 
-  const handleClusterPress = useCallback(
-    (markerIds: string[], coordinate: Coordinate) => {
-      setStatus(
-        `Cluster (${markerIds.length}) · ${coordinate.latitude.toFixed(4)}, ${coordinate.longitude.toFixed(4)}`,
-      );
-    },
-    [],
-  );
+  const handleClusterPress = useCallback((event: ClusterPressEvent) => {
+    setStatus(
+      `Cluster (${event.count}) · ${event.coordinate.latitude.toFixed(4)}, ${event.coordinate.longitude.toFixed(4)}`,
+    );
+    // Member ids are fetched on demand instead of travelling with every press;
+    // a lookup that resolves after a newer press is dropped.
+    const request = ++latestClusterRequest.current;
+    mapRef.current
+      ?.getClusterMembers(event.clusterId)
+      .then((ids) => {
+        if (request === latestClusterRequest.current && ids.length > 0) {
+          const preview = ids.slice(0, 3).join(', ');
+          setStatus(
+            `Cluster (${ids.length}) · ${preview}${ids.length > 3 ? ', …' : ''}`,
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleMapReady = useCallback(() => {
     setMapReady(true);

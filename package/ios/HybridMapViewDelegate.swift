@@ -213,7 +213,9 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
       return nil
     }
 
-    return parent?.poiSelectionAccessory()
+    return parent?.applePoiDetailPresentation?.toMKSelectionAccessory(
+      presentedFrom: mapView.nearestViewController
+    )
   }
 
   @available(iOS 16.0, *)
@@ -239,11 +241,12 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
     parent?.notifyPoiPress(annotation: mapFeature)
 
-    // Without native details there is nothing to show for a selected POI, so clear
-    // the selection right away. With details, MapKit needs the selection to stay.
-    if parent?.presentsNativePoiDetails != true {
-      mapView.deselectAnnotation(mapFeature, animated: false)
+    // MapKit shows the native details through the selection accessory (iOS 18+), which
+    // needs the POI to stay selected. Otherwise there is nothing to show, so clear it.
+    if #available(iOS 18.0, *), parent?.applePoiDetailPresentation != nil {
+      return true
     }
+    mapView.deselectAnnotation(mapFeature, animated: false)
     return true
   }
 

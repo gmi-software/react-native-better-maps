@@ -162,6 +162,14 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       applySelectablePoiFeatures(to: view)
     }
   }
+
+  /// Native MapKit detail presentation for selected POIs (iOS 18+). Enables selectable
+  /// points of interest on its own, independently of `onPoiPress`.
+  var applePoiDetailPresentation: ApplePoiDetailPresentation? {
+    didSet {
+      applySelectablePoiFeatures(to: view)
+    }
+  }
   var onLongPress: ((Coordinate) -> Void)?
 
   var markers: [MarkerDescriptor]? {
@@ -411,6 +419,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     onMapReady = nil
     onPress = nil
     onPoiPress = nil
+    applePoiDetailPresentation = nil
     onLongPress = nil
     onMarkerPress = nil
     onMarkerDragEnd = nil
@@ -484,8 +493,62 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   private func applySelectablePoiFeatures(to mapView: MKMapView) {
     if #available(iOS 16.0, *) {
-      mapView.selectableMapFeatures = onPoiPress == nil ? [] : .pointsOfInterest
+      let wantsSelectablePois = onPoiPress != nil || applePoiDetailPresentation != nil
+      mapView.selectableMapFeatures = wantsSelectablePois ? .pointsOfInterest : []
     }
   }
 
+  /// Whether a tapped POI must stay selected so MapKit can show its native details.
+  /// False when no presentation is configured or the OS predates `MKSelectionAccessory`.
+  var presentsNativePoiDetails: Bool {
+    guard applePoiDetailPresentation != nil else {
+      return false
+    }
+    if #available(iOS 18.0, *) {
+      return true
+    }
+    return false
+  }
+
+  /// Selection accessory for a POI feature annotation, mirroring `applePoiDetailPresentation`.
+  @available(iOS 18.0, *)
+  func poiSelectionAccessory() -> MKSelectionAccessory? {
+    guard let applePoiDetailPresentation else {
+      return nil
+    }
+
+    let presenter = view.nearestViewController
+    let style: MKSelectionAccessory.MapItemDetailPresentationStyle
+    switch applePoiDetailPresentation {
+    case .automatic:
+      style = .automatic(presentationViewController: presenter)
+    case .callout:
+      style = .callout(.automatic)
+    case .sheet:
+      if let presenter {
+        style = .sheet(presentedFrom: presenter)
+      } else {
+        // Nothing can present a sheet yet; let MapKit pick a presentation instead.
+        style = .automatic(presentationViewController: nil)
+      }
+    case .openinmaps:
+      style = .openInMaps
+    }
+    return .mapItemDetail(style)
+  }
+
+}
+
+extension UIView {
+  /// The closest view controller up the responder chain, used to present MapKit sheets.
+  fileprivate var nearestViewController: UIViewController? {
+    var responder: UIResponder? = next
+    while let current = responder {
+      if let controller = current as? UIViewController {
+        return controller
+      }
+      responder = current.next
+    }
+    return nil
+  }
 }

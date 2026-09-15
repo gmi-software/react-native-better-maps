@@ -100,6 +100,15 @@ final class HybridMapView: HybridMapViewSpec {
     set { setBackedOnMain(newValue, store: \.showsScale) { $0.showsScale = $1 } }
   }
 
+  var applePoiDetailPresentation: ApplePoiDetailPresentation? {
+    get { getBacked(\.applePoiDetailPresentation) }
+    set {
+      setBackedOnMain(newValue, store: \.applePoiDetailPresentation) {
+        $0.applePoiDetailPresentation = $1
+      }
+    }
+  }
+
   var customMapStyle: String? {
     get { getBacked(\.customMapStyle) }
     set { setBackedOnMain(newValue, store: \.customMapStyle) { $0.customMapStyle = $1 } }

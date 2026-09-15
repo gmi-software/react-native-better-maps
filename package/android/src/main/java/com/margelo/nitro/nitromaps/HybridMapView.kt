@@ -32,6 +32,7 @@ class HybridMapView(
   private var _followsUserLocation: Boolean? = null
   private var _showsCompass: Boolean? = null
   private var _showsScale: Boolean? = null
+  private var _applePoiDetailPresentation: ApplePoiDetailPresentation? = null
   private var _customMapStyle: String? = null
   private var _googleMapId: String? = null
   private var _clusteringEnabled: Boolean? = null
@@ -128,6 +129,13 @@ class HybridMapView(
     set(value) {
       _showsScale = value
       adapter?.showsScale = value
+    }
+
+  /** Apple MapKit only; the Google Maps SDK has no native POI detail surface. */
+  override var applePoiDetailPresentation: ApplePoiDetailPresentation?
+    get() = _applePoiDetailPresentation
+    set(value) {
+      _applePoiDetailPresentation = value
     }
 
   override var customMapStyle: String?

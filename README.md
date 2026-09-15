@@ -311,7 +311,7 @@ Provider-specific props narrow the callback payload:
 
 ### Native POI details on Apple Maps
 
-Apple MapKit can present its own place details for a selected point of interest through `MKSelectionAccessory.mapItemDetail(...)` on iOS 18+. Set `applePoiDetailPresentation` to opt in. The prop is accepted for `provider="apple"` and when the provider is omitted, and rejected for `google`.
+Apple MapKit can present its own place details for a selected point of interest through `MKSelectionAccessory.mapItemDetail(...)` on iOS 18+. Set `applePoiDetailPresentation` to opt in. The prop is accepted for `provider="apple"` and when the provider is omitted, and rejected for `google`, `openstreetmap`, and `mapbox`.
 
 ```tsx
 <MapView

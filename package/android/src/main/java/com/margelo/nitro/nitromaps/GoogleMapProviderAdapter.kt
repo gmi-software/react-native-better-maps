@@ -224,6 +224,12 @@ class GoogleMapProviderAdapter(
   override var mapPadding: EdgePadding?
     get() = _mapPadding
     set(value) {
+      // Padding changes the camera that a region fit produces, so drop the
+      // skip-cache and let the next same-region apply recompute.
+      if (value != _mapPadding) {
+        lastAppliedRegion = null
+        lastAppliedRegionCamera = null
+      }
       _mapPadding = value
       applyMapPadding()
     }
@@ -605,8 +611,10 @@ class GoogleMapProviderAdapter(
     region: Region,
     animated: Boolean = false,
   ) {
-    val map = googleMap ?: return
-    runWhenMapViewLaidOut { fitCamera(map, region, animated) }
+    runOnMain {
+      val map = googleMap ?: return@runOnMain
+      runWhenMapViewLaidOut { fitCamera(map, region, animated) }
+    }
   }
 
   private fun fitCamera(map: GoogleMap, region: Region, animated: Boolean) {

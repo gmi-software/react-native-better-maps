@@ -6,23 +6,27 @@ import org.junit.Test
 
 class ShapeRenderVersionTest {
   private val route = arrayOf(Coordinate(52.2297, 21.0122), Coordinate(52.237, 21.017))
+  private val hole = arrayOf(Coordinate(52.231, 21.014), Coordinate(52.232, 21.015), Coordinate(52.2315, 21.016))
 
   private fun polyline(
     id: String = "route",
     coordinates: Array<Coordinate> = route,
     strokeColor: String? = "#FF0000",
     strokeWidth: Double? = 4.0,
+    zIndex: Double? = 1.0,
     tappable: Boolean? = true,
-  ) = PolylineDescriptor(id, coordinates, strokeColor, strokeWidth, tappable)
+  ) = PolylineDescriptor(id, coordinates, strokeColor, strokeWidth, zIndex, tappable)
 
   private fun polygon(
     id: String = "district",
     coordinates: Array<Coordinate> = route,
+    holes: Array<Array<Coordinate>>? = null,
     fillColor: String? = "#007AFF33",
     strokeColor: String? = "#007AFF",
     strokeWidth: Double? = 2.0,
+    zIndex: Double? = 1.0,
     tappable: Boolean? = false,
-  ) = PolygonDescriptor(id, coordinates, fillColor, strokeColor, strokeWidth, tappable)
+  ) = PolygonDescriptor(id, coordinates, holes, fillColor, strokeColor, strokeWidth, zIndex, tappable)
 
   private fun circle(
     id: String = "radius",
@@ -38,6 +42,10 @@ class ShapeRenderVersionTest {
   fun `equal descriptors share a version`() {
     assertEquals(polyline().renderVersion(), polyline(coordinates = route.copyOf()).renderVersion())
     assertEquals(polygon().renderVersion(), polygon(coordinates = route.copyOf()).renderVersion())
+    assertEquals(
+      polygon(holes = arrayOf(hole)).renderVersion(),
+      polygon(holes = arrayOf(hole.copyOf())).renderVersion(),
+    )
     assertEquals(circle().renderVersion(), circle().renderVersion())
   }
 
@@ -54,6 +62,7 @@ class ShapeRenderVersionTest {
     assertNotEquals("strokeColor", base, polyline(strokeColor = "#00FF00").renderVersion())
     assertNotEquals("cleared strokeColor", base, polyline(strokeColor = null).renderVersion())
     assertNotEquals("strokeWidth", base, polyline(strokeWidth = 5.0).renderVersion())
+    assertNotEquals("zIndex", base, polyline(zIndex = 2.0).renderVersion())
     assertNotEquals("tappable", base, polyline(tappable = false).renderVersion())
   }
 
@@ -66,9 +75,12 @@ class ShapeRenderVersionTest {
       base,
       polygon(coordinates = arrayOf(route[0], Coordinate(52.24, 21.02))).renderVersion(),
     )
+    assertNotEquals("holes", base, polygon(holes = arrayOf(hole)).renderVersion())
+    assertNotEquals("cleared holes", polygon(holes = arrayOf(hole)).renderVersion(), polygon(holes = null).renderVersion())
     assertNotEquals("fillColor", base, polygon(fillColor = "#00000000").renderVersion())
     assertNotEquals("strokeColor", base, polygon(strokeColor = "#000000").renderVersion())
     assertNotEquals("strokeWidth", base, polygon(strokeWidth = 3.0).renderVersion())
+    assertNotEquals("zIndex", base, polygon(zIndex = 2.0).renderVersion())
     assertNotEquals("tappable", base, polygon(tappable = true).renderVersion())
   }
 
@@ -87,6 +99,9 @@ class ShapeRenderVersionTest {
   @Test
   fun `absent and zero valued fields are distinguishable`() {
     assertNotEquals(polyline(strokeWidth = null).renderVersion(), polyline(strokeWidth = 0.0).renderVersion())
+    assertNotEquals(polyline(zIndex = null).renderVersion(), polyline(zIndex = 0.0).renderVersion())
+    assertNotEquals(polygon(zIndex = null).renderVersion(), polygon(zIndex = 0.0).renderVersion())
+    assertNotEquals(polygon(holes = null).renderVersion(), polygon(holes = emptyArray()).renderVersion())
     assertNotEquals(circle(tappable = null).renderVersion(), circle(tappable = false).renderVersion())
   }
 

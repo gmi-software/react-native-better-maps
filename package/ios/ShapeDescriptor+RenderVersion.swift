@@ -25,6 +25,7 @@ extension PolylineDescriptor {
     var hasher = Hasher()
     hasher.combine(strokeColor)
     hasher.combine(strokeWidth)
+    hasher.combine(zIndex)
     hasher.combine(tappable)
     return hasher.finalize()
   }
@@ -34,6 +35,15 @@ extension PolygonDescriptor {
   func geometryVersion() -> Int {
     var hasher = Hasher()
     coordinates.hashGeometry(into: &hasher)
+    if let holes {
+      hasher.combine(true)
+      hasher.combine(holes.count)
+      for hole in holes {
+        hole.hashGeometry(into: &hasher)
+      }
+    } else {
+      hasher.combine(false)
+    }
     return hasher.finalize()
   }
 
@@ -42,6 +52,7 @@ extension PolygonDescriptor {
     hasher.combine(fillColor)
     hasher.combine(strokeColor)
     hasher.combine(strokeWidth)
+    hasher.combine(zIndex)
     hasher.combine(tappable)
     return hasher.finalize()
   }

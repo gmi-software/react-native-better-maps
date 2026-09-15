@@ -108,6 +108,13 @@ jobs:
       - name: Test
         run: bun run --filter react-native-better-maps test
 
+      - name: Copy README into the package
+        # npm reads the README shown on the registry page from the package
+        # directory while it builds the manifest, before any pack script runs.
+        # The `prepack` copy therefore never reaches the registry (1.0.0 through
+        # 1.2.0 all show "No README data found!"); the file must exist here first.
+        run: cp README.md package/README.md
+
       - name: Publish
         working-directory: package
         env:

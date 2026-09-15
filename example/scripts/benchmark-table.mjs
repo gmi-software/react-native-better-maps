@@ -10,18 +10,49 @@ if (files.length === 0) {
   process.exit(1);
 }
 
+function metadataKey(result) {
+  return {
+    platform: result.platform,
+    provider: result.provider,
+    refreshRateHz: result.frames.refreshRateHz,
+    // Header shows the calendar day; per-scenario ISO timestamps always differ.
+    recordedAt: String(result.recordedAt).slice(0, 10),
+  };
+}
+
+function metadataMismatch(expected, actual) {
+  const fields = ['platform', 'provider', 'refreshRateHz', 'recordedAt'];
+  return fields.filter((field) => expected[field] !== actual[field]);
+}
+
 const results = [];
+let expectedMeta = null;
 for (const file of files) {
   for (const line of readFileSync(file, 'utf8').split('\n')) {
     const start = line.indexOf(MARKER);
     if (start < 0) {
       continue;
     }
+    let result;
     try {
-      results.push(JSON.parse(line.slice(start + MARKER.length)));
+      result = JSON.parse(line.slice(start + MARKER.length));
     } catch {
       // A truncated line from a log buffer; skip it.
+      continue;
     }
+    const meta = metadataKey(result);
+    if (expectedMeta == null) {
+      expectedMeta = meta;
+    } else {
+      const mismatched = metadataMismatch(expectedMeta, meta);
+      if (mismatched.length > 0) {
+        console.error(
+          `mixed benchmark metadata (${mismatched.join(', ')}): expected ${JSON.stringify(expectedMeta)}, got ${JSON.stringify(meta)}`,
+        );
+        process.exit(1);
+      }
+    }
+    results.push(result);
   }
 }
 

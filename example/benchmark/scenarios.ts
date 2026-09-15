@@ -59,7 +59,11 @@ async function animate(
   camera: Camera,
   durationMs: number,
 ): Promise<void> {
-  await context.map()?.animateCamera(camera, durationMs / 1000);
+  const map = context.map();
+  if (map == null) {
+    throw new Error('Benchmark map ref is null; cannot animateCamera');
+  }
+  await map.animateCamera(camera, durationMs / 1000);
   await context.sleep(durationMs + 120);
 }
 

@@ -1,8 +1,8 @@
 import 'react-native-reanimated';
 import { registerRootComponent } from 'expo';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-// `EXPO_PUBLIC_*` variables are inlined at bundle time, so the demo bundle
-// never includes the harness unless it was built with the flag set.
+// `EXPO_PUBLIC_*` is inlined at bundle time and picks which screen renders.
+// Both static `require()`s stay in Metro's dependency graph either way.
 const App =
   process.env.EXPO_PUBLIC_BENCHMARK === '1'
     ? require('./benchmark/BenchmarkApp').default

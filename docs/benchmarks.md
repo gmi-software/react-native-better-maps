@@ -81,11 +81,14 @@ In a debug build the line shows in Metro's terminal. Every build also writes it
 to the system log, which is how release builds are harvested:
 
 ```bash
+# iOS Simulator only — simctl does not stream logs from a physical device
 xcrun simctl spawn booted log stream --predicate 'eventMessage contains "[benchmark]"'
 adb logcat -s NitroMapsBenchmark
 ```
 
-"Share JSON" exports the whole run through the system share sheet, and
+On a physical iOS device, use the in-app **Share JSON** export (or another
+supported device-log tool) instead of `simctl`. "Share JSON" also works on any
+platform through the system share sheet, and
 `node example/scripts/benchmark-table.mjs <log file>` turns captured lines into
 the Markdown table used below.
 
@@ -121,8 +124,8 @@ about a phone's GPU or CPU. The failures it does show are the ones the audit
 predicted: p99 climbs to two frames on the clustered zoom sweep and on rotation,
 and the worst frame is 80 ms during rotation.
 
-| Scenario           | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | RSS Δ   |
-| ------------------ | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ------- |
+| Scenario           | Result   | FPS | p50     | p95     | p99     | Worst | Jank  | JS lag p95 | phys_footprint Δ |
+| ------------------ | -------- | --- | ------- | ------- | ------- | ----- | ----- | ---------- | ---------------- |
 | A-empty-idle       | fail (1) | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 56 ms | 0.9 % | 1.1 ms     | +111 MB |
 | B-markers-100      | pass     | 59  | 16.7 ms | 16.7 ms | 16.7 ms | 47 ms | 0.7 % | 1.1 ms     | +66 MB  |
 | C-markers-1k       | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms | 42 ms | 0.3 % | 1.1 ms     | +66 MB  |
@@ -149,7 +152,7 @@ measured natively and are unaffected. Recorded 2026-09-08. An emulated GPU
 exaggerates the marker add/remove churn the audit described: the worst frames on
 the 10k scenarios are the diff applies after each camera move.
 
-| Scenario           | Result   | FPS | p50     | p95     | p99      | Worst  | Jank   | JS lag p95 | RSS Δ  |
+| Scenario           | Result   | FPS | p50     | p95     | p99      | Worst  | Jank   | JS lag p95 | PSS Δ  |
 | ------------------ | -------- | --- | ------- | ------- | -------- | ------ | ------ | ---------- | ------ |
 | A-empty-idle       | fail (3) | 59  | 16.7 ms | 16.7 ms | 33.3 ms  | 67 ms  | 1.4 %  | 22.7 ms    | -21 MB |
 | B-markers-100      | pass     | 60  | 16.7 ms | 16.7 ms | 16.7 ms  | 33 ms  | 1.0 %  | 26.5 ms    | -31 MB |

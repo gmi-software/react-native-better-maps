@@ -96,7 +96,10 @@ export default function BenchmarkApp() {
 
   const mount = useCallback((next: BenchmarkScenario) => {
     return new Promise<void>((resolve) => {
-      const timeout = setTimeout(resolve, 10_000);
+      const timeout = setTimeout(() => {
+        readyResolver.current = null;
+        resolve();
+      }, 10_000);
       readyResolver.current = () => {
         clearTimeout(timeout);
         resolve();
@@ -180,31 +183,41 @@ export default function BenchmarkApp() {
       return;
     }
 
-    manualRecording.current = null;
-    setManualActive(false);
-    const recording = await stopFrameRecording();
-    const jsLag = active.lag.stop();
-    const afterBytes = await memoryFootprintBytes();
-    const frames = computeFrameStats(recording);
-    const MB = 1024 * 1024;
-    const result: ScenarioResult = {
-      id: `manual-${scenario.id}`,
-      name: `Manual · ${scenario.name}`,
-      platform: Platform.OS,
-      provider,
-      recordedAt: new Date().toISOString(),
-      frames,
-      jsLag,
-      memory: {
-        beforeMB: active.beforeBytes / MB,
-        afterMB: afterBytes / MB,
-        deltaMB: (afterBytes - active.beforeBytes) / MB,
-      },
-      evaluation: evaluateFrameStats(frames, jsLag),
-    };
-    await publishResult(result);
-    appendResult(result);
-    setStatus('Done');
+    try {
+      const recording = await stopFrameRecording();
+      const afterBytes = await memoryFootprintBytes();
+      const rawRate =
+        recording.refreshRateHz || (await displayRefreshRateHz());
+      const refreshRateHz =
+        Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 60;
+      const frames = computeFrameStats({ ...recording, refreshRateHz });
+      const jsLag = active.lag.stop();
+      const MB = 1024 * 1024;
+      const result: ScenarioResult = {
+        id: `manual-${scenario.id}`,
+        name: `Manual · ${scenario.name}`,
+        platform: Platform.OS,
+        provider,
+        recordedAt: new Date().toISOString(),
+        frames,
+        jsLag,
+        memory: {
+          beforeMB: active.beforeBytes / MB,
+          afterMB: afterBytes / MB,
+          deltaMB: (afterBytes - active.beforeBytes) / MB,
+        },
+        evaluation: evaluateFrameStats(frames, jsLag),
+      };
+      await publishResult(result);
+      appendResult(result);
+      setStatus('Done');
+    } catch (error) {
+      setStatus(`Failed: ${String(error)}`);
+    } finally {
+      active.lag.stop();
+      manualRecording.current = null;
+      setManualActive(false);
+    }
   }, [appendResult, provider, scenario]);
 
   const selectScenario = useCallback(

@@ -7,7 +7,10 @@ import type {
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../native/specs/overlays';
-import type { ApplePoiCategory } from '../native/specs/MapView.nitro';
+import type {
+  ApplePoiCategory,
+  ApplePoiDetailPresentation,
+} from '../native/specs/MapView.nitro';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
 import type { EdgePadding, Region } from './region';
 
@@ -140,6 +143,12 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
   /** Whether to show the scale control (supported by Apple MapKit). */
   showsScale?: boolean;
 
+  /**
+   * Native MapKit detail presentation for selected points of interest.
+   * Apple MapKit on iOS 18+ only; a no-op elsewhere.
+   */
+  applePoiDetailPresentation?: ApplePoiDetailPresentation;
+
   /** Custom map style as a JSON string (full support on Google Maps; curated subset on Apple MapKit iOS 16+). */
   customMapStyle?: string;
 
@@ -158,6 +167,12 @@ interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
 
   /** Whether to show the scale control. */
   showsScale?: boolean;
+
+  /**
+   * Presents native MapKit details for a selected point of interest on
+   * iOS 18+. Works with or without `onPoiPress`. Omit to disable.
+   */
+  applePoiDetailPresentation?: ApplePoiDetailPresentation;
 
   /** Custom map style as a JSON string. Apple MapKit applies a curated subset on iOS 16+. */
   customMapStyle?: string;
@@ -178,6 +193,9 @@ interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
   /** Google Maps SDK has no native scale control. */
   showsScale?: never;
 
+  /** Google Maps SDK has no native POI detail surface; POI taps stay event-only. */
+  applePoiDetailPresentation?: never;
+
   /** Custom Google Maps style JSON. */
   customMapStyle?: string;
 
@@ -192,6 +210,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   provider: 'openstreetmap';
   googleMapId?: never;
   showsScale?: never;
+  applePoiDetailPresentation?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
@@ -202,6 +221,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   provider: 'mapbox';
   googleMapId?: never;
   showsScale?: never;
+  applePoiDetailPresentation?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;

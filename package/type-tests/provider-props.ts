@@ -7,6 +7,7 @@ import type {
 export const appleProps: MapViewPropsForProvider<'apple'> = {
   provider: 'apple',
   showsScale: true,
+  applePoiDetailPresentation: 'callout',
   clusteringEnabled: true,
   markerEnteringAnimation: { preset: 'fade-scale', duration: 180 },
   clusterEnteringAnimation: 'system',
@@ -32,6 +33,7 @@ export const googleProps: MapViewPropsForProvider<'google'> = {
 
 export const defaultProviderProps: MapViewProps = {
   showsScale: true,
+  applePoiDetailPresentation: 'sheet',
   customMapStyle: '[]',
   markerEnteringAnimation: false,
   onPoiPress: (event) => {
@@ -102,4 +104,23 @@ export const mapboxPoiPressProps: MapViewPropsForProvider<'mapbox'> = {
   provider: 'mapbox',
   // @ts-expect-error Planned Mapbox support has no native POI press capability yet.
   onPoiPress: () => {},
+};
+
+export const googleApplePoiDetailProps: MapViewPropsForProvider<'google'> = {
+  provider: 'google',
+  // @ts-expect-error Google Maps has no native POI detail surface; POI taps stay event-only.
+  applePoiDetailPresentation: 'callout',
+};
+
+export const openStreetMapApplePoiDetailProps: MapViewPropsForProvider<'openstreetmap'> =
+  {
+    provider: 'openstreetmap',
+    // @ts-expect-error Planned OpenStreetMap support has no native POI detail surface.
+    applePoiDetailPresentation: 'callout',
+  };
+
+export const mapboxApplePoiDetailProps: MapViewPropsForProvider<'mapbox'> = {
+  provider: 'mapbox',
+  // @ts-expect-error Planned Mapbox support has no native POI detail surface.
+  applePoiDetailPresentation: 'callout',
 };

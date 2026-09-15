@@ -22,6 +22,8 @@ struct MapViewState {
   var pinStyle: MarkerPinStyle?
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
+  var onCameraMove: ((Camera) -> Void)?
+  var cameraMoveThrottleMs: Double?
   var onMapReady: (() -> Void)?
   var onPress: ((Coordinate) -> Void)?
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
@@ -58,6 +60,8 @@ struct MapViewState {
     adapter.pinStyle = pinStyle
     adapter.onRegionChange = onRegionChange
     adapter.onRegionChangeComplete = onRegionChangeComplete
+    adapter.cameraMoveThrottleMs = cameraMoveThrottleMs
+    adapter.onCameraMove = onCameraMove
     adapter.onMapReady = onMapReady
     adapter.onPress = onPress
     adapter.onPoiPress = onPoiPress

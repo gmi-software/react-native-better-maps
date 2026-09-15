@@ -26,6 +26,8 @@ interface MapProviderAdapter {
 
   var onRegionChange: ((region: Region) -> Unit)?
   var onRegionChangeComplete: ((region: Region) -> Unit)?
+  var onCameraMove: ((camera: Camera) -> Unit)?
+  var cameraMoveThrottleMs: Double?
   var onMapReady: (() -> Unit)?
   var onPress: ((coordinate: Coordinate) -> Unit)?
   var onPoiPress: ((event: NativePoiPressEvent) -> Unit)?

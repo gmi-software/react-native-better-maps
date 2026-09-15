@@ -1,0 +1,34 @@
+# Real-gesture pan on the 10k-marker scenario.
+#
+# Build and launch the example with EXPO_PUBLIC_BENCHMARK=1 first, then:
+#   maestro test example/maestro/benchmark-pan.yaml
+# The result line is printed by the app as `[benchmark] {...}` in Metro's output.
+appId: com.nitromaps.example
+---
+- launchApp
+- tapOn:
+    id: 'benchmark-scenario-D-markers-10k'
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    id: 'benchmark-record-toggle'
+- swipe:
+    start: 80%, 55%
+    end: 20%, 55%
+    duration: 800
+- swipe:
+    start: 20%, 55%
+    end: 80%, 55%
+    duration: 800
+- swipe:
+    start: 50%, 70%
+    end: 50%, 30%
+    duration: 800
+- swipe:
+    start: 50%, 30%
+    end: 50%, 70%
+    duration: 800
+- tapOn:
+    id: 'benchmark-record-toggle'
+- assertVisible:
+    id: 'benchmark-result-manual-D-markers-10k'

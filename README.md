@@ -52,7 +52,6 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - **Unified map API** - One typed React API for Apple MapKit and Google Maps SDK.
 - **Provider-aware props** - TypeScript narrows provider-specific props with `MapViewPropsForProvider<P>`.
 - **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, circles, and GeoJSON FeatureCollections.
-- **Markers and overlays** - Markers with title/subtitle callouts and drag support, plus polylines, polygons, and circles.
 - **Delta marker updates** - The marker dataset lives natively. `markers` and `<Marker>` compile to deltas, and `MarkerCollection` updates it directly: one packed batch per change, `updatePositions` for animated markers, nothing re-serialized for markers that did not change.
 - **Native POI taps** - `onPoiPress` reports provider-owned places from Apple Maps and Google Maps without confusing them with app-owned markers.
 - **Camera control** - Declarative region/camera props plus imperative camera helpers.

@@ -175,7 +175,17 @@ class MapOverlayController(
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
   ) {
     val map = googleMap ?: return
-    val store = store ?: return
+    val store = store
+    if (store == null) {
+      // Detached while clustering (or another viewport-pipeline mode) was on:
+      // clear what is still on the map before bailing.
+      applyDiff(
+        computeMarkerRenderDiff(emptyList(), HashMap(markerVersions)),
+        animateEntering,
+        maxAnimatedMarkers,
+      )
+      return
+    }
     if (!usesViewportPipeline()) {
       return
     }

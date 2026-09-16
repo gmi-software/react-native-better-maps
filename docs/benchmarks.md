@@ -28,7 +28,7 @@ Thresholds scale with the display's refresh rate (`budget = 1000 / Hz`):
 | p99                                                       | ≤ 1.5 × budget                                                   |
 | worst frame                                               | ≤ 3 × budget (25 ms at 120 Hz, 50 ms at 60 Hz)                   |
 | jank frames                                               | ≤ 1 %                                                            |
-| JS lag p95 (scenarios that say "JS lag is checked" below) | ≤ budget                                                         |
+| JS lag p95 (scenarios that say "JS lag is checked" below) | ≤ budget + 5 %                                                   |
 
 They are implemented in `benchmark/thresholds.ts` and unit-tested with
 `cd example && bun test`.

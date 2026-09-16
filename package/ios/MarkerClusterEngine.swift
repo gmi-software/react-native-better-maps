@@ -546,6 +546,11 @@ final class MarkerRenderPipeline {
 
   private func refreshNow(_ parameters: RefreshParameters) {
     guard let store else {
+      // Detached while clustering (or another viewport-pipeline mode) was on:
+      // clear what is still on the map before bailing.
+      parameters.apply(
+        Self.computeDiff(target: [], displayed: parameters.displayedVersions)
+      )
       return
     }
 

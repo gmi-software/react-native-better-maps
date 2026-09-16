@@ -51,16 +51,22 @@ export interface BenchmarkScenario {
 const collectionCache = new Map<number, MarkerCollection>();
 
 /**
- * One `MarkerCollection` per dataset size, populated on first use. Scenarios
- * that mutate it (I, M) do so cumulatively across runs, which is harmless for
- * a benchmark and keeps the mount cost out of the recording.
+ * One `MarkerCollection` per dataset size so `props()` and `run()` share the
+ * same instance. Pass `reset: true` from `props()` so each mount starts from
+ * the baseline dataset; `run()` must reuse the instance without resetting, or
+ * the reset `set()` would land inside the recording window.
  */
-function collectionOf(count: number): MarkerCollection {
+function collectionOf(
+  count: number,
+  options: { reset?: boolean } = {},
+): MarkerCollection {
   let collection = collectionCache.get(count);
   if (collection == null) {
     collection = new MarkerCollection();
     collection.set(markers(count));
     collectionCache.set(count, collection);
+  } else if (options.reset) {
+    collection.set(markers(count));
   }
   return collection;
 }
@@ -224,7 +230,7 @@ export const SCENARIOS: BenchmarkScenario[] = [
       '100 of 1,000 markers move at 10 Hz for 5 s through MarkerCollection.updatePositions.',
     props: () => ({
       region: WARSAW_REGION,
-      markerCollection: collectionOf(1_000),
+      markerCollection: collectionOf(1_000, { reset: true }),
     }),
     checkJsLag: true,
     async run(context) {
@@ -289,7 +295,7 @@ export const SCENARIOS: BenchmarkScenario[] = [
       'One marker of a 10,000-marker collection is upserted every 100 ms for 3 s.',
     props: () => ({
       region: WARSAW_REGION,
-      markerCollection: collectionOf(10_000),
+      markerCollection: collectionOf(10_000, { reset: true }),
     }),
     settleMs: 2500,
     checkJsLag: true,

@@ -163,8 +163,9 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
-  /// Native MapKit detail presentation for selected POIs (iOS 18+). Enables selectable
-  /// points of interest on its own, independently of `onPoiPress`.
+  /// Native MapKit detail presentation for selected POIs (iOS 18+). On iOS 18+ it enables
+  /// selectable points of interest on its own, independently of `onPoiPress`. On earlier
+  /// versions it is ignored and does not turn selection on.
   var applePoiDetailPresentation: ApplePoiDetailPresentation? {
     didSet {
       applySelectablePoiFeatures(to: view)
@@ -492,10 +493,21 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   private func applySelectablePoiFeatures(to mapView: MKMapView) {
-    if #available(iOS 16.0, *) {
-      let wantsSelectablePois = onPoiPress != nil || applePoiDetailPresentation != nil
-      mapView.selectableMapFeatures = wantsSelectablePois ? .pointsOfInterest : []
+    guard #available(iOS 16.0, *) else {
+      return
     }
+
+    // Presentation accessories exist only on iOS 18+. Counting the prop on 16/17 would
+    // enable selection with nothing to show and can swallow the next background press.
+    let wantsNativeDetails: Bool
+    if #available(iOS 18.0, *) {
+      wantsNativeDetails = applePoiDetailPresentation != nil
+    } else {
+      wantsNativeDetails = false
+    }
+
+    let wantsSelectablePois = onPoiPress != nil || wantsNativeDetails
+    mapView.selectableMapFeatures = wantsSelectablePois ? .pointsOfInterest : []
   }
 
 }

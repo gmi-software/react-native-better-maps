@@ -287,8 +287,18 @@ final class MapOverlayController {
     var changed = false
     // Union of the sprites that changed, so a pan re-renders the edge tiles only.
     var dirty = MKMapRect.null
+    let mapPointsPerPoint: Double = {
+      guard let mapView, mapView.bounds.width > 0 else {
+        return 0
+      }
+      return mapView.visibleMapRect.width / Double(mapView.bounds.width)
+    }()
     func touch(_ sprite: MarkerSprite) {
-      dirty = dirty.union(MKMapRect(x: sprite.mapPoint.x, y: sprite.mapPoint.y, width: 0, height: 0))
+      if mapPointsPerPoint > 0 {
+        dirty = dirty.union(sprite.drawMapRect(mapPointsPerPoint: mapPointsPerPoint))
+      } else {
+        dirty = dirty.union(MKMapRect(x: sprite.mapPoint.x, y: sprite.mapPoint.y, width: 0, height: 0))
+      }
     }
 
     for key in diff.removedKeys {
@@ -390,7 +400,10 @@ final class MapOverlayController {
           loadSpriteImage(imageDescriptor, token: token, key: entry.key)
         }
       } else {
-        let pin = PinImageRenderer.pin(scale: scale)
+        let pin = PinImageRenderer.pin(
+          scale: scale,
+          color: descriptor.markerColor?.toUIColor(fallback: .systemRed)
+        )
         image = pin.cgImage
         size = pin.size
       }
@@ -408,7 +421,8 @@ final class MapOverlayController {
           imageSize: size
         ),
         rotation: radians,
-        opacity: CGFloat(descriptor.opacity ?? 1)
+        opacity: CGFloat(descriptor.opacity ?? 1),
+        zIndex: descriptor.zIndex ?? 0
       )
     case let .cluster(_, coordinate, count, _, _):
       let badge = ClusterBadgeImageRenderer.badge(count: count, scale: scale)
@@ -423,7 +437,8 @@ final class MapOverlayController {
         hitSize: CGSize(width: diameter, height: diameter),
         centerOffset: .zero,
         rotation: 0,
-        opacity: 1
+        opacity: 1,
+        zIndex: 0
       )
     }
   }
@@ -483,9 +498,10 @@ final class MapOverlayController {
       renderer.setNeedsDisplay()
       return
     }
-    // Sprites reach past their coordinate by `maxReach` points; pad in map points.
+    // Dirty already unions each touched sprite's draw extent (offset + rotation).
+    // A small pad covers antialiasing / rounding at tile edges.
     let mapPointsPerPoint = mapView.visibleMapRect.width / Double(mapView.bounds.width)
-    let padding = Double(snapshot.maxReach + 2) * mapPointsPerPoint
+    let padding = 2 * mapPointsPerPoint
     let area = dirty.insetBy(dx: -padding, dy: -padding)
     let visible = mapView.visibleMapRect
     if area.contains(visible) || area.intersection(visible).width * area.intersection(visible).height > visible.width * visible.height * 0.6 {

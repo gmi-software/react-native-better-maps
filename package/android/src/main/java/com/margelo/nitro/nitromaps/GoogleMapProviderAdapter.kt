@@ -211,13 +211,17 @@ class GoogleMapProviderAdapter(
     get() = _mapPadding
     set(value) {
       // Padding changes the camera that a region fit produces, so drop the
-      // skip-cache and let the next same-region apply recompute.
-      if (value != _mapPadding) {
+      // skip-cache and re-fit the current region when the camera is region-driven.
+      val paddingChanged = value != _mapPadding
+      if (paddingChanged) {
         lastAppliedRegion = null
         lastAppliedRegionCamera = null
       }
       _mapPadding = value
       applyMapPadding()
+      if (paddingChanged && _camera == null) {
+        _region?.let(::applyRegion)
+      }
     }
 
   private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null

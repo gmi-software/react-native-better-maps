@@ -114,7 +114,17 @@ Marker datasets live in a native `MarkerStore` behind the `MarkerCollection` Hyb
 
 The diff does not reach the map SDK in one pass. A per-map scheduler driven by `CADisplayLink` on iOS and `Choreographer` on Android applies removals at once, then a bounded number of adds per frame, nearest to the camera first, then retained updates within a 2 ms budget; the add count halves after a long frame and grows back on frames within budget. A newer diff replaces whatever is still pending, which is safe because diffs are computed against what is actually on the map. On MapKit the live refresh during gestures runs off the same display link instead of a wall-clock timer, and image-less markers are flat pre-rendered pins unless `pinStyle="system"` asks for `MKMarkerAnnotationView`. Clustering keeps the buckets of the cells that were fully inside the previous padded viewport for as long as the zoom octave and the dataset stay the same, so a pan only accumulates the cells that entered. See [ADR 0006](adr/0006-frame-budgeted-rendering.md).
 
-The camera reaches JS through two events per gesture, `onRegionChange` when it begins and `onRegionChangeComplete` when it ends, which suits data loading. Overlays that must track the map while it moves opt into `onCameraMove`: MapKit samples `MKMapView.camera` on a display link that runs only between `regionWillChange` and `regionDidChange`, the Google SDKs report the camera every frame and the adapter throttles it to `cameraMoveThrottleMs`, and every adapter emits the final camera once the move ends. The `react-native-better-maps/reanimated` entry point turns that stream into a Reanimated shared value so overlays follow the camera on the UI thread without a React render per update. See [ADR 0007](adr/0007-camera-stream-and-cpp-core.md).
+The camera reaches JS through two events per gesture: `onRegionChange` once when
+a user gesture begins, and `onRegionChangeComplete` when it ends. Use
+`onRegionChangeComplete` for data loading; `onRegionChange` can report a
+transient region at the start of the move. Overlays that must track the map
+while it moves opt into `onCameraMove`: MapKit samples `MKMapView.camera` on a
+display link that runs only between `regionWillChange` and `regionDidChange`,
+the Google SDKs report the camera every frame and the adapter throttles it to
+`cameraMoveThrottleMs`, and every adapter emits the final camera once the move
+ends. The `react-native-better-maps/reanimated` entry point turns that stream
+into a Reanimated shared value so overlays follow the camera on the UI thread
+without a React render per update. See [ADR 0007](adr/0007-camera-stream-and-cpp-core.md).
 
 With `markerRendering="sprites"` the MapKit controller keeps the same pipeline and diffs but applies the sprite part of each diff at once: a dictionary of sprites (coordinate, bitmap, size, offset, rotation, opacity) becomes an immutable snapshot that a world-sized `MKOverlay`'s renderer draws per tile on MapKit's threads, above the labels. A viewport change is then one snapshot swap and a background re-render instead of annotation-view layout on the main thread. Taps are hit-tested against the snapshot; a marker with a title or subtitle is promoted to a selected annotation view for its callout and demoted when the callout closes; draggable markers always take the view path through the frame scheduler. See [ADR 0008](adr/0008-mapkit-sprite-layer.md).
 

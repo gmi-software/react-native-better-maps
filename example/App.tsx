@@ -793,6 +793,7 @@ export default function App() {
       return;
     }
 
+    latestClusterRequest.current += 1;
     const next = (providerIndex + 1) % SUPPORTED_MAP_PROVIDERS.length;
     setProviderIndex(next);
     setMapReady(false);
@@ -804,6 +805,7 @@ export default function App() {
       if (index === scenarioIndex) {
         return;
       }
+      latestClusterRequest.current += 1;
       setScenarioIndex(index);
       setMapReady(false);
       setStatus(MAP_SCENARIOS[index].name);
@@ -824,6 +826,7 @@ export default function App() {
         return;
       }
 
+      latestClusterRequest.current += 1;
       setAnimationOptionIndex(nextIndex);
       setMapReady(false);
       setStatus(`Animation · ${ANIMATION_OPTIONS[nextIndex].label}`);

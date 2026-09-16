@@ -19,6 +19,8 @@ struct MarkerSprite {
   /// Radians, clockwise on screen.
   let rotation: CGFloat
   let opacity: CGFloat
+  /// Higher values draw above lower ones within the same layer (singles or clusters).
+  let zIndex: Double
 
   var isCluster: Bool {
     if case .cluster = element {
@@ -31,11 +33,27 @@ struct MarkerSprite {
   var reach: CGFloat {
     max(size.width, size.height) / 2 + (centerOffset.x * centerOffset.x + centerOffset.y * centerOffset.y).squareRoot()
   }
+
+  /// Axis-aligned map rect covering the drawn (possibly rotated) bitmap.
+  /// Matches `MarkerSpriteRenderer`'s cull bound so invalidation clears every pixel.
+  func drawMapRect(mapPointsPerPoint: Double) -> MKMapRect {
+    let width = Double(size.width) * mapPointsPerPoint
+    let height = Double(size.height) * mapPointsPerPoint
+    let centerX = mapPoint.x + Double(centerOffset.x) * mapPointsPerPoint
+    let centerY = mapPoint.y + Double(centerOffset.y) * mapPointsPerPoint
+    let halfDiagonal = (width * width + height * height).squareRoot() / 2
+    return MKMapRect(
+      x: centerX - halfDiagonal,
+      y: centerY - halfDiagonal,
+      width: halfDiagonal * 2,
+      height: halfDiagonal * 2
+    )
+  }
 }
 
-/// An immutable set of sprites in draw order: singles north to south, so the
-/// southern pins overlap the northern ones the way pins stack, then cluster
-/// badges on top.
+/// An immutable set of sprites in draw order: singles by zIndex then north to
+/// south, so southern / higher-z pins overlap lower ones the way pins stack,
+/// then cluster badges on top.
 final class MarkerSpriteSnapshot {
   let sprites: [MarkerSprite]
   /// The largest `reach` of any sprite, for hit-test pre-filtering.
@@ -52,6 +70,9 @@ final class MarkerSpriteSnapshot {
     MarkerSpriteSnapshot(sprites: sprites.sorted { lhs, rhs in
       if lhs.isCluster != rhs.isCluster {
         return !lhs.isCluster
+      }
+      if lhs.zIndex != rhs.zIndex {
+        return lhs.zIndex < rhs.zIndex
       }
       return lhs.coordinate.latitude > rhs.coordinate.latitude
     })
@@ -115,44 +136,53 @@ final class MarkerSpriteRenderer: MKOverlayRenderer {
     }
     let sprites = snapshots.current.sprites
     // Map points per screen point at this tile's zoom scale.
-    let scale = 1 / CGFloat(zoomScale)
+    let scale = 1 / Double(zoomScale)
+    let worldWidth = MKMapSize.world.width
 
     for sprite in sprites {
       guard let image = sprite.image else {
         continue
       }
-      let width = sprite.size.width * scale
-      let height = sprite.size.height * scale
-      let centerX = sprite.mapPoint.x + sprite.centerOffset.x * scale
-      let centerY = sprite.mapPoint.y + sprite.centerOffset.y * scale
+      let width = Double(sprite.size.width) * scale
+      let height = Double(sprite.size.height) * scale
+      let baseCenterX = sprite.mapPoint.x + Double(sprite.centerOffset.x) * scale
+      let centerY = sprite.mapPoint.y + Double(sprite.centerOffset.y) * scale
       // Cull on the rotated extent; a sprite that touches the tile draws whole.
+      // MapKit may ask for tiles in wrapped worlds (± one world width).
       let halfDiagonal = (width * width + height * height).squareRoot() / 2
-      let reach = MKMapRect(
-        x: centerX - halfDiagonal,
-        y: centerY - halfDiagonal,
-        width: halfDiagonal * 2,
-        height: halfDiagonal * 2
-      )
-      guard mapRect.intersects(reach) else {
-        continue
-      }
+      for wrappedCenterX in [baseCenterX, baseCenterX - worldWidth, baseCenterX + worldWidth] {
+        let reach = MKMapRect(
+          x: wrappedCenterX - halfDiagonal,
+          y: centerY - halfDiagonal,
+          width: halfDiagonal * 2,
+          height: halfDiagonal * 2
+        )
+        guard mapRect.intersects(reach) else {
+          continue
+        }
 
-      // Map points go through the renderer's own conversion into its drawing
-      // space, as every overlay renderer's content should.
-      let drawRect = rect(for: MKMapRect(x: centerX - width / 2, y: centerY - height / 2, width: width, height: height))
-      context.saveGState()
-      context.translateBy(x: drawRect.midX, y: drawRect.midY)
-      if sprite.rotation != 0 {
-        context.rotate(by: sprite.rotation)
+        // Map points go through the renderer's own conversion into its drawing
+        // space, as every overlay renderer's content should.
+        let drawRect = rect(for: MKMapRect(
+          x: wrappedCenterX - width / 2,
+          y: centerY - height / 2,
+          width: width,
+          height: height
+        ))
+        context.saveGState()
+        context.translateBy(x: drawRect.midX, y: drawRect.midY)
+        if sprite.rotation != 0 {
+          context.rotate(by: sprite.rotation)
+        }
+        // The drawing space is y-down; CGImage drawing is y-up.
+        context.scaleBy(x: 1, y: -1)
+        context.setAlpha(sprite.opacity)
+        context.draw(
+          image,
+          in: CGRect(x: -drawRect.width / 2, y: -drawRect.height / 2, width: drawRect.width, height: drawRect.height)
+        )
+        context.restoreGState()
       }
-      // The drawing space is y-down; CGImage drawing is y-up.
-      context.scaleBy(x: 1, y: -1)
-      context.setAlpha(sprite.opacity)
-      context.draw(
-        image,
-        in: CGRect(x: -drawRect.width / 2, y: -drawRect.height / 2, width: drawRect.width, height: drawRect.height)
-      )
-      context.restoreGState()
     }
   }
 }

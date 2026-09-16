@@ -20,6 +20,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private var _googleMapId: String?
   private var lastAppliedRegion: Region?
   private var lastAppliedRegionCamera: GMSCameraPosition?
+  /// Region waiting for a non-zero viewport before `GMSCameraUpdate.fit`.
+  private var pendingRegionFit: (region: Region, animated: Bool)?
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -275,6 +277,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     lastLiveMarkerRefreshTime = 0
     lastAppliedRegion = nil
     lastAppliedRegionCamera = nil
+    pendingRegionFit = nil
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
@@ -315,6 +318,32 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func applyRegion(_ region: Region, animated: Bool = false) {
+    // `GMSCameraUpdate.fit` needs a laid-out viewport. Fitting against a zero
+    // size produces a bogus camera that the cache would then treat as settled.
+    guard view.bounds.width > 0, view.bounds.height > 0 else {
+      pendingRegionFit = (region, animated)
+      DispatchQueue.main.async { [weak self] in
+        self?.flushPendingRegionFitIfPossible()
+      }
+      return
+    }
+
+    pendingRegionFit = nil
+    fitCamera(to: region, animated: animated)
+  }
+
+  private func flushPendingRegionFitIfPossible() {
+    guard let pending = pendingRegionFit,
+          view.bounds.width > 0,
+          view.bounds.height > 0
+    else {
+      return
+    }
+    pendingRegionFit = nil
+    fitCamera(to: pending.region, animated: pending.animated)
+  }
+
+  private func fitCamera(to region: Region, animated: Bool) {
     if let lastAppliedRegion,
        let lastAppliedRegionCamera,
        region.approximatelyEquals(lastAppliedRegion),
@@ -434,6 +463,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func notifyMapReadyIfNeeded() {
+    flushPendingRegionFitIfPossible()
     isMapReady = true
     deliverMapReadyIfPossible()
   }
@@ -542,6 +572,7 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
+    flushPendingRegionFitIfPossible()
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
     handleRegionDidChange()

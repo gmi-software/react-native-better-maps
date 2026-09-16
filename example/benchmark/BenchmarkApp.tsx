@@ -176,8 +176,15 @@ export default function BenchmarkApp() {
     const active = manualRecording.current;
     if (active == null) {
       const beforeBytes = await memoryFootprintBytes();
-      manualRecording.current = { lag: startJsLagSampler(), beforeBytes };
-      await startFrameRecording();
+      const lag = startJsLagSampler();
+      try {
+        await startFrameRecording();
+      } catch (error) {
+        lag.stop();
+        setStatus(`Failed: ${String(error)}`);
+        return;
+      }
+      manualRecording.current = { lag, beforeBytes };
       setManualActive(true);
       setStatus('Recording: gesture now, then tap Stop');
       return;

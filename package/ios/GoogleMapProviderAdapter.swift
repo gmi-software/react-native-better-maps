@@ -490,12 +490,20 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
       return
     }
     let now = CACurrentMediaTime()
-    let interval = max(0, (cameraMoveThrottleMs ?? 100) / 1000)
+    let interval = resolvedCameraMoveThrottleSeconds()
     guard now - lastCameraEmitTime >= interval else {
       return
     }
     lastCameraEmitTime = now
     onCameraMove(position.toCamera())
+  }
+
+  /// Finite intervals ≥ 0, otherwise the documented 100 ms default.
+  private func resolvedCameraMoveThrottleSeconds() -> CFTimeInterval {
+    guard let value = cameraMoveThrottleMs, value.isFinite, value >= 0 else {
+      return Self.defaultCameraMoveThrottleMs / 1000
+    }
+    return value / 1000
   }
 
   private func stopCameraStream(at position: GMSCameraPosition) {
@@ -606,6 +614,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
     mapView.mapStyle = try? GMSMapStyle(jsonString: customMapStyle)
   }
+
+  private static let defaultCameraMoveThrottleMs: Double = 100
 }
 
 extension GoogleMapProviderAdapter: GMSMapViewDelegate {

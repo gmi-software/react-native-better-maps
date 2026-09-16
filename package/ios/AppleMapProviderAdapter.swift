@@ -370,12 +370,20 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       cameraStreamClock.stop()
       return
     }
-    let interval = max(0, (cameraMoveThrottleMs ?? 100) / 1000)
+    let interval = resolvedCameraMoveThrottleSeconds()
     guard frame.timestamp - lastCameraEmitTime >= interval else {
       return
     }
     lastCameraEmitTime = frame.timestamp
     onCameraMove(view.camera.toCamera())
+  }
+
+  /// Finite intervals ≥ 0, otherwise the documented 100 ms default.
+  private func resolvedCameraMoveThrottleSeconds() -> CFTimeInterval {
+    guard let value = cameraMoveThrottleMs, value.isFinite, value >= 0 else {
+      return Self.defaultCameraMoveThrottleMs / 1000
+    }
+    return value / 1000
   }
 
   func startLiveClustering() {
@@ -542,5 +550,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       mapView.selectableMapFeatures = onPoiPress == nil ? [] : .pointsOfInterest
     }
   }
+
+  private static let defaultCameraMoveThrottleMs: Double = 100
 
 }

@@ -742,7 +742,7 @@ class GoogleMapProviderAdapter(
       return
     }
     val now = SystemClock.uptimeMillis()
-    val interval = (cameraMoveThrottleMs ?: DEFAULT_CAMERA_MOVE_THROTTLE_MS).coerceAtLeast(0.0).toLong()
+    val interval = resolvedCameraMoveThrottleMs().toLong()
     if (lastCameraEmitMs != 0L && now - lastCameraEmitMs < interval) {
       return
     }
@@ -756,6 +756,16 @@ class GoogleMapProviderAdapter(
     }
     isCameraStreaming = false
     onCameraMove?.invoke(map.cameraPosition.toCamera())
+  }
+
+  /** Finite intervals ≥ 0, otherwise the documented 100 ms default. */
+  private fun resolvedCameraMoveThrottleMs(): Double {
+    val value = cameraMoveThrottleMs
+    return if (value != null && value.isFinite() && value >= 0.0) {
+      value
+    } else {
+      DEFAULT_CAMERA_MOVE_THROTTLE_MS
+    }
   }
 
   private fun handleRegionDidChange() {

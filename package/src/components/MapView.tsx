@@ -33,6 +33,7 @@ import { resolveMapProvider } from '../providers';
 import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
+import { normalizeCameraMoveThrottleMs } from '../utils/cameraMoveThrottle';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
 import {
   camerasEqual,
@@ -386,7 +387,7 @@ export function MapView({
       onRegionChange={onRegionChangeCallback}
       onRegionChangeComplete={onRegionChangeCompleteCallback}
       onCameraMove={onCameraMoveCallback}
-      cameraMoveThrottleMs={cameraMoveThrottleMs}
+      cameraMoveThrottleMs={normalizeCameraMoveThrottleMs(cameraMoveThrottleMs)}
       onMapReady={onMapReadyCallback}
       onPress={onPressCallback}
       onPoiPress={onPoiPressNativeCallback}

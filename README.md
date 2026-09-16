@@ -255,7 +255,9 @@ function ControlledMap() {
 
 ### Following the camera
 
-`onRegionChange` and `onRegionChangeComplete` fire once per gesture, which is what data loading wants. An overlay that must track the camera while it moves opts into a throttled stream:
+`onRegionChange` fires when a gesture begins and can report a transient region.
+Use `onRegionChangeComplete` for data loading when the gesture ends. An overlay
+that must track the camera while it moves opts into a throttled stream:
 
 ```tsx
 <MapView
@@ -267,7 +269,9 @@ function ControlledMap() {
 Nothing runs unless `onCameraMove` is set, and each call crosses to the JS thread, so pair a low throttle with a cheap handler. With Reanimated installed, `react-native-better-maps/reanimated` feeds the stream into a shared value that overlays read on the UI thread without a React render per update:
 
 ```tsx
+import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { MapView } from 'react-native-better-maps';
 import { useCameraSharedValue } from 'react-native-better-maps/reanimated';
 
 function MapWithCompass() {
@@ -277,12 +281,22 @@ function MapWithCompass() {
   }));
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <MapView style={{ flex: 1 }} onCameraMove={onCameraMove} cameraMoveThrottleMs={16} />
       <Animated.Text style={[styles.needle, needle]}>▲</Animated.Text>
-    </>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  needle: {
+    position: 'absolute',
+    top: 48,
+    alignSelf: 'center',
+    color: '#FF453A',
+    fontSize: 18,
+  },
+});
 ```
 
 `react-native-reanimated` is an optional peer dependency; the main entry point does not import it.

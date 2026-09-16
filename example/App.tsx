@@ -765,6 +765,7 @@ export default function App() {
         return current;
       }
 
+      latestClusterRequest.current += 1;
       const next = (current + 1) % SUPPORTED_MAP_PROVIDERS.length;
       setMapReady(false);
       setStatus(PROVIDER_LABELS[SUPPORTED_MAP_PROVIDERS[next] ?? provider]);
@@ -777,6 +778,7 @@ export default function App() {
       if (index === scenarioIndex) {
         return;
       }
+      latestClusterRequest.current += 1;
       setScenarioIndex(index);
       setMapReady(false);
       setStatus(MAP_SCENARIOS[index].name);
@@ -797,6 +799,7 @@ export default function App() {
         return;
       }
 
+      latestClusterRequest.current += 1;
       setAnimationOptionIndex(nextIndex);
       setMapReady(false);
       setStatus(`Animation · ${ANIMATION_OPTIONS[nextIndex].label}`);

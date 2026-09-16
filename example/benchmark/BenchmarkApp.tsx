@@ -80,6 +80,7 @@ export default function BenchmarkApp() {
     lag: LagSampler;
     beforeBytes: number;
   } | null>(null);
+  const manualTransition = useRef(false);
 
   const scenario = SCENARIOS[scenarioIndex];
 
@@ -173,57 +174,67 @@ export default function BenchmarkApp() {
   }, [appendResult, context, mount, provider, running, scenario]);
 
   const toggleManualRecording = useCallback(async () => {
-    const active = manualRecording.current;
-    if (active == null) {
-      const beforeBytes = await memoryFootprintBytes();
-      const lag = startJsLagSampler();
-      try {
-        await startFrameRecording();
-      } catch (error) {
-        lag.stop();
-        setStatus(`Failed: ${String(error)}`);
-        return;
-      }
-      manualRecording.current = { lag, beforeBytes };
-      setManualActive(true);
-      setStatus('Recording: gesture now, then tap Stop');
+    if (manualTransition.current) {
       return;
     }
-
+    manualTransition.current = true;
+    const active = manualRecording.current;
     try {
-      const recording = await stopFrameRecording();
-      const afterBytes = await memoryFootprintBytes();
-      const rawRate =
-        recording.refreshRateHz || (await displayRefreshRateHz());
-      const refreshRateHz =
-        Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 60;
-      const frames = computeFrameStats({ ...recording, refreshRateHz });
-      const jsLag = active.lag.stop();
-      const MB = 1024 * 1024;
-      const result: ScenarioResult = {
-        id: `manual-${scenario.id}`,
-        name: `Manual · ${scenario.name}`,
-        platform: Platform.OS,
-        provider,
-        recordedAt: new Date().toISOString(),
-        frames,
-        jsLag,
-        memory: {
-          beforeMB: active.beforeBytes / MB,
-          afterMB: afterBytes / MB,
-          deltaMB: (afterBytes - active.beforeBytes) / MB,
-        },
-        evaluation: evaluateFrameStats(frames, jsLag),
-      };
-      await publishResult(result);
-      appendResult(result);
-      setStatus('Done');
-    } catch (error) {
-      setStatus(`Failed: ${String(error)}`);
+      if (active == null) {
+        const beforeBytes = await memoryFootprintBytes();
+        const lag = startJsLagSampler();
+        try {
+          await startFrameRecording();
+        } catch (error) {
+          lag.stop();
+          manualRecording.current = null;
+          setManualActive(false);
+          setStatus(`Failed: ${String(error)}`);
+          return;
+        }
+        manualRecording.current = { lag, beforeBytes };
+        setManualActive(true);
+        setStatus('Recording: gesture now, then tap Stop');
+        return;
+      }
+
+      try {
+        const recording = await stopFrameRecording();
+        const afterBytes = await memoryFootprintBytes();
+        const rawRate =
+          recording.refreshRateHz || (await displayRefreshRateHz());
+        const refreshRateHz =
+          Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 60;
+        const frames = computeFrameStats({ ...recording, refreshRateHz });
+        const jsLag = active.lag.stop();
+        const MB = 1024 * 1024;
+        const result: ScenarioResult = {
+          id: `manual-${scenario.id}`,
+          name: `Manual · ${scenario.name}`,
+          platform: Platform.OS,
+          provider,
+          recordedAt: new Date().toISOString(),
+          frames,
+          jsLag,
+          memory: {
+            beforeMB: active.beforeBytes / MB,
+            afterMB: afterBytes / MB,
+            deltaMB: (afterBytes - active.beforeBytes) / MB,
+          },
+          evaluation: evaluateFrameStats(frames, jsLag),
+        };
+        await publishResult(result);
+        appendResult(result);
+        setStatus('Done');
+      } catch (error) {
+        setStatus(`Failed: ${String(error)}`);
+      } finally {
+        active.lag.stop();
+        manualRecording.current = null;
+        setManualActive(false);
+      }
     } finally {
-      active.lag.stop();
-      manualRecording.current = null;
-      setManualActive(false);
+      manualTransition.current = false;
     }
   }, [appendResult, provider, scenario]);
 

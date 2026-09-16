@@ -80,7 +80,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var region: Region? {
     didSet {
-      guard let region, !isUserGestureMoving, camera == nil else {
+      guard let region else {
+        pendingRegionFit = nil
+        return
+      }
+      guard !isUserGestureMoving, camera == nil else {
         return
       }
       applyRegion(region)
@@ -365,6 +369,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
+    // Drop any deferred region fit so it cannot override this camera after layout.
+    pendingRegionFit = nil
     let target = camera.toGMSCameraPosition(current: view.camera)
     guard !view.camera.approximatelyEquals(target) else {
       return

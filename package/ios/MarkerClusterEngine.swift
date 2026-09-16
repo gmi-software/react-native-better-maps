@@ -673,8 +673,8 @@ final class MarkerRenderPipeline {
     _ request: ViewportRefreshRequest,
     clusterCellPoints: Double
   ) -> [MarkerRenderEntry] {
-    let signpost = MapTrace.begin("computeViewportDiff")
-    defer { MapTrace.end("computeViewportDiff", signpost) }
+    let signpost = MapTrace.begin("computeViewportTarget")
+    defer { MapTrace.end("computeViewportTarget", signpost) }
     let parameters = request.parameters
     let store = request.store
 

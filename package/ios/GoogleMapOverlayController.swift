@@ -327,6 +327,7 @@ final class GoogleMapOverlayController {
     guard let marker = markers[entry.key] else {
       return
     }
+    OverlayEnteringAnimationResolver.cancelGoogleMarkerEnteringAnimation(marker)
     updateMarker(marker, with: entry.element)
     markerVersions[entry.key] = entry.version
   }

@@ -328,7 +328,7 @@ Apple MapKit can present its own place details for a selected point of interest 
 | -------------- | ----------------------------------------------------- |
 | `'automatic'`  | MapKit picks the presentation for the current context |
 | `'callout'`    | Callout anchored to the selected place                |
-| `'sheet'`      | Sheet presented from the map's view controller        |
+| `'sheet'`      | Sheet from the map's view controller; falls back to callout if none is available |
 | `'openInMaps'` | Affordance that opens the place in the Maps app       |
 
 - Setting the prop enables selectable points of interest on its own; `onPoiPress` is optional. When both are set, the event fires immediately and the native details open for the same tap.

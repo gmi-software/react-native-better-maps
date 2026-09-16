@@ -49,6 +49,8 @@ at runtime.
   native place-detail surface, it should get its own provider-specific prop rather than a
   shared one.
 - The `'sheet'` style relies on MapKit presenting from the map view's nearest view controller.
-  In a React Native app that is the root view controller or the controller of a `Modal`.
+  In a React Native app that is the root view controller or the controller of a `Modal`. When no
+  presenter is available, `ApplePoiDetailPresentation.toMKSelectionAccessory(presentedFrom:)`
+  falls back from `.sheet` to `.callout` so place details still appear.
 - React Native POI detail components, custom callout content, and cross-provider parity remain
   out of scope.

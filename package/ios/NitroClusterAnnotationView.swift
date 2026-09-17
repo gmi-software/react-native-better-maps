@@ -69,10 +69,13 @@ final class NitroClusterAnnotationView: MKAnnotationView {
     label.frame = rect
     label.text = Self.format(count)
 
-    accessibilityLabel = String.localizedStringWithFormat(
-      NSLocalizedString("%d markers in this cluster", comment: "Map marker cluster"),
-      count
-    )
+    let markerText = count == 1
+      ? NSLocalizedString("1 marker in this cluster", comment: "Map marker cluster singular")
+      : String.localizedStringWithFormat(
+          NSLocalizedString("%d markers in this cluster", comment: "Map marker cluster plural"),
+          count
+        )
+    accessibilityLabel = markerText
     accessibilityHint = NSLocalizedString("Double tap to zoom in", comment: "Map marker cluster hint")
   }
 

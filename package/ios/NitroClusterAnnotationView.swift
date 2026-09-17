@@ -25,6 +25,11 @@ final class NitroClusterAnnotationView: MKAnnotationView {
     collisionMode = .circle
     centerOffset = .zero
 
+    isAccessibilityElement = true
+    accessibilityTraits = .button
+    circle.isAccessibilityElement = false
+    label.isAccessibilityElement = false
+
     circle.isUserInteractionEnabled = false
     circle.layer.borderWidth = 2
     circle.layer.borderColor = UIColor.white.cgColor
@@ -63,6 +68,12 @@ final class NitroClusterAnnotationView: MKAnnotationView {
     gradient.cornerRadius = diameter / 2
     label.frame = rect
     label.text = Self.format(count)
+
+    accessibilityLabel = String.localizedStringWithFormat(
+      NSLocalizedString("%d markers in this cluster", comment: "Map marker cluster"),
+      count
+    )
+    accessibilityHint = NSLocalizedString("Double tap to zoom in", comment: "Map marker cluster hint")
   }
 
   private static func format(_ count: Int) -> String {

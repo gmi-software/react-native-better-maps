@@ -18,7 +18,7 @@ For native changes, name the provider, platform and device you tested on.
 
 - [ ] `bun run lint`, `bun run typecheck` and `bun run build` pass
 - [ ] Tests pass, and new behavior is covered by a test
-- [ ] Nitro specs changed? `bun run nitrogen` was re-run and the generated code is committed
+- [ ] Nitro specs changed? `bun run nitrogen` was re-run (`package/nitrogen/` is generated and gitignored, never committed)
 - [ ] Public API changed? The README and the capability matrix are updated
 - [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [ ] Behavior changed without a type change? Say so explicitly above — it breaks consumers whose code still compiles

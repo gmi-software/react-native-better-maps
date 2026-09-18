@@ -1,0 +1,275 @@
+name: Native build
+
+# Nothing else in this repository compiles Swift, Kotlin or C++: `quality` in
+# ci.yml stops at TypeScript.
+#
+# package/nitrogen, package/plugin/build, example/ios and example/android are all
+# gitignored, and the Gradle wrapper and Xcode workspace only exist after an Expo
+# prebuild, so both jobs rebuild the whole chain on every run.
+on:
+  workflow_call:
+
+jobs:
+  ios:
+    name: iOS (${{ matrix.provider }})
+    # Pinned rather than macos-latest: a silent jump to the next macOS image
+    # should not be able to turn the release pipeline red.
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      # Which leg fails is the diagnosis: `apple` alone means a GoogleMaps symbol
+      # escaped its `#if canImport(GoogleMaps)` guard, `google` alone means the
+      # guarded code itself is broken.
+      fail-fast: false
+      matrix:
+        include:
+          # No key: the config plugin removes `betterMaps.iosGoogleProvider`, the
+          # podspec drops the GoogleMaps dependency, and guarded code compiles to
+          # nothing.
+          - provider: apple
+            google_maps_api_key: ''
+          # Any non-empty string works — the key is only validated at runtime, so
+          # no secret is needed and fork pull requests work.
+          - provider: google
+            google_maps_api_key: ci-compile-only
+    env:
+      # CocoaPods aborts with `Encoding::CompatibilityError: Unicode Normalization
+      # not appropriate for ASCII-8BIT` when the locale is not UTF-8.
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      EXPO_NO_TELEMETRY: '1'
+      # Read by example/app.config.js at prebuild time — that is when the config
+      # plugin decides whether to write the podspec's Google Maps flag.
+      GOOGLE_MAPS_IOS_API_KEY: ${{ matrix.google_maps_api_key }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Restore the Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # First because it needs no codegen and no pods, so a broken toolchain fails
+      # in seconds. --scratch-path is not optional: the default `package/ios/.build`
+      # sits inside the podspec's `ios/**/*.swift` glob.
+      - name: Swift unit tests
+        run: swift test --package-path package/ios --scratch-path "$RUNNER_TEMP/spm-build"
+
+      # `package/app.plugin.js` requires `plugin/build/index`, which is gitignored,
+      # so prebuild cannot resolve the config plugin without this.
+      - name: Build the config plugin
+        run: bun run --filter react-native-better-maps build:plugin
+
+      # The podspec unconditionally `load`s nitrogen/generated/ios/NitroMaps+autolinking.rb.
+      # Without codegen it cannot even be evaluated.
+      - name: Codegen
+        run: bun run nitrogen
+
+      - name: Restore the CocoaPods cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # Only the download cache, which is content-addressed and additive.
+          # `example/ios/Pods` is deliberately not cached: prebuild is clean by
+          # default and deletes it, and a restored Pods project can reference
+          # sources from another branch — a false green is worse than no CI.
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: ${{ runner.os }}-${{ runner.arch }}-pods-${{ matrix.provider }}-${{ hashFiles('bun.lock', 'package/react-native-better-maps.podspec', 'package/package.json', 'example/package.json', 'example/app.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-pods-${{ matrix.provider }}-
+            ${{ runner.os }}-${{ runner.arch }}-pods-
+
+      # `--no-install` skips the JS install and pod install; pods are installed
+      # explicitly below.
+      - name: Prebuild the example app
+        working-directory: example
+        run: bunx expo prebuild --platform ios --no-install
+
+      - name: Verify the Google Maps provider flag
+        env:
+          EXPECTED_PROVIDER: ${{ matrix.provider }}
+        run: |
+          # Without this, a change to the config plugin could silently turn the
+          # matrix into two identical Apple-only runs.
+          properties=example/ios/Podfile.properties.json
+          actual=apple
+          if [ -f "$properties" ] && jq -e '.["betterMaps.iosGoogleProvider"] == "true"' "$properties" >/dev/null; then
+            actual=google
+          fi
+          echo "Podfile.properties.json resolves to the '$actual' provider."
+          if [ "$actual" != "$EXPECTED_PROVIDER" ]; then
+            echo "::error::Expected the '$EXPECTED_PROVIDER' leg, but Podfile.properties.json resolves to '$actual'. The matrix is not exercising two different configurations."
+            exit 1
+          fi
+
+      # Must run from example/ios. `pod lib lint` cannot work here: the podspec
+      # calls install_modules_dependencies, which only exists inside a React
+      # Native app's Podfile.
+      - name: Install pods
+        working-directory: example/ios
+        run: pod install
+
+      - name: Verify the library scheme exists
+        run: |
+          # The pod schemes are not shared: they live in xcuserdata and are created
+          # when Xcode first loads the project, which `-list` does. `schemes[0]` is
+          # EXConstants, so the scheme must always be named explicitly.
+          schemes="$(xcodebuild -workspace example/ios/NitroMapsExample.xcworkspace -list)"
+          echo "$schemes"
+          if ! echo "$schemes" | grep -qE '^[[:space:]]*react-native-better-maps$'; then
+            echo "::error::The react-native-better-maps scheme is missing from the workspace."
+            exit 1
+          fi
+
+      - name: Compile the library
+        run: |
+          set -o pipefail
+          # `build`, not `build-for-testing`: autolinking declares the pod without
+          # `:testspecs`, so there is no test target to compile and the latter only
+          # emits an empty xctestrun.
+          #
+          # ARCHS is pinned because a generic destination has no active arch, so the
+          # Debug default of ONLY_ACTIVE_ARCH=YES would build arm64 and x86_64 for
+          # no extra signal.
+          NSUnbufferedIO=YES xcodebuild build \
+            -workspace example/ios/NitroMapsExample.xcworkspace \
+            -scheme react-native-better-maps \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | xcbeautify --renderer github-actions
+
+  android:
+    name: Android
+    # Pinned: the Android SDK and NDK contents differ between runner images.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Restore the Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build the config plugin
+        run: bun run --filter react-native-better-maps build:plugin
+
+      # package/android/build.gradle applies ../nitrogen/generated/android/NitroMaps+autolinking.gradle
+      # and CMakeLists.txt includes the generated .cmake, so codegen has to come first.
+      - name: Codegen
+        run: bun run nitrogen
+
+      # Also where the Gradle wrapper and settings.gradle come from. No Google Maps
+      # key is needed: the plugin skips the manifest metadata when there is none.
+      - name: Prebuild the example app
+        working-directory: example
+        run: bunx expo prebuild --platform android --no-install
+
+      # After the prebuild, so the wrapper properties the cache key hashes exist.
+      # Nothing before this step needs a JDK.
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # package/android/build.gradle compiles against Java 17.
+          java-version: '17'
+          cache: gradle
+          # The default glob would walk bun's symlinked node_modules.
+          cache-dependency-path: |
+            bun.lock
+            package/android/build.gradle
+            package/android/gradle.properties
+            example/android/gradle/wrapper/gradle-wrapper.properties
+          # Only a push to main writes a cache anything else can restore. Pull
+          # request and tag scopes are leaves, so writing there is pure eviction
+          # pressure on the 10 GB repository budget.
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Install the pinned NDK
+        run: |
+          # The runner image ships a different NDK patch release, so this downloads
+          # either way. As a named step it reads as a download rather than a hang in
+          # the middle of the Gradle run. Either failure below is non-fatal — Gradle
+          # installs the NDK itself, just more slowly and less legibly.
+          #
+          # Expo's generated root build.gradle never writes ndkVersion literally, so
+          # NitroMaps_ndkVersion is the only readable source; it holds the same value
+          # the expo-root-project plugin puts in rootProject.ext.
+          ndk_version="$(sed -n 's/^NitroMaps_ndkVersion=//p' package/android/gradle.properties)"
+          if [ -z "$ndk_version" ]; then
+            echo "::warning::NitroMaps_ndkVersion is missing; leaving the NDK download to Gradle."
+            exit 0
+          fi
+
+          # The image documents "Android Command Line Tools 12.0" but not its layout.
+          sdkmanager=''
+          for candidate in "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager \
+                           "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager; do
+            if [ -x "$candidate" ]; then
+              sdkmanager="$candidate"
+              break
+            fi
+          done
+          if [ -z "$sdkmanager" ]; then
+            echo "::warning::sdkmanager not found; leaving the NDK download to Gradle."
+            exit 0
+          fi
+
+          echo "Installing NDK $ndk_version with $sdkmanager"
+          "$sdkmanager" --install "ndk;$ndk_version"
+
+      # assembleDebug, not compileDebugKotlin: it also runs CMake, so cpp-adapter.cpp,
+      # the generated JNI bindings and the shared C++ get compiled too. Both tasks go
+      # in one invocation — a second ./gradlew repays the configuration phase, which
+      # shells out to node.
+      - name: Compile the library and run the Kotlin unit tests
+        working-directory: example/android
+        run: |
+          ./gradlew \
+            :react-native-better-maps:assembleDebug \
+            :react-native-better-maps:testDebugUnitTest \
+            -PreactNativeArchitectures=arm64-v8a \
+            --no-daemon --console=plain

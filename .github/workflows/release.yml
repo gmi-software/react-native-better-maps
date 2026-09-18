@@ -19,7 +19,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The gate 1.2.0 did not have. That release reached npm with a Google-only Swift
+  # file that was not guarded behind `canImport(GoogleMaps)`, breaking every
+  # Apple-Maps-only install. Native pull request runs are `paths:`-filtered and
+  # advisory, so this is the step that actually stops a broken native build from
+  # being published.
+  native:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/native-build.yml
+
   release:
+    needs: [native]
     runs-on: ubuntu-latest
     permissions:
       # Create the GitHub Release for the pushed tag.
@@ -29,7 +40,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Full history so conventional-changelog can build the release notes
           # from every commit since the previous tag.
@@ -37,7 +48,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 

@@ -148,6 +148,9 @@ export interface MapViewProps extends HybridViewProps {
   /** Whether to show the compass control. */
   showsCompass?: boolean;
 
+  /** Whether to show extruded buildings. Defaults to true. */
+  showsBuildings?: boolean;
+
   /** Whether to show the scale control (iOS only). */
   showsScale?: boolean;
 

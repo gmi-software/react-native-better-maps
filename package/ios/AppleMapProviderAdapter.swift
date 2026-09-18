@@ -111,6 +111,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
+  var showsBuildings: Bool? {
+    didSet {
+      applyControlSettings(to: view)
+    }
+  }
+
   var showsScale: Bool? {
     didSet {
       applyControlSettings(to: view)
@@ -433,6 +439,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     showsUserLocation = nil
     followsUserLocation = nil
     showsCompass = nil
+    showsBuildings = nil
     showsScale = nil
     customMapStyle = nil
     googleMapId = nil
@@ -448,6 +455,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     view.showsUserLocation = false
     view.userTrackingMode = .none
     view.showsCompass = true
+    view.showsBuildings = true
     view.showsScale = false
     view.layoutMargins = .zero
     if #available(iOS 16.0, *) {
@@ -467,6 +475,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   private func applyControlSettings(to mapView: MKMapView) {
     mapView.showsCompass = showsCompass ?? true
+    mapView.showsBuildings = showsBuildings ?? true
     mapView.showsScale = showsScale ?? false
     mapView.applyScaleAppearance()
   }

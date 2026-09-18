@@ -59,6 +59,7 @@ export function MapView({
   showsUserLocation,
   followsUserLocation,
   showsCompass,
+  showsBuildings,
   showsScale,
   customMapStyle,
   clusteringEnabled,
@@ -285,6 +286,7 @@ export function MapView({
       showsUserLocation={showsUserLocation}
       followsUserLocation={followsUserLocation}
       showsCompass={showsCompass}
+      showsBuildings={showsBuildings}
       showsScale={showsScale}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}

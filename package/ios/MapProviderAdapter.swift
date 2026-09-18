@@ -14,6 +14,7 @@ protocol MapProviderAdapter: AnyObject {
   var showsUserLocation: Bool? { get set }
   var followsUserLocation: Bool? { get set }
   var showsCompass: Bool? { get set }
+  var showsBuildings: Bool? { get set }
   var showsScale: Bool? { get set }
   var customMapStyle: String? { get set }
   var googleMapId: String? { get set }
@@ -63,6 +64,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var showsUserLocation: Bool?
   var followsUserLocation: Bool?
   var showsCompass: Bool?
+  var showsBuildings: Bool?
   var showsScale: Bool?
   var customMapStyle: String?
   var googleMapId: String?

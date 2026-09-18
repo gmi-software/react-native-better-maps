@@ -169,6 +169,14 @@ class GoogleMapProviderAdapter(
       applyUiSettings()
     }
 
+  private var _showsBuildings: Boolean? = null
+  override var showsBuildings: Boolean?
+    get() = _showsBuildings
+    set(value) {
+      _showsBuildings = value
+      applyBuildingsSettings()
+    }
+
   private var _showsScale: Boolean? = null
   override var showsScale: Boolean?
     get() = _showsScale
@@ -419,6 +427,7 @@ class GoogleMapProviderAdapter(
   private fun configureMap(map: GoogleMap) {
     map.mapType = _mapType.toGoogleMapType()
     applyUiSettings(map)
+    applyBuildingsSettings(map)
     applyUserLocationSettings(map)
     applyMapPadding(map)
     applyCustomMapStyle(map)
@@ -545,6 +554,10 @@ class GoogleMapProviderAdapter(
       isTiltGesturesEnabled = pitchEnabled ?: true
       isCompassEnabled = _showsCompass ?: true
     }
+  }
+
+  private fun applyBuildingsSettings(map: GoogleMap? = googleMap) {
+    map?.isBuildingsEnabled = _showsBuildings ?: true
   }
 
   private fun applyUserLocationSettings(map: GoogleMap? = googleMap) {

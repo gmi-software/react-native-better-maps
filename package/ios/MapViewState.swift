@@ -12,6 +12,7 @@ struct MapViewState {
   var showsUserLocation: Bool?
   var followsUserLocation: Bool?
   var showsCompass: Bool?
+  var showsBuildings: Bool?
   var showsScale: Bool?
   var customMapStyle: String?
   var googleMapId: String?
@@ -47,6 +48,7 @@ struct MapViewState {
     adapter.showsUserLocation = showsUserLocation
     adapter.followsUserLocation = followsUserLocation
     adapter.showsCompass = showsCompass
+    adapter.showsBuildings = showsBuildings
     adapter.showsScale = showsScale
     adapter.customMapStyle = customMapStyle
     adapter.googleMapId = googleMapId

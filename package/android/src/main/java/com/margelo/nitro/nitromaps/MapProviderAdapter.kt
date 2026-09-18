@@ -16,6 +16,7 @@ interface MapProviderAdapter {
   var showsUserLocation: Boolean?
   var followsUserLocation: Boolean?
   var showsCompass: Boolean?
+  var showsBuildings: Boolean?
   var showsScale: Boolean?
   var customMapStyle: String?
   var googleMapId: String?

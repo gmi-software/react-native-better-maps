@@ -95,6 +95,11 @@ final class HybridMapView: HybridMapViewSpec {
     set { setBackedOnMain(newValue, store: \.showsCompass) { $0.showsCompass = $1 } }
   }
 
+  var showsBuildings: Bool? {
+    get { getBacked(\.showsBuildings) }
+    set { setBackedOnMain(newValue, store: \.showsBuildings) { $0.showsBuildings = $1 } }
+  }
+
   var showsScale: Bool? {
     get { getBacked(\.showsScale) }
     set { setBackedOnMain(newValue, store: \.showsScale) { $0.showsScale = $1 } }

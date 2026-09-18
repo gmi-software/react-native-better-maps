@@ -31,6 +31,7 @@ class HybridMapView(
   private var _showsUserLocation: Boolean? = null
   private var _followsUserLocation: Boolean? = null
   private var _showsCompass: Boolean? = null
+  private var _showsBuildings: Boolean? = null
   private var _showsScale: Boolean? = null
   private var _customMapStyle: String? = null
   private var _googleMapId: String? = null
@@ -121,6 +122,13 @@ class HybridMapView(
     set(value) {
       _showsCompass = value
       adapter?.showsCompass = value
+    }
+
+  override var showsBuildings: Boolean?
+    get() = _showsBuildings
+    set(value) {
+      _showsBuildings = value
+      adapter?.showsBuildings = value
     }
 
   override var showsScale: Boolean?
@@ -325,6 +333,7 @@ class HybridMapView(
     _showsUserLocation = null
     _followsUserLocation = null
     _showsCompass = null
+    _showsBuildings = null
     _showsScale = null
     _customMapStyle = null
     _googleMapId = null
@@ -406,6 +415,7 @@ class HybridMapView(
     adapter.showsUserLocation = _showsUserLocation
     adapter.followsUserLocation = _followsUserLocation
     adapter.showsCompass = _showsCompass
+    adapter.showsBuildings = _showsBuildings
     adapter.showsScale = _showsScale
     adapter.customMapStyle = _customMapStyle
     adapter.googleMapId = _googleMapId

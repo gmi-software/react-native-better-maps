@@ -134,6 +134,12 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
+  var showsBuildings: Bool? {
+    didSet {
+      applyControlSettings(to: view)
+    }
+  }
+
   var showsScale: Bool?
 
   var customMapStyle: String? {
@@ -293,6 +299,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     showsUserLocation = nil
     followsUserLocation = nil
     showsCompass = nil
+    showsBuildings = nil
     showsScale = nil
     customMapStyle = nil
     googleMapId = nil
@@ -488,6 +495,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   private func applyControlSettings(to mapView: GMSMapView) {
     mapView.settings.compassButton = showsCompass ?? true
+    mapView.isBuildingsEnabled = showsBuildings ?? true
   }
 
   private func applyMapPadding(to mapView: GMSMapView) {

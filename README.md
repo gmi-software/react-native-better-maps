@@ -550,6 +550,7 @@ setMarkers((current) =>
 | Gestures                   | Supported                                                   | Supported                                  | Supported                                  |
 | User location              | Supported; host app owns permission prompt                  | Supported; host app owns permission prompt | Supported; host app owns permission prompt |
 | Compass                    | Supported                                                   | Supported                                  | Supported                                  |
+| 3D buildings               | Supported                                                   | Supported                                  | Supported                                  |
 | Scale control              | Supported                                                   | Unsupported                                | Unsupported                                |
 | Markers / overlays         | Supported                                                   | Supported                                  | Supported                                  |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |

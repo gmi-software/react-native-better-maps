@@ -89,6 +89,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `onPoiPress` | Reports provider-owned points of interest, not app-owned `Marker` overlays. It is enabled automatically when the callback is present. |
 | `showsUserLocation` / `followsUserLocation` | Toggles the native user-location layer. Host app must request location permission (`NSLocationWhenInUseUsageDescription` on iOS; `ACCESS_FINE_LOCATION` on Android). |
 | `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only (`showsScale` is a no-op on Android). |
+| `showsBuildings` | Extruded 3D buildings on all three shipping providers. Defaults to `true` to match the native SDK defaults. |
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 

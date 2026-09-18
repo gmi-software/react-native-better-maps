@@ -6,6 +6,7 @@ import type {
 
 export const appleProps: MapViewPropsForProvider<'apple'> = {
   provider: 'apple',
+  showsBuildings: false,
   showsScale: true,
   clusteringEnabled: true,
   markerEnteringAnimation: { preset: 'fade-scale', duration: 180 },
@@ -19,6 +20,7 @@ export const appleProps: MapViewPropsForProvider<'apple'> = {
 
 export const googleProps: MapViewPropsForProvider<'google'> = {
   provider: 'google',
+  showsBuildings: true,
   googleMapId: 'google-map-id',
   customMapStyle: '[]',
   clusteringEnabled: true,
@@ -31,6 +33,7 @@ export const googleProps: MapViewPropsForProvider<'google'> = {
 };
 
 export const defaultProviderProps: MapViewProps = {
+  showsBuildings: false,
   showsScale: true,
   customMapStyle: '[]',
   markerEnteringAnimation: false,

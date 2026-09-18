@@ -69,6 +69,9 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Whether to show the compass control. */
   showsCompass?: boolean;
 
+  /** Whether to show extruded buildings. Defaults to true. */
+  showsBuildings?: boolean;
+
   /** Padding applied to map edges, in density-independent pixels. */
   mapPadding?: EdgePadding;
 

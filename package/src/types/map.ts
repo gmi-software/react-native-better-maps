@@ -7,7 +7,10 @@ import type {
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../native/specs/overlays';
-import type { ApplePoiCategory } from '../native/specs/MapView.nitro';
+import type {
+  ApplePoiCategory,
+  MarkerPinStyle,
+} from '../native/specs/MapView.nitro';
 import type { MarkerCollection } from '../markers/MarkerCollection';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
 import type { EdgePadding, Region } from './region';
@@ -167,6 +170,14 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
   /** Whether to show the scale control (supported by Apple MapKit). */
   showsScale?: boolean;
 
+  /**
+   * How Apple MapKit draws markers without an image. `flat` (default) is a
+   * single pre-rendered image per pin and keeps the main thread cheap at
+   * hundreds of visible markers; `system` is MapKit's balloon marker with its
+   * drop and selection animations. Google Maps draws its own default marker.
+   */
+  pinStyle?: MarkerPinStyle;
+
   /** Custom map style as a JSON string (full support on Google Maps; curated subset on Apple MapKit iOS 16+). */
   customMapStyle?: string;
 
@@ -185,6 +196,13 @@ interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
 
   /** Whether to show the scale control. */
   showsScale?: boolean;
+
+  /**
+   * How markers without an image are drawn: `flat` (default) is a single
+   * pre-rendered image per pin, `system` is MapKit's balloon marker with its
+   * drop and selection animations.
+   */
+  pinStyle?: MarkerPinStyle;
 
   /** Custom map style as a JSON string. Apple MapKit applies a curated subset on iOS 16+. */
   customMapStyle?: string;
@@ -205,6 +223,9 @@ interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
   /** Google Maps SDK has no native scale control. */
   showsScale?: never;
 
+  /** Google Maps draws its own default marker. */
+  pinStyle?: never;
+
   /** Custom Google Maps style JSON. */
   customMapStyle?: string;
 
@@ -219,6 +240,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   provider: 'openstreetmap';
   googleMapId?: never;
   showsScale?: never;
+  pinStyle?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
@@ -229,6 +251,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   provider: 'mapbox';
   googleMapId?: never;
   showsScale?: never;
+  pinStyle?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;

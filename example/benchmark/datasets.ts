@@ -26,6 +26,43 @@ export const POLAND_REGION: Region = {
 };
 
 const markerCache = new Map<number, MarkerDescriptor[]>();
+const denseCache = new Map<number, MarkerDescriptor[]>();
+
+/** Deterministic PRNG, same as the Poland generator. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * `count` markers spread uniformly over the Warsaw viewport, so every one of
+ * them competes for the viewport LOD cap instead of hiding across the country.
+ */
+export function denseMarkers(count: number): MarkerDescriptor[] {
+  let cached = denseCache.get(count);
+  if (cached == null) {
+    const rng = mulberry32(0xd3a5e);
+    const halfLat = WARSAW_REGION.latitudeDelta * 0.45;
+    const halfLon = WARSAW_REGION.longitudeDelta * 0.45;
+    cached = [];
+    for (let index = 0; index < count; index += 1) {
+      cached.push({
+        id: `dense-${index}`,
+        coordinate: {
+          latitude: WARSAW_REGION.latitude + (rng() * 2 - 1) * halfLat,
+          longitude: WARSAW_REGION.longitude + (rng() * 2 - 1) * halfLon,
+        },
+      });
+    }
+    denseCache.set(count, cached);
+  }
+  return cached;
+}
 
 /** Deterministic Poland dataset, memoized so scenarios share one array identity. */
 export function markers(count: number): MarkerDescriptor[] {

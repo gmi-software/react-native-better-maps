@@ -28,6 +28,11 @@ import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
+import {
+  camerasEqual,
+  edgePaddingsEqual,
+  regionsEqual,
+} from '../utils/mapValueEquality';
 
 const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
 
@@ -130,6 +135,13 @@ export function MapView({
     normalizeEnteringAnimation(clusterEnteringAnimation),
     enteringAnimationsEqual,
   );
+
+  // `region`, `camera` and `mapPadding` are usually written inline in JSX. The
+  // Google providers answer a new `region` with a camera move, so an
+  // equal-but-new object must not reach native.
+  const stableRegion = useStableValue(region, regionsEqual);
+  const stableCamera = useStableValue(camera, camerasEqual);
+  const stableMapPadding = useStableValue(mapPadding, edgePaddingsEqual);
 
   const hasMarkerPress =
     onMarkerPressProp != null || hasCollectedMarkerPress;
@@ -276,8 +288,8 @@ export function MapView({
       provider={resolvedProvider}
       googleMapId={googleMapId}
       mapType={mapType}
-      region={region}
-      camera={camera}
+      region={stableRegion}
+      camera={stableCamera}
       scrollEnabled={scrollEnabled}
       zoomEnabled={zoomEnabled}
       rotateEnabled={rotateEnabled}
@@ -288,7 +300,7 @@ export function MapView({
       showsScale={showsScale}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
-      mapPadding={mapPadding}
+      mapPadding={stableMapPadding}
       markerEnteringAnimation={markerEntering}
       clusterEnteringAnimation={clusterEntering}
       markers={markers}

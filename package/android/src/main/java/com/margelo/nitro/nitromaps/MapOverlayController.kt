@@ -18,10 +18,10 @@ import com.google.android.gms.maps.model.Polyline
 import java.util.concurrent.Executors
 
 /** Reconciles overlay descriptors with Google Maps overlay objects. */
-class MapOverlayController(
-  private var googleMap: GoogleMap?,
+internal class MapOverlayController(
   private val context: ThemedReactContext,
 ) {
+  private var googleMap: GoogleMap? = null
   private val markers = HashMap<String, Marker>()
   private val mainHandler = Handler(Looper.getMainLooper())
   private val density: Float = context.resources.displayMetrics.density
@@ -32,11 +32,9 @@ class MapOverlayController(
   private val polygons = LinkedHashMap<String, Polygon>()
   private val circles = LinkedHashMap<String, Circle>()
   private val markerEnterAnimators = HashMap<String, Animator>()
-  private var clusteringEnabled = false
+  private val renderState = MarkerRenderState()
   private var onMarkerPress: ((String) -> Unit)? = null
   private var onClusterPress: ((List<String>, Coordinate) -> Unit)? = null
-  private var allMarkerDescriptors: Array<MarkerDescriptor> = emptyArray()
-  private var markersFingerprint: Long = 0L
   private var spatialIndex: MarkerSpatialIndex? = null
   private var refreshGeneration: Int = 0
   private var viewWidthPx: Int = 0
@@ -53,7 +51,15 @@ class MapOverlayController(
   fun setGoogleMap(map: GoogleMap?) {
     googleMap = map
     if (map == null) {
+      renderState.detachMap()
       clear()
+      return
+    }
+
+    // A fresh map needs a fresh index.
+    spatialIndex = null
+    if (renderState.attachMap()) {
+      reapplyMarkers()
     }
   }
 
@@ -68,18 +74,15 @@ class MapOverlayController(
 
     viewWidthPx = widthPx
     viewHeightPx = heightPx
-    if (widthPx > 0 && heightPx > 0 && usesViewportPipeline()) {
+    if (widthPx > 0 && heightPx > 0 && renderState.usesViewportPipeline) {
       refreshViewportMarkers()
     }
   }
 
   fun setClusteringEnabled(enabled: Boolean) {
-    if (clusteringEnabled == enabled) {
-      return
+    if (renderState.setClusteringEnabled(enabled)) {
+      reapplyMarkers()
     }
-
-    clusteringEnabled = enabled
-    reapplyMarkers()
   }
 
   fun setMarkerPressHandlers(
@@ -105,8 +108,7 @@ class MapOverlayController(
     polylines.clear()
     polygons.clear()
     circles.clear()
-    allMarkerDescriptors = emptyArray()
-    markersFingerprint = 0L
+    renderState.reset()
     spatialIndex = null
     refreshGeneration += 1
     computeExecutor.shutdown()
@@ -114,32 +116,20 @@ class MapOverlayController(
   }
 
   fun setMarkers(descriptors: Array<MarkerDescriptor>?) {
-    val next = descriptors ?: emptyArray()
-    val fingerprint = next.markersFingerprint()
-    if (fingerprint == markersFingerprint) {
+    if (!renderState.setMarkers(descriptors)) {
       return
     }
 
-    markersFingerprint = fingerprint
-    allMarkerDescriptors = next
     spatialIndex = null
     reapplyMarkers()
   }
 
-  /**
-   * Whether markers are driven by the background viewport pipeline (clustering
-   * or large LOD) rather than the synchronous small-dataset path.
-   */
-  private fun usesViewportPipeline(): Boolean {
-    return clusteringEnabled || allMarkerDescriptors.size > ASYNC_THRESHOLD
-  }
-
   private fun reapplyMarkers() {
     googleMap ?: return
-    if (usesViewportPipeline()) {
+    if (renderState.usesViewportPipeline) {
       rebuildIndexAndRefresh()
     } else {
-      applyMarkersSync(allMarkerDescriptors)
+      applyMarkersSync(renderState.descriptors)
     }
   }
 
@@ -149,7 +139,7 @@ class MapOverlayController(
   ) {
     val map = googleMap ?: return
     val index = spatialIndex ?: return
-    if (!usesViewportPipeline()) {
+    if (!renderState.usesViewportPipeline) {
       return
     }
     if (viewWidthPx <= 0 || viewHeightPx <= 0) {
@@ -158,7 +148,7 @@ class MapOverlayController(
 
     val bounds = map.projection.visibleRegion.latLngBounds
     val latitudeSpan = bounds.northeast.latitude - bounds.southwest.latitude
-    val clustering = clusteringEnabled
+    val clustering = renderState.clusteringEnabled
     val widthPx = viewWidthPx
     val heightPx = viewHeightPx
     val displayedVersions = HashMap(markerVersions)
@@ -188,7 +178,7 @@ class MapOverlayController(
   }
 
   private fun rebuildIndexAndRefresh() {
-    val descriptors = allMarkerDescriptors
+    val descriptors = renderState.descriptors
     refreshGeneration += 1
     val generation = refreshGeneration
 
@@ -452,7 +442,7 @@ class MapOverlayController(
   }
 
   fun onCameraIdle() {
-    if (usesViewportPipeline()) {
+    if (renderState.usesViewportPipeline) {
       scheduleIdleRefresh()
     }
   }
@@ -469,7 +459,7 @@ class MapOverlayController(
     val runnable =
       Runnable {
         idleRefreshRunnable = null
-        if (usesViewportPipeline()) {
+        if (renderState.usesViewportPipeline) {
           refreshViewportMarkers()
         }
       }
@@ -478,7 +468,7 @@ class MapOverlayController(
   }
 
   private fun scheduleLiveRefresh() {
-    if (!usesViewportPipeline() || liveRefreshRunnable != null) {
+    if (!renderState.usesViewportPipeline || liveRefreshRunnable != null) {
       return
     }
 
@@ -500,7 +490,7 @@ class MapOverlayController(
 
   private fun runLiveRefresh() {
     lastLiveRefreshMs = SystemClock.uptimeMillis()
-    if (usesViewportPipeline()) {
+    if (renderState.usesViewportPipeline) {
       refreshViewportMarkers(
         animateEntering = true,
         maxAnimatedMarkers = MAX_LIVE_ANIMATED_MARKERS_PER_DIFF,
@@ -627,9 +617,6 @@ class MapOverlayController(
   }
 
   private companion object {
-    /** Non-clustered datasets at or below this size reconcile synchronously. */
-    const val ASYNC_THRESHOLD = 500
-
     /** Main-thread marker animations are capped so bulk refreshes do not block gestures. */
     const val MAX_ANIMATED_MARKERS_PER_DIFF = 96
 

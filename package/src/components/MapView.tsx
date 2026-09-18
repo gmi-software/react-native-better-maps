@@ -60,6 +60,7 @@ export function MapView({
   followsUserLocation,
   showsCompass,
   showsScale,
+  applePoiDetailPresentation,
   customMapStyle,
   clusteringEnabled,
   mapPadding,
@@ -286,6 +287,7 @@ export function MapView({
       followsUserLocation={followsUserLocation}
       showsCompass={showsCompass}
       showsScale={showsScale}
+      applePoiDetailPresentation={applePoiDetailPresentation}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
       mapPadding={mapPadding}

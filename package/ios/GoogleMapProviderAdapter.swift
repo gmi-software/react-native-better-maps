@@ -136,6 +136,9 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var showsScale: Bool?
 
+  /// Apple MapKit only; the Google Maps SDK has no native POI detail surface.
+  var applePoiDetailPresentation: ApplePoiDetailPresentation?
+
   var customMapStyle: String? {
     didSet {
       applyCustomMapStyle(to: view)
@@ -294,6 +297,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     followsUserLocation = nil
     showsCompass = nil
     showsScale = nil
+    applePoiDetailPresentation = nil
     customMapStyle = nil
     googleMapId = nil
     clusteringEnabled = nil

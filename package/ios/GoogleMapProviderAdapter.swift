@@ -20,6 +20,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private var _googleMapId: String?
   private var lastAppliedRegion: Region?
   private var lastAppliedRegionCamera: GMSCameraPosition?
+  /// Region waiting for a non-zero viewport before `GMSCameraUpdate.fit`.
+  private var pendingRegionFit: (region: Region, animated: Bool)?
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -78,7 +80,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var region: Region? {
     didSet {
-      guard let region, !isUserGestureMoving, camera == nil else {
+      guard let region else {
+        pendingRegionFit = nil
+        return
+      }
+      guard !isUserGestureMoving, camera == nil else {
         return
       }
       applyRegion(region)
@@ -188,9 +194,9 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
   var onLongPress: ((Coordinate) -> Void)?
 
-  var markers: [MarkerDescriptor]? {
+  var markerCollection: HybridMarkerCollection? {
     didSet {
-      overlayController.setMarkers(markers)
+      overlayController.attach(store: markerCollection?.store)
     }
   }
 
@@ -227,7 +233,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   var onCirclePress: ((String) -> Void)? {
     didSet { overlayController.onCirclePress = onCirclePress }
   }
-  var onClusterPress: (([String], Coordinate) -> Void)? {
+  var onClusterPress: ((NativeClusterPressEvent) -> Void)? {
     didSet { overlayController.onClusterPress = onClusterPress }
   }
 
@@ -265,12 +271,17 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     applyCameraUpdate(update, animated: animated ?? true, duration: nil)
   }
 
+  func getClusterMembers(clusterId: String) throws -> Promise<[String]> {
+    Promise.resolved(withResult: overlayController.clusterMembers(id: clusterId))
+  }
+
   func prepareForRecycle() {
     isUserRegionChange = false
     isUserGestureMoving = false
     lastLiveMarkerRefreshTime = 0
     lastAppliedRegion = nil
     lastAppliedRegionCamera = nil
+    pendingRegionFit = nil
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
@@ -287,7 +298,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     onPolygonPress = nil
     onCirclePress = nil
     onClusterPress = nil
-    markers = nil
+    markerCollection = nil
     polylines = nil
     polygons = nil
     circles = nil
@@ -311,6 +322,32 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func applyRegion(_ region: Region, animated: Bool = false) {
+    // `GMSCameraUpdate.fit` needs a laid-out viewport. Fitting against a zero
+    // size produces a bogus camera that the cache would then treat as settled.
+    guard view.bounds.width > 0, view.bounds.height > 0 else {
+      pendingRegionFit = (region, animated)
+      DispatchQueue.main.async { [weak self] in
+        self?.flushPendingRegionFitIfPossible()
+      }
+      return
+    }
+
+    pendingRegionFit = nil
+    fitCamera(to: region, animated: animated)
+  }
+
+  private func flushPendingRegionFitIfPossible() {
+    guard let pending = pendingRegionFit,
+          view.bounds.width > 0,
+          view.bounds.height > 0
+    else {
+      return
+    }
+    pendingRegionFit = nil
+    fitCamera(to: pending.region, animated: pending.animated)
+  }
+
+  private func fitCamera(to region: Region, animated: Bool) {
     if let lastAppliedRegion,
        let lastAppliedRegionCamera,
        region.approximatelyEquals(lastAppliedRegion),
@@ -332,6 +369,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
+    // Drop any deferred region fit so it cannot override this camera after layout.
+    pendingRegionFit = nil
     let target = camera.toGMSCameraPosition(current: view.camera)
     guard !view.camera.approximatelyEquals(target) else {
       return
@@ -430,6 +469,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func notifyMapReadyIfNeeded() {
+    flushPendingRegionFitIfPossible()
     isMapReady = true
     deliverMapReadyIfPossible()
   }
@@ -538,6 +578,7 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
+    flushPendingRegionFitIfPossible()
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
     handleRegionDidChange()

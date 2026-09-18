@@ -44,6 +44,9 @@ class HybridMapView(
   /** Apple-only: Google Maps draws its own default marker. Stored so the prop round-trips. */
   override var pinStyle: MarkerPinStyle? = null
 
+  /** Apple-only: the sprite layer is a MapKit rendering path. Stored so the prop round-trips. */
+  override var markerRendering: MarkerRendering? = null
+
   override var provider: MapProvider?
     get() = _provider
     set(value) {
@@ -355,6 +358,7 @@ class HybridMapView(
     _markerEnteringAnimation = null
     _clusterEnteringAnimation = null
     pinStyle = null
+    markerRendering = null
     onRegionChange = null
     onRegionChangeComplete = null
     onCameraMove = null

@@ -95,6 +95,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 | `markerCollection` | A `MarkerCollection` owned by the app. Replaces `markers` and `<Marker>` children; updated through `set`, `upsert`, `remove` and `updatePositions`. |
 | `pinStyle` | Apple MapKit only. `flat` (default) draws image-less markers as one pre-rendered image on an `MKAnnotationView`; `system` uses `MKMarkerAnnotationView`. |
+| `markerRendering` | Apple MapKit only. `views` (default) is one annotation view per displayed marker; `sprites` draws the displayed markers and cluster badges into map tiles through `MarkerSpriteRenderer`, an `MKOverlayRenderer`. Draggable markers and the marker whose callout is open stay views. |
 | `getClusterMembers(clusterId)` | Imperative ref method; resolves the marker ids inside a displayed cluster. |
 
 ### Platform gaps (Phase 8)
@@ -124,6 +125,8 @@ the Google SDKs report the camera every frame and the adapter throttles it to
 ends. The `react-native-better-maps/reanimated` entry point turns that stream
 into a Reanimated shared value so overlays follow the camera on the UI thread
 without a React render per update. See [ADR 0007](adr/0007-camera-stream-and-cpp-core.md).
+
+With `markerRendering="sprites"` the MapKit controller keeps the same pipeline and diffs but applies the sprite part of each diff at once: a dictionary of sprites (coordinate, bitmap, size, offset, rotation, opacity) becomes an immutable snapshot that a world-sized `MKOverlay`'s renderer draws per tile on MapKit's threads, above the labels. A viewport change is then one snapshot swap and a background re-render instead of annotation-view layout on the main thread. Taps are hit-tested against the snapshot; a marker with a title or subtitle is promoted to a selected annotation view for its callout and demoted when the callout closes; draggable markers always take the view path through the frame scheduler. See [ADR 0008](adr/0008-mapkit-sprite-layer.md).
 
 Marker and marker-cluster entering animations follow the same descriptor model. The public API accepts `false`, `system`, or a serializable preset config; the React wrapper normalizes that into native descriptors. Native provider adapters execute the animation when a marker render element appears in the render diff. Updating animation config for an already retained marker does not restart the animation; the new config is used the next time that marker is added again.
 

@@ -43,19 +43,26 @@ final class NitroFlatPinAnnotationView: MKAnnotationView {
   }
 }
 
-/// Draws the default pin once per screen scale.
+/// Draws the default pin once per screen scale and fill color.
 enum PinImageRenderer {
   static let pinSize = CGSize(width: 30, height: 42)
-  private static var cache: [CGFloat: UIImage] = [:]
+  private static var cache: [String: UIImage] = [:]
 
-  static func pin(scale: CGFloat) -> UIImage {
-    let key = scale > 0 ? scale : UIScreen.main.scale
+  static func pin(scale: CGFloat, color: UIColor? = nil) -> UIImage {
+    let renderScale = scale > 0 ? scale : UIScreen.main.scale
+    let fillColor = color ?? .systemRed
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    var alpha: CGFloat = 0
+    fillColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+    let key = "\(renderScale)-\(red)-\(green)-\(blue)-\(alpha)"
     if let cached = cache[key] {
       return cached
     }
 
     let format = UIGraphicsImageRendererFormat.default()
-    format.scale = key
+    format.scale = renderScale
     let image = UIGraphicsImageRenderer(size: pinSize, format: format).image { context in
       let cg = context.cgContext
       let headCenter = CGPoint(x: pinSize.width / 2, y: 14)
@@ -75,7 +82,7 @@ enum PinImageRenderer {
 
       cg.saveGState()
       cg.setShadow(offset: CGSize(width: 0, height: 1), blur: 2, color: UIColor.black.withAlphaComponent(0.35).cgColor)
-      UIColor.systemRed.setFill()
+      fillColor.setFill()
       body.fill()
       cg.restoreGState()
 

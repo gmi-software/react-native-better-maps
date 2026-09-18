@@ -27,7 +27,9 @@ enum MarkerImageLoader {
   ) {
     let cacheKey = cacheKey(for: image)
     if let cached = cache.object(forKey: cacheKey) {
-      completion(cached)
+      DispatchQueue.main.async {
+        completion(cached)
+      }
       return
     }
 
@@ -86,7 +88,9 @@ enum MarkerImageLoader {
     completion: @escaping (UIImage?) -> Void
   ) {
     guard let url = URL(string: uri) else {
-      completion(nil)
+      DispatchQueue.main.async {
+        completion(nil)
+      }
       return
     }
 

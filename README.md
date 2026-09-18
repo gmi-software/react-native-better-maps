@@ -253,6 +253,54 @@ function ControlledMap() {
 }
 ```
 
+### Following the camera
+
+`onRegionChange` fires when a gesture begins and can report a transient region.
+Use `onRegionChangeComplete` for data loading when the gesture ends. An overlay
+that must track the camera while it moves opts into a throttled stream:
+
+```tsx
+<MapView
+  onCameraMove={(camera) => setHeading(camera.heading ?? 0)}
+  cameraMoveThrottleMs={100}
+/>
+```
+
+Nothing runs unless `onCameraMove` is set, and each call crosses to the JS thread, so pair a low throttle with a cheap handler. With Reanimated installed, `react-native-better-maps/reanimated` feeds the stream into a shared value that overlays read on the UI thread without a React render per update:
+
+```tsx
+import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { MapView } from 'react-native-better-maps';
+import { useCameraSharedValue } from 'react-native-better-maps/reanimated';
+
+function MapWithCompass() {
+  const { camera, onCameraMove } = useCameraSharedValue();
+  const needle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${-(camera.value?.heading ?? 0)}deg` }],
+  }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <MapView style={{ flex: 1 }} onCameraMove={onCameraMove} cameraMoveThrottleMs={16} />
+      <Animated.Text style={[styles.needle, needle]}>▲</Animated.Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  needle: {
+    position: 'absolute',
+    top: 48,
+    alignSelf: 'center',
+    color: '#FF453A',
+    fontSize: 18,
+  },
+});
+```
+
+`react-native-reanimated` is an optional peer dependency; the main entry point does not import it.
+
 ## Map providers
 
 `MapView` accepts an optional `provider` prop:
@@ -626,6 +674,7 @@ setMarkers((current) =>
 | Scale control              | Supported                                                   | Unsupported                                | Unsupported                                |
 | Markers / overlays         | Supported                                                   | Supported                                  | Supported                                  |
 | Marker collections (deltas) | Supported                                                  | Supported                                  | Supported                                  |
+| Camera stream (`onCameraMove`) | Supported                                               | Supported                                  | Supported                                  |
 | Pin style                  | `flat` (default) or `system`                                | Google default marker                      | Google default marker                      |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |
@@ -657,6 +706,7 @@ setMarkers((current) =>
 | --------------------- | ------------------------------------------------------------------------ |
 | `MarkerCollection`    | Native-owned marker dataset updated through `set` / `upsert` / `remove` / `updatePositions` |
 | `useMarkerCollection` | Creates one `MarkerCollection` for the lifetime of a component            |
+| `useCameraSharedValue` | From `react-native-better-maps/reanimated`: feeds `onCameraMove` into a Reanimated shared value |
 
 ### Types
 

@@ -33,6 +33,7 @@ import { resolveMapProvider } from '../providers';
 import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
+import { normalizeCameraMoveThrottleMs } from '../utils/cameraMoveThrottle';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
 import {
   camerasEqual,
@@ -97,6 +98,8 @@ export function MapView({
   circles: circlesProp,
   onRegionChange,
   onRegionChangeComplete,
+  onCameraMove,
+  cameraMoveThrottleMs,
   onMapReady,
   onPress,
   onPoiPress,
@@ -304,6 +307,7 @@ export function MapView({
   const onRegionChangeCompleteCallback = useNitroCallback(
     onRegionChangeComplete,
   );
+  const onCameraMoveCallback = useNitroCallback(onCameraMove);
   const onMapReadyCallback = useNitroCallback(onMapReady);
   const onPressCallback = useNitroCallback(onPress);
   const onPoiPressNativeCallback = useNitroCallback(
@@ -382,6 +386,8 @@ export function MapView({
       circles={circles}
       onRegionChange={onRegionChangeCallback}
       onRegionChangeComplete={onRegionChangeCompleteCallback}
+      onCameraMove={onCameraMoveCallback}
+      cameraMoveThrottleMs={normalizeCameraMoveThrottleMs(cameraMoveThrottleMs)}
       onMapReady={onMapReadyCallback}
       onPress={onPressCallback}
       onPoiPress={onPoiPressNativeCallback}

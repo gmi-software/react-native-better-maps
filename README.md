@@ -308,6 +308,12 @@ Provider-specific props narrow the callback payload:
 | `google` | `{ provider: 'google', coordinate, name, placeId }`                                         |
 | omitted  | `ApplePoiPressEvent \| GooglePoiPressEvent` because the runtime default depends on platform |
 
+Apple POI events carry no identifier. MapKit's `MKMapFeatureAnnotation` exposes no stable public ID, so there is nothing to look a place up with. Correlate taps by `coordinate` and `name`, or set `provider="google"` on iOS if a Place ID is required on both platforms.
+
+`placeId` is a Google Place ID from the Google Maps SDK, usable with the [Places API](https://developers.google.com/maps/documentation/places/web-service/place-id). It is not a cross-provider identifier and is not present on Apple events.
+
+The [default provider](#map-providers) is `apple` on iOS and `google` on Android, so the same `<MapView onPoiPress={...} />` yields different payloads unless `provider` is set. Code that reads `placeId` needs an explicit `provider="google"`.
+
 ## Custom marker images
 
 Markers support custom bitmap icons with positioning and styling options:

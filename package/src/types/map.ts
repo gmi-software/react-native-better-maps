@@ -21,6 +21,16 @@ export type MapType = 'standard' | 'satellite' | 'hybrid' | 'terrain';
  */
 export type MapProvider = 'apple' | 'google' | 'openstreetmap' | 'mapbox';
 
+/**
+ * Apple Maps POI tap payload. There is no identifier: MapKit's
+ * `MKMapFeatureAnnotation` exposes no stable public ID, so this event
+ * cannot be looked up in a places API.
+ *
+ * Correlate by `coordinate` and `name`, or set `provider="google"` on iOS
+ * if a Google Place ID is required on both platforms. The default provider
+ * is `apple` on iOS and `google` on Android, so omitted `provider` yields
+ * this shape on iOS only.
+ */
 export interface ApplePoiPressEvent {
   provider: 'apple';
   coordinate: Coordinate;
@@ -29,10 +39,21 @@ export interface ApplePoiPressEvent {
   rawCategory?: string;
 }
 
+/**
+ * Google Maps POI tap payload. `placeId` is a Google Place ID from the
+ * Google Maps SDK, usable with the Places API — not a cross-provider
+ * identifier.
+ *
+ * Apple POI events have no identifier. Because the default provider is
+ * `apple` on iOS and `google` on Android, code that reads `placeId` needs
+ * an explicit `provider="google"` (including on iOS) to get this payload
+ * on both platforms.
+ */
 export interface GooglePoiPressEvent {
   provider: 'google';
   coordinate: Coordinate;
   name: string;
+  /** Google Place ID (Places API). Absent on Apple POI events. */
   placeId: string;
 }
 

@@ -83,6 +83,8 @@ export type GeojsonInput = GeojsonObject | string;
 export interface GeojsonToOverlayOptions {
   /**
    * Overlay id prefix used for generated markers, polylines, and polygons.
+   * On a `<Geojson>` child this is the public layer id: explicit `id` wins,
+   * else `geojson-key-${key}`, else positional `geojson-N`.
    *
    * @default 'geojson'
    */

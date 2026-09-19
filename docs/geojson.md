@@ -37,7 +37,7 @@ Colors follow the library-wide format: `#RGB`, `#RGBA`, `#RRGGBB`, or `#RRGGBBAA
 
 Component-level `markerColor` and `zIndex` provide defaults. Feature properties take precedence. `zIndex` applies to every generated Google Maps overlay and to Apple Maps markers; MapKit does not expose shape overlay z-ordering.
 
-`onPress` receives the original `GeojsonFeature`, including `properties`.
+`onPress` receives the original `GeojsonFeature`, including `properties`. Generated overlay ids are prefixed with the layer id: explicit `<Geojson id>`, else `geojson-key-${key}`, else positional `geojson-N`.
 
 ## Limits
 

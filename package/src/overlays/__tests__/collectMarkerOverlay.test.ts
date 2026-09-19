@@ -54,4 +54,17 @@ describe('collectMarkerOverlay', () => {
     expect(state.markers[0]?.markerColor).toBeUndefined();
     expect(state.markers[0]?.zIndex).toBeUndefined();
   });
+
+  test('uses the React key when no explicit id is provided', () => {
+    const state = createState();
+
+    collectMarkerOverlay(
+      { coordinate: { latitude: 52.2297, longitude: 21.0122 } },
+      state,
+      resolveMarkerImage,
+      'b',
+    );
+
+    expect(state.markers[0]?.id).toBe('marker-key-b');
+  });
 });

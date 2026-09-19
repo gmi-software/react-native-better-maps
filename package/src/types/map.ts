@@ -87,19 +87,32 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Bulk circle descriptors. */
   circles?: CircleDescriptor[];
 
-  /** Called when any marker is pressed. */
+  /**
+   * Called when any marker is pressed.
+   * `id` is the public overlay id: explicit `Marker.id`, else
+   * `marker-key-${key}`, else positional `marker-N`.
+   */
   onMarkerPress?: (id: string) => void;
 
   /** Called when any marker drag ends. */
   onMarkerDragEnd?: (id: string, coordinate: Coordinate) => void;
 
-  /** Called when any polyline is pressed. */
+  /**
+   * Called when any polyline is pressed.
+   * `id` follows the same public overlay id namespace as {@linkcode onMarkerPress}.
+   */
   onPolylinePress?: (id: string) => void;
 
-  /** Called when any polygon is pressed. */
+  /**
+   * Called when any polygon is pressed.
+   * `id` follows the same public overlay id namespace as {@linkcode onMarkerPress}.
+   */
   onPolygonPress?: (id: string) => void;
 
-  /** Called when any circle is pressed. */
+  /**
+   * Called when any circle is pressed.
+   * `id` follows the same public overlay id namespace as {@linkcode onMarkerPress}.
+   */
   onCirclePress?: (id: string) => void;
 
   /** Called once when a user-initiated region change begins. */
@@ -120,7 +133,10 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Called when the user long-presses the map. */
   onLongPress?: (coordinate: Coordinate) => void;
 
-  /** Called when a marker cluster is pressed. */
+  /**
+   * Called when a marker cluster is pressed.
+   * Member ids use the same public overlay id namespace as {@linkcode onMarkerPress}.
+   */
   onClusterPress?: (markerIds: string[], coordinate: Coordinate) => void;
 
   /** Default entering animation for marker overlays. */

@@ -13,6 +13,7 @@ import { Polygon } from '../components/Polygon';
 import { Polyline } from '../components/Polyline';
 import { collectGeojsonOverlays } from './collectGeojsonOverlays';
 import {
+  claimOverlayId,
   resolveOverlayId,
   tappableFromPress,
   type OverlayCollectorState,
@@ -65,13 +66,23 @@ const overlayCollectors: OverlayCollector[] = [
     component: Marker,
     collect: (child, state, dependencies) => {
       const props = child.props as MarkerProps;
-      const id = resolveOverlayId(props.id, 'marker', state.markerIndex);
       if (!isValidCoordinate(props.coordinate)) {
+        const id = resolveOverlayId(
+          props.id,
+          child.key,
+          'marker',
+          state.markerIndex,
+        );
         state.markerIndex += 1;
         warnOverlay(`marker "${id}" skipped: invalid coordinate`);
         return;
       }
-      collectMarkerOverlay(props, state, dependencies.resolveMarkerImage);
+      collectMarkerOverlay(
+        props,
+        state,
+        dependencies.resolveMarkerImage,
+        child.key,
+      );
     },
   },
   {
@@ -79,7 +90,12 @@ const overlayCollectors: OverlayCollector[] = [
     component: Polyline,
     collect: (child, state) => {
       const props = child.props as PolylineProps;
-      const id = resolveOverlayId(props.id, 'polyline', state.polylineIndex);
+      const id = resolveOverlayId(
+        props.id,
+        child.key,
+        'polyline',
+        state.polylineIndex,
+      );
       state.polylineIndex += 1;
 
       if (!isValidCoordinateList(props.coordinates, 2)) {
@@ -87,14 +103,15 @@ const overlayCollectors: OverlayCollector[] = [
         return;
       }
 
+      const uniqueId = claimOverlayId(state, 'polyline', id);
       state.polylines.push({
-        id,
+        id: uniqueId,
         coordinates: props.coordinates,
         strokeColor: props.strokeColor,
         strokeWidth: props.strokeWidth,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
-      state.registry.set(overlayCallbackKey(OverlayType.Polyline, id), {
+      state.registry.set(overlayCallbackKey(OverlayType.Polyline, uniqueId), {
         onPress: props.onPress,
       });
       if (props.onPress != null) {
@@ -107,7 +124,12 @@ const overlayCollectors: OverlayCollector[] = [
     component: Polygon,
     collect: (child, state) => {
       const props = child.props as PolygonProps;
-      const id = resolveOverlayId(props.id, 'polygon', state.polygonIndex);
+      const id = resolveOverlayId(
+        props.id,
+        child.key,
+        'polygon',
+        state.polygonIndex,
+      );
       state.polygonIndex += 1;
 
       if (!isValidCoordinateList(props.coordinates, 3)) {
@@ -115,15 +137,16 @@ const overlayCollectors: OverlayCollector[] = [
         return;
       }
 
+      const uniqueId = claimOverlayId(state, 'polygon', id);
       state.polygons.push({
-        id,
+        id: uniqueId,
         coordinates: props.coordinates,
         fillColor: props.fillColor,
         strokeColor: props.strokeColor,
         strokeWidth: props.strokeWidth,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
-      state.registry.set(overlayCallbackKey(OverlayType.Polygon, id), {
+      state.registry.set(overlayCallbackKey(OverlayType.Polygon, uniqueId), {
         onPress: props.onPress,
       });
       if (props.onPress != null) {
@@ -136,7 +159,12 @@ const overlayCollectors: OverlayCollector[] = [
     component: Circle,
     collect: (child, state) => {
       const props = child.props as CircleProps;
-      const id = resolveOverlayId(props.id, 'circle', state.circleIndex);
+      const id = resolveOverlayId(
+        props.id,
+        child.key,
+        'circle',
+        state.circleIndex,
+      );
       state.circleIndex += 1;
 
       if (!isValidCoordinate(props.center)) {
@@ -150,8 +178,9 @@ const overlayCollectors: OverlayCollector[] = [
         return;
       }
 
+      const uniqueId = claimOverlayId(state, 'circle', id);
       state.circles.push({
-        id,
+        id: uniqueId,
         center: props.center,
         radius: props.radius,
         fillColor: props.fillColor,
@@ -159,7 +188,7 @@ const overlayCollectors: OverlayCollector[] = [
         strokeWidth: props.strokeWidth,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
-      state.registry.set(overlayCallbackKey(OverlayType.Circle, id), {
+      state.registry.set(overlayCallbackKey(OverlayType.Circle, uniqueId), {
         onPress: props.onPress,
       });
       if (props.onPress != null) {
@@ -171,7 +200,7 @@ const overlayCollectors: OverlayCollector[] = [
     overlayType: OverlayType.Geojson,
     component: Geojson,
     collect: (child, state) => {
-      collectGeojsonOverlays(child.props as GeojsonProps, state);
+      collectGeojsonOverlays(child.props as GeojsonProps, state, child.key);
     },
   },
 ];

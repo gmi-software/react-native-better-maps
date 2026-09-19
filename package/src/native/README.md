@@ -32,7 +32,7 @@ Platform map SDK (MapKit / Google Maps)
 
 **Decision: data-driven descriptors (Option B).**
 
-Overlay components (`<Marker />`, `<Polyline />`, etc.) are lightweight React wrappers. `MapView` collects their props via `React.Children`, assigns stable `id` values, and serializes them into descriptor struct arrays passed to the native `HybridMapView`. Overlay interaction events flow back through id-keyed map-level callbacks; `MapView` dispatches them to the matching overlay's `onPress` / `onDragEnd` handlers.
+Overlay components (`<Marker />`, `<Polyline />`, etc.) are lightweight React wrappers. `MapView` collects their props via `React.Children`, assigns public `id` values (explicit `id`, else `${type}-key-${key}`, else positional `${type}-${index}`), and serializes them into descriptor struct arrays passed to the native `HybridMapView`. Overlay interaction events flow back through id-keyed map-level callbacks; `MapView` dispatches them to the matching overlay's `onPress` / `onDragEnd` handlers.
 
 ```
 <MapView>

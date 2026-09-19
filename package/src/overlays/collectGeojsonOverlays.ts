@@ -5,8 +5,9 @@ import type {
   GeojsonProps,
 } from '../types/geojson';
 import {
+  assignOverlayId,
   tappableFromPress,
-  resolveOverlayId,
+  type OverlayChildKey,
   type OverlayCollectorState,
 } from './overlayCollect';
 import { OverlayType, overlayCallbackKey } from './overlayType';
@@ -77,8 +78,15 @@ function mergeConvertedOverlays(
 export function collectGeojsonOverlays(
   props: GeojsonProps,
   state: OverlayCollectorState,
+  key?: OverlayChildKey,
 ): void {
-  const layerId = resolveOverlayId(props.id, 'geojson', state.geojsonIndex);
+  const layerId = assignOverlayId(
+    state,
+    props.id,
+    key,
+    'geojson',
+    state.geojsonIndex,
+  );
   state.geojsonIndex += 1;
 
   const converted = geojsonToOverlayDescriptors(props.geojson, {

@@ -1,7 +1,11 @@
 import type { MarkerImage, MarkerImageSource } from '../native/specs/overlays';
 import type { MarkerProps } from '../types/overlays';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-import { resolveOverlayId, type OverlayCollectorState } from './overlayCollect';
+import {
+  assignOverlayId,
+  type OverlayChildKey,
+  type OverlayCollectorState,
+} from './overlayCollect';
 import { OverlayType, overlayCallbackKey } from './overlayType';
 
 export type MarkerImageResolver = (
@@ -12,8 +16,9 @@ export function collectMarkerOverlay(
   props: MarkerProps,
   state: OverlayCollectorState,
   resolveMarkerImage: MarkerImageResolver,
+  key?: OverlayChildKey,
 ): void {
-  const id = resolveOverlayId(props.id, 'marker', state.markerIndex);
+  const id = assignOverlayId(state, props.id, key, 'marker', state.markerIndex);
   state.markerIndex += 1;
 
   state.markers.push({

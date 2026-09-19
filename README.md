@@ -29,6 +29,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Supported platforms](#supported-platforms)
 - [Installation](#installation)
 - [Quick start](#quick-start)
+- [Overlay identity](#overlay-identity)
 - [Map providers](#map-providers)
 - [Native POI press events](#native-poi-press-events)
 - [Custom marker images](#custom-marker-images)
@@ -249,6 +250,32 @@ function ControlledMap() {
   return <MapView ref={mapRef} style={{ flex: 1 }} />;
 }
 ```
+
+## Overlay identity
+
+JSX overlays (`Marker`, `Polyline`, `Polygon`, `Circle`, `Geojson`) need a stable public id. Native views key annotations on that string, and `onMarkerPress`, `onPolylinePress`, `onPolygonPress`, `onCirclePress`, and `onClusterPress` report it back to JavaScript.
+
+Precedence:
+
+1. Explicit `id` when it is a non-empty string.
+2. A namespaced React key: `${type}-key-${key}` (for example `<Marker key="b" />` becomes `marker-key-b`).
+3. A positional last resort: `${type}-${index}` (for example `marker-0`).
+
+```tsx
+<MapView style={{ flex: 1 }}>
+  {stops.map((stop) => (
+    <Marker key={stop.id} coordinate={stop.coordinate} title={stop.name} />
+  ))}
+</MapView>
+```
+
+That `key` is enough: removing the first stop keeps the survivors as `marker-key-b` and `marker-key-c`. Prefer an explicit `id` when the press callback should match your own data 1:1.
+
+**Behavior change:** lists that only used positional ids such as `marker-0` will now report key-derived ids when a `key` is present. Matching on `marker-0` was never reliable — adding or removing an earlier sibling changed every later index.
+
+In development, overlays with neither `id` nor `key` log a warning. Two overlays of the same kind that resolve to the same id also warn; the later overlay is given a `#N` suffix so both stay addressable.
+
+Bulk `markers` / `polylines` / `polygons` / `circles` descriptors always use the `id` you pass on each descriptor.
 
 ## Map providers
 
@@ -648,14 +675,15 @@ See [example/.env.example](example/.env.example) for the supported environment v
 
 ## Common problems
 
-| Problem                                     | Solution                                                                                                                                                       |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Map is blank when using Google Maps         | Add a Google Maps API key through the Expo config plugin, `GoogleMapsIosApiKey` in `Info.plist`, or `com.google.android.geo.API_KEY` in `AndroidManifest.xml`. |
-| iOS Google Maps key set but provider errors | iOS needs both `GoogleMapsIosApiKey` in `Info.plist` **and** `"betterMaps.iosGoogleProvider": "true"` in `Podfile.properties.json`, then `pod install`. The config plugin sets both; in bare workflow or with a stale `Podfile.properties.json`, they can drift apart. |
-| New Architecture errors                     | Confirm React Native `0.78+`, New Architecture, and `react-native-nitro-modules` are installed, then rebuild the native app.                                   |
-| Provider throws before rendering            | Check the [supported platforms](#supported-platforms) table. `openstreetmap` and `mapbox` are reserved for future support but do not render yet.               |
-| Expo Go does not load native maps           | Use a development build after `expo prebuild`; native Nitro modules are not available in Expo Go.                                                              |
-| Marker animations affect gesture smoothness | For very large marker sets, prefer clustering, shorter durations, or disable marker/cluster entering animations.                                               |
+| Problem                                         | Solution                                                                                                                                                                                                                                                               |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Map is blank when using Google Maps             | Add a Google Maps API key through the Expo config plugin, `GoogleMapsIosApiKey` in `Info.plist`, or `com.google.android.geo.API_KEY` in `AndroidManifest.xml`.                                                                                                         |
+| iOS Google Maps key set but provider errors     | iOS needs both `GoogleMapsIosApiKey` in `Info.plist` **and** `"betterMaps.iosGoogleProvider": "true"` in `Podfile.properties.json`, then `pod install`. The config plugin sets both; in bare workflow or with a stale `Podfile.properties.json`, they can drift apart. |
+| New Architecture errors                         | Confirm React Native `0.78+`, New Architecture, and `react-native-nitro-modules` are installed, then rebuild the native app.                                                                                                                                           |
+| Provider throws before rendering                | Check the [supported platforms](#supported-platforms) table. `openstreetmap` and `mapbox` are reserved for future support but do not render yet.                                                                                                                       |
+| Expo Go does not load native maps               | Use a development build after `expo prebuild`; native Nitro modules are not available in Expo Go.                                                                                                                                                                      |
+| Marker animations affect gesture smoothness     | For very large marker sets, prefer clustering, shorter durations, or disable marker/cluster entering animations.                                                                                                                                                       |
+| `onMarkerPress` reports shifting `marker-0` ids | Set a stable `id` or React `key` on each overlay. Positional ids are a last resort and change when siblings are inserted or removed.                                                                                                                                   |
 
 ## Development
 

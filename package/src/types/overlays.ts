@@ -85,7 +85,11 @@ export interface MarkerDescriptor {
  * Props for a map marker overlay.
  */
 export interface MarkerProps {
-  /** Unique identifier for the marker. */
+  /**
+   * Public overlay id returned by `onMarkerPress` / `onClusterPress`.
+   * Wins over the React `key`. When omitted, the collector uses
+   * `marker-key-${key}`, then positional `marker-N`.
+   */
   id?: string;
 
   /** Geographic position of the marker. Invalid coordinates skip the marker with a development warning. */
@@ -141,7 +145,11 @@ export interface MarkerProps {
  * Props for a polyline overlay.
  */
 export interface PolylineProps {
-  /** Unique identifier for the polyline. */
+  /**
+   * Public overlay id returned by `onPolylinePress`.
+   * Wins over the React `key`. When omitted, the collector uses
+   * `polyline-key-${key}`, then positional `polyline-N`.
+   */
   id?: string;
 
   /** Ordered list of coordinates forming the polyline. Invalid coordinates or fewer than 2 points skip the polyline with a development warning. */
@@ -164,7 +172,11 @@ export interface PolylineProps {
  * Props for a polygon overlay.
  */
 export interface PolygonProps {
-  /** Unique identifier for the polygon. */
+  /**
+   * Public overlay id returned by `onPolygonPress`.
+   * Wins over the React `key`. When omitted, the collector uses
+   * `polygon-key-${key}`, then positional `polygon-N`.
+   */
   id?: string;
 
   /** Ordered list of coordinates forming the polygon boundary. Invalid coordinates or fewer than 3 points skip the polygon with a development warning. */
@@ -190,7 +202,11 @@ export interface PolygonProps {
  * Props for a circle overlay.
  */
 export interface CircleProps {
-  /** Unique identifier for the circle. */
+  /**
+   * Public overlay id returned by `onCirclePress`.
+   * Wins over the React `key`. When omitted, the collector uses
+   * `circle-key-${key}`, then positional `circle-N`.
+   */
   id?: string;
 
   /** Center coordinate of the circle. An invalid center skips the circle with a development warning. */

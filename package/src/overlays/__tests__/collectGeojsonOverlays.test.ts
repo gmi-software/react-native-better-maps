@@ -143,4 +143,16 @@ describe('collectGeojsonOverlays', () => {
     expect(state.polygons[0]?.tappable).toBe(false);
     expect(state.registry.size).toBe(3);
   });
+
+  test('uses a key-derived layer id when no explicit id is provided', () => {
+    const state = createState();
+
+    collectGeojsonOverlays({ geojson: collection }, state, 'delivery');
+
+    expect(state.markers[0]?.id).toBe('geojson-key-delivery:point:marker-0');
+    expect(state.polylines[0]?.id).toBe('geojson-key-delivery:line:polyline-0');
+    expect(state.polygons[0]?.id).toBe(
+      'geojson-key-delivery:polygon:polygon-0',
+    );
+  });
 });

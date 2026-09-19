@@ -74,7 +74,7 @@ Delivered incrementally during Phases 3–5; polished for platform consistency i
 - [x] Expo setup documentation
 - [x] CI quality checks
 - [ ] Release performance benchmark pass
-- [ ] Migration guide from react-native-maps
+- [x] Migration guide from react-native-maps (`docs/migration-from-react-native-maps.md`)
 - [ ] npm publish (v1.0.0)
 - [ ] GitHub release with changelog
 

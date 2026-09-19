@@ -14,7 +14,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 
 [Features](#features) • [Installation](#installation) • [Quick start](#quick-start) • [Map providers](#map-providers) • [Documentation](#documentation) • [Public API](#public-api)
 
-**Full documentation** lives in [`docs/`](docs). Start with [Expo setup](docs/expo-setup.md), [Architecture](docs/architecture.md), and [Roadmap](docs/roadmap.md).
+**Full documentation** lives in [`docs/`](docs). Start with [Expo setup](docs/expo-setup.md), [Architecture](docs/architecture.md), [Migration from react-native-maps](docs/migration-from-react-native-maps.md), and [Roadmap](docs/roadmap.md).
 
 </div>
 
@@ -373,6 +373,8 @@ Platform notes:
 | `opacity`              | `opacity`                          |
 | Custom RN child views  | Not supported (use bitmap `image`) |
 
+The full prop-level compatibility matrix, setup differences, and before/after examples live in [docs/migration-from-react-native-maps.md](docs/migration-from-react-native-maps.md).
+
 ## GeoJSON overlays
 
 `<Geojson>` converts a GeoJSON object (or JSON string) into the existing marker, polyline, and polygon overlay pipeline. There is no native GeoJSON parser — conversion happens in JavaScript so overlay diffing stays shared.
@@ -638,6 +640,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 
 - [Expo setup](docs/expo-setup.md)
 - [Architecture](docs/architecture.md)
+- [Migration from react-native-maps](docs/migration-from-react-native-maps.md)
 - [GeoJSON overlays](docs/geojson.md)
 - [Roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
@@ -682,7 +685,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## What's next
 
-The release surface focuses on Apple MapKit and Google Maps SDK providers. Follow-up work is tracked in [docs/roadmap.md](docs/roadmap.md), including additional providers, expanded migration docs, and offline tile support.
+The release surface focuses on Apple MapKit and Google Maps SDK providers. Follow-up work is tracked in [docs/roadmap.md](docs/roadmap.md), including additional providers and offline tile support. For `react-native-maps` adopters, see [docs/migration-from-react-native-maps.md](docs/migration-from-react-native-maps.md).
 
 ## License
 

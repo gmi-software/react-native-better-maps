@@ -95,7 +95,11 @@ chore: add commitlint configuration
 - Run `bun run lint`, `bun run typecheck`, and `bun run build` before opening a PR.
 - Use conventional commit messages for all commits in the PR.
 - Follow existing naming conventions and avoid `any` in TypeScript.
-- Update documentation when changing public APIs.
+- Update documentation when changing public APIs. If you add, rename, or drop a public prop, update the compatibility matrix in [docs/migration-from-react-native-maps.md](docs/migration-from-react-native-maps.md).
+
+## Documentation
+
+Living docs live in [`docs/`](docs/). Start with [Architecture](docs/architecture.md), [Expo setup](docs/expo-setup.md), and the [react-native-maps migration guide](docs/migration-from-react-native-maps.md).
 
 ## Code style
 

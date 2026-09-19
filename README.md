@@ -580,32 +580,42 @@ setMarkers((current) =>
 
 ### Types
 
-| Type                        | Description                                          |
-| --------------------------- | ---------------------------------------------------- |
-| `Coordinate`                | `{ latitude, longitude }`                            |
-| `Region`                    | Center + span                                        |
-| `Camera`                    | Position, zoom, heading, pitch                       |
-| `MapType`                   | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
-| `MapProvider`               | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'` |
-| `PoiPressEvent`             | Provider-discriminated native POI press payload      |
-| `ApplePoiPressEvent`        | Apple Maps POI payload with category                 |
-| `GooglePoiPressEvent`       | Google Maps POI payload with place ID                |
-| `ApplePoiCategory`          | Known MapKit POI categories plus `unknown`           |
-| `MapViewRef`                | Imperative handle for camera control                 |
-| `MapViewProps`              | Props for `MapView`                                  |
-| `MapViewPropsForProvider`   | Provider-specific `MapView` props                    |
-| `MarkerDescriptor`          | Bulk marker descriptor                               |
-| `MarkerProps`               | Props for `Marker`                                   |
-| `MarkerImage`               | Resolved marker image descriptor                     |
-| `MarkerAnchor`              | Anchor point on marker image (0..1)                  |
-| `MarkerPoint`               | Point offset in dp                                   |
-| `OverlayEnteringAnimation`  | Marker / marker-cluster entering animation config    |
-| `PolylineProps`             | Props for `Polyline`                                 |
-| `PolygonProps`              | Props for `Polygon`                                  |
-| `CircleProps`               | Props for `Circle`                                   |
-| `GeojsonProps`              | Props for `Geojson`                                  |
-| `GeojsonFeature`            | Feature passed to `Geojson` `onPress`                |
-| `GeojsonOverlayDescriptors` | Result of `geojsonToOverlayDescriptors`              |
+| Type                                   | Description                                                   |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `Coordinate`                           | `{ latitude, longitude }`                                     |
+| `Region`                               | Center + span                                                 |
+| `Camera`                               | Position, zoom, heading, pitch                                |
+| `EdgePadding`                          | Padding applied to map edges, in dp                           |
+| `VisibleRegion`                        | Geographic bounds of the currently visible map area           |
+| `ApplePoiCategory`                     | Known MapKit POI categories plus `unknown`                    |
+| `ApplePoiPressEvent`                   | Apple Maps POI payload with category                          |
+| `GooglePoiPressEvent`                  | Google Maps POI payload with place ID                         |
+| `MapProvider`                          | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'`          |
+| `MapType`                              | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'`          |
+| `MapViewProps`                         | Props for `MapView`                                           |
+| `MapViewPropsForProvider`              | Provider-specific `MapView` props                             |
+| `PoiPressEvent`                        | Provider-discriminated native POI press payload               |
+| `MarkerAnchor`                         | Anchor point on marker image (0..1)                           |
+| `MarkerImage`                          | Resolved marker image descriptor                              |
+| `MarkerImageSource`                    | `require()` asset or `{ uri }` marker image                   |
+| `MarkerDescriptor`                     | Bulk marker descriptor                                        |
+| `MarkerPoint`                          | Point offset in dp                                            |
+| `MarkerProps`                          | Props for `Marker`                                            |
+| `OverlayEnteringAnimation`             | Marker / marker-cluster entering animation config             |
+| `OverlayEnteringAnimationConfig`       | Object form of entering animation (preset, duration, delay)   |
+| `OverlayEnteringAnimationPreset`       | `'fade' \| 'fade-scale'`                                      |
+| `OverlayEnteringAnimationReduceMotion` | `'system' \| 'never'` Reduced Motion handling                 |
+| `PolylineProps`                        | Props for `Polyline`                                          |
+| `PolygonProps`                         | Props for `Polygon`                                           |
+| `CircleProps`                          | Props for `Circle`                                            |
+| `GeojsonFeature`                       | Feature passed to `Geojson` `onPress`                         |
+| `GeojsonFeatureCollection`             | GeoJSON FeatureCollection of `GeojsonFeature`s                |
+| `GeojsonGeometry`                      | GeoJSON geometry (Point through GeometryCollection)           |
+| `GeojsonInput`                         | GeoJSON object or JSON string (`<Geojson geojson>`)           |
+| `GeojsonOverlayDescriptors`            | Result of `geojsonToOverlayDescriptors`                       |
+| `GeojsonProps`                         | Props for `Geojson`                                           |
+| `GeojsonToOverlayOptions`              | Options for `geojsonToOverlayDescriptors`                     |
+| `MapViewRef`                           | Imperative handle for camera control                          |
 
 ### Utilities
 

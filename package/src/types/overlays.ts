@@ -153,6 +153,12 @@ export interface PolylineProps {
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
 
+  /**
+   * Drawing order relative to other map overlays. Google providers only.
+   * Apple MapKit does not expose shape overlay z-ordering.
+   */
+  zIndex?: number;
+
   /** Whether the polyline is tappable. */
   tappable?: boolean;
 
@@ -170,6 +176,9 @@ export interface PolygonProps {
   /** Ordered list of coordinates forming the polygon boundary. Invalid coordinates or fewer than 3 points skip the polygon with a development warning. */
   coordinates: Coordinate[];
 
+  /** Interior polygon boundaries that remain unfilled. */
+  holes?: Coordinate[][];
+
   /** Fill color in hex format (e.g. '#FF000080'). */
   fillColor?: string;
 
@@ -178,6 +187,12 @@ export interface PolygonProps {
 
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
+
+  /**
+   * Drawing order relative to other map overlays. Google providers only.
+   * Apple MapKit does not expose shape overlay z-ordering.
+   */
+  zIndex?: number;
 
   /** Whether the polygon is tappable. */
   tappable?: boolean;

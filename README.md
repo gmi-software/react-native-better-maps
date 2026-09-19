@@ -373,6 +373,47 @@ Platform notes:
 | `opacity`              | `opacity`                          |
 | Custom RN child views  | Not supported (use bitmap `image`) |
 
+## Polylines and polygons
+
+`<Polyline>` and `<Polygon>` accept stroke/fill styling plus drawing order. Interior rings are available on hand-written `<Polygon>` children, not only through `<Geojson>` or the bulk `polygons` prop:
+
+```tsx
+<Polyline
+  coordinates={[
+    { latitude: 52.2297, longitude: 21.0122 },
+    { latitude: 52.237, longitude: 21.017 },
+  ]}
+  strokeColor="#FF0000"
+  strokeWidth={3}
+  zIndex={2}
+/>
+
+<Polygon
+  coordinates={[
+    { latitude: 52.23, longitude: 21.0 },
+    { latitude: 52.23, longitude: 21.03 },
+    { latitude: 52.25, longitude: 21.03 },
+    { latitude: 52.25, longitude: 21.0 },
+  ]}
+  holes={[
+    [
+      { latitude: 52.235, longitude: 21.01 },
+      { latitude: 52.235, longitude: 21.02 },
+      { latitude: 52.245, longitude: 21.02 },
+      { latitude: 52.245, longitude: 21.01 },
+    ],
+  ]}
+  fillColor="#FF000080"
+  strokeColor="#FF0000"
+  zIndex={1}
+/>
+```
+
+| Prop     | Component             | Description                                                                                                                  |
+| -------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `zIndex` | `Polyline`, `Polygon` | Drawing order relative to other map overlays. Google providers only — Apple MapKit does not expose shape overlay z-ordering. |
+| `holes`  | `Polygon`             | Interior polygon boundaries that remain unfilled.                                                                            |
+
 ## GeoJSON overlays
 
 `<Geojson>` converts a GeoJSON object (or JSON string) into the existing marker, polyline, and polygon overlay pipeline. There is no native GeoJSON parser — conversion happens in JavaScript so overlay diffing stays shared.

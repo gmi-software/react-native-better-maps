@@ -92,6 +92,7 @@ const overlayCollectors: OverlayCollector[] = [
         coordinates: props.coordinates,
         strokeColor: props.strokeColor,
         strokeWidth: props.strokeWidth,
+        zIndex: props.zIndex,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
       state.registry.set(overlayCallbackKey(OverlayType.Polyline, id), {
@@ -118,9 +119,11 @@ const overlayCollectors: OverlayCollector[] = [
       state.polygons.push({
         id,
         coordinates: props.coordinates,
+        holes: props.holes,
         fillColor: props.fillColor,
         strokeColor: props.strokeColor,
         strokeWidth: props.strokeWidth,
+        zIndex: props.zIndex,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
       state.registry.set(overlayCallbackKey(OverlayType.Polygon, id), {

@@ -546,6 +546,7 @@ setMarkers((current) =>
 | -------------------------- | ----------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Region / camera            | Supported                                                   | Supported                                  | Supported                                  |
 | Camera animation           | Supported                                                   | Supported                                  | Supported                                  |
+| Camera altitude            | Supported (preferred over `zoom`)                           | Ignored; `getCamera().altitude` is `null`  | Ignored; `getCamera().altitude` is `null`  |
 | Visible region             | Supported                                                   | Supported                                  | Supported                                  |
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
 | Map types                  | Standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain       | Standard, satellite, hybrid, terrain       |

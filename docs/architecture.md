@@ -90,6 +90,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `showsUserLocation` / `followsUserLocation` | Toggles the native user-location layer. Host app must request location permission (`NSLocationWhenInUseUsageDescription` on iOS; `ACCESS_FINE_LOCATION` on Android). |
 | `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only (`showsScale` is a no-op on Android). |
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
+| `camera` / `setCamera` / `animateCamera` | `altitude` is Apple MapKit only. Google providers ignore it and fall back to `zoom`, or to zoom 10 / the current zoom when `zoom` is omitted. `getCamera().altitude` is `null` on Google. |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 
 ### Platform gaps (Phase 8)

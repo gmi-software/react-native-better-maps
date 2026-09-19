@@ -1,4 +1,4 @@
-import { Children, isValidElement, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import type { MutableRefObject, ReactNode } from 'react';
 import type {
   CircleDescriptor,
@@ -6,7 +6,7 @@ import type {
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../native/specs/overlays';
-import { collectOverlayChild } from '../overlays/collectOverlayChild';
+import { collectOverlayChildren } from '../overlays/collectOverlayChildren';
 import { resolveMarkerImage } from '../overlays/resolveMarkerImage';
 import type {
   OverlayCallbacks,
@@ -48,13 +48,7 @@ export function useCollectedOverlays(children: ReactNode): CollectedOverlays {
       hasCirclePress: false,
     };
 
-    Children.forEach(children, (child) => {
-      if (!isValidElement(child)) {
-        return;
-      }
-
-      collectOverlayChild(child, state, { resolveMarkerImage });
-    });
+    collectOverlayChildren(children, state, { resolveMarkerImage });
 
     callbackRegistry.current = state.registry;
 

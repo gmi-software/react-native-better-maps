@@ -43,6 +43,15 @@ export type PoiPressEvent = ApplePoiPressEvent | GooglePoiPressEvent;
  */
 interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   style?: StyleProp<ViewStyle>;
+
+  /**
+   * Overlay children collected by `MapView`. Only `<Marker>`, `<Polyline>`,
+   * `<Polygon>`, `<Circle>` and `<Geojson>` are recognized. Fragments are
+   * unwrapped recursively; other wrapper components are never rendered and
+   * are ignored with a development warning. Prefer returning an array of
+   * overlay elements, or use the bulk `markers` / `polylines` / `polygons` /
+   * `circles` props.
+   */
   children?: ReactNode;
 
   /** Initial or controlled region. */

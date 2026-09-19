@@ -230,6 +230,8 @@ function MyMap() {
 }
 ```
 
+`MapView` collects `<Marker>`, `<Polyline>`, `<Polygon>`, `<Circle>` and `<Geojson>` from `children`. Fragments are unwrapped; custom wrapper components are not rendered — return an array of overlay elements, or use the bulk `markers` / `polylines` / `polygons` / `circles` props.
+
 ### Imperative camera API
 
 ```tsx
@@ -372,6 +374,7 @@ Platform notes:
 | `flat`                 | `flat`                             |
 | `opacity`              | `opacity`                          |
 | Custom RN child views  | Not supported (use bitmap `image`) |
+| Overlays inside custom components / render helpers | Not supported — return an array, or use the bulk props |
 
 ## GeoJSON overlays
 

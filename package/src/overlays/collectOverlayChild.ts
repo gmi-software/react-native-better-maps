@@ -19,6 +19,7 @@ import {
 } from './overlayCollect';
 import type { OverlayComponentType, OverlayTypeName } from './overlayType';
 import { OverlayType, overlayCallbackKey } from './overlayType';
+import { unwrapElementType } from './overlayElement';
 import {
   isValidCoordinate,
   isValidCoordinateList,
@@ -30,19 +31,30 @@ import {
   type MarkerImageResolver,
 } from './collectMarkerOverlay';
 
+function hasOverlayType(type: unknown, overlayType: OverlayTypeName): boolean {
+  if (
+    type == null ||
+    (typeof type !== 'function' && typeof type !== 'object')
+  ) {
+    return false;
+  }
+  return (type as OverlayComponentType).overlayType === overlayType;
+}
+
 function isOverlayChild(
   child: ReactElement,
   overlayType: OverlayTypeName,
   component: unknown,
 ): boolean {
-  if (typeof child.type === 'function' || typeof child.type === 'object') {
-    const childType = child.type as OverlayComponentType;
-    if (childType.overlayType === overlayType) {
-      return true;
-    }
+  const innerType = unwrapElementType(child.type);
+  if (
+    hasOverlayType(child.type, overlayType) ||
+    hasOverlayType(innerType, overlayType)
+  ) {
+    return true;
   }
 
-  return child.type === component;
+  return child.type === component || innerType === component;
 }
 
 export interface OverlayCollectorDependencies {
@@ -180,13 +192,15 @@ export function collectOverlayChild(
   child: ReactElement,
   state: OverlayCollectorState,
   dependencies: OverlayCollectorDependencies,
-): void {
+): boolean {
   for (const collector of overlayCollectors) {
     if (!isOverlayChild(child, collector.overlayType, collector.component)) {
       continue;
     }
 
     collector.collect(child, state, dependencies);
-    return;
+    return true;
   }
+
+  return false;
 }

@@ -102,7 +102,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 
 ### Overlay components
 
-`Marker`, `Polyline`, `Polygon`, `Circle`, and `Geojson` are overlay components that compose inside `MapView`. Overlay props are collected on the JS side and serialized into descriptor structs passed to the native `HybridMapView` (data-driven architecture). `Geojson` is converted into marker, polyline, and polygon descriptors before that native pass; invalid GeoJSON is skipped with a development warning.
+`Marker`, `Polyline`, `Polygon`, `Circle`, and `Geojson` are overlay components that compose inside `MapView`. Overlay props are collected on the JS side via `React.Children` and serialized into descriptor structs passed to the native `HybridMapView` (data-driven architecture). Nested arrays and Fragments are walked; wrapper components are not rendered, so overlays must be direct children (or Fragment contents) or passed via the bulk descriptor props. Unknown children log a development warning. `Geojson` is converted into marker, polyline, and polygon descriptors before that native pass; invalid GeoJSON is skipped with a development warning.
 
 Marker and marker-cluster entering animations follow the same descriptor model. The public API accepts `false`, `system`, or a serializable preset config; the React wrapper normalizes that into native descriptors. Native provider adapters execute the animation when a marker render element appears in the render diff. Updating animation config for an already retained marker does not restart the animation; the new config is used the next time that marker is added again.
 

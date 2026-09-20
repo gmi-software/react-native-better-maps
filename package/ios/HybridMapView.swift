@@ -181,6 +181,18 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
+  var onCameraMove: ((Camera) -> Void)? {
+    get { getBacked(\.onCameraMove) }
+    set { setBackedOnMain(newValue, store: \.onCameraMove) { $0.onCameraMove = $1 } }
+  }
+
+  var cameraMoveThrottleMs: Double? {
+    get { getBacked(\.cameraMoveThrottleMs) }
+    set {
+      setBackedOnMain(newValue, store: \.cameraMoveThrottleMs) { $0.cameraMoveThrottleMs = $1 }
+    }
+  }
+
   var onMapReady: (() -> Void)? {
     get { getBacked(\.onMapReady) }
     set { setBackedOnMain(newValue, store: \.onMapReady) { $0.onMapReady = $1 } }

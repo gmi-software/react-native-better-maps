@@ -25,6 +25,8 @@ protocol MapProviderAdapter: AnyObject {
 
   var onRegionChange: ((Region) -> Void)? { get set }
   var onRegionChangeComplete: ((Region) -> Void)? { get set }
+  var onCameraMove: ((Camera) -> Void)? { get set }
+  var cameraMoveThrottleMs: Double? { get set }
   var onMapReady: (() -> Void)? { get set }
   var onPress: ((Coordinate) -> Void)? { get set }
   var onPoiPress: ((NativePoiPressEvent) -> Void)? { get set }
@@ -76,6 +78,8 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
 
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?
+  var onCameraMove: ((Camera) -> Void)?
+  var cameraMoveThrottleMs: Double?
   var onMapReady: (() -> Void)?
   var onPress: ((Coordinate) -> Void)?
   var onPoiPress: ((NativePoiPressEvent) -> Void)?

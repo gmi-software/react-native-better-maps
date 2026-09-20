@@ -192,6 +192,20 @@ class HybridMapView(
       adapter?.onRegionChangeComplete = value
     }
 
+  override var onCameraMove: ((camera: Camera) -> Unit)? = null
+    set(value) {
+      field = value
+      adapter?.onCameraMove = value
+    }
+
+  private var _cameraMoveThrottleMs: Double? = null
+  override var cameraMoveThrottleMs: Double?
+    get() = _cameraMoveThrottleMs
+    set(value) {
+      _cameraMoveThrottleMs = value
+      adapter?.cameraMoveThrottleMs = value
+    }
+
   override var onMapReady: (() -> Unit)? = null
     set(value) {
       field = value
@@ -343,6 +357,8 @@ class HybridMapView(
     pinStyle = null
     onRegionChange = null
     onRegionChangeComplete = null
+    onCameraMove = null
+    _cameraMoveThrottleMs = null
     onMapReady = null
     onPress = null
     onPoiPress = null
@@ -423,6 +439,8 @@ class HybridMapView(
     adapter.clusterEnteringAnimation = _clusterEnteringAnimation
     adapter.onRegionChange = onRegionChange
     adapter.onRegionChangeComplete = onRegionChangeComplete
+    adapter.cameraMoveThrottleMs = _cameraMoveThrottleMs
+    adapter.onCameraMove = onCameraMove
     adapter.onMapReady = onMapReady
     adapter.onPress = onPress
     adapter.onPoiPress = onPoiPress

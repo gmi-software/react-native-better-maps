@@ -144,6 +144,16 @@ enum OverlayEnteringAnimationResolver {
     }
   }
 
+  /// Stops an in-flight fade-scale entering animation so `marker.icon` updates are visible.
+  static func cancelGoogleMarkerEnteringAnimation(_ marker: GMSMarker) {
+    guard let iconView = marker.iconView else {
+      return
+    }
+    iconView.layer.removeAllAnimations()
+    marker.iconView = nil
+    marker.tracksViewChanges = false
+  }
+
   private static func prepareGoogleFadeScaleMarker(_ marker: GMSMarker) {
     let image = marker.icon ?? GMSMarker.markerImage(with: nil)
     let imageView = UIImageView(

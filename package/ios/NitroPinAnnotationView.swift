@@ -24,7 +24,7 @@ final class NitroPinAnnotationView: MKMarkerAnnotationView {
     alpha = 1
     transform = .identity
     annotation = marker
-    animatesWhenAdded = marker.enteringAnimation.kind == .system
+    animatesWhenAdded = marker.enteringAnimation.kind == .system && !marker.suppressesNextEnteringAnimation
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil
     displayPriority = .required

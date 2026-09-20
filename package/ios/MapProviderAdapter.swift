@@ -21,6 +21,7 @@ protocol MapProviderAdapter: AnyObject {
   var mapPadding: EdgePadding? { get set }
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
+  var pinStyle: MarkerPinStyle? { get set }
 
   var onRegionChange: ((Region) -> Void)? { get set }
   var onRegionChangeComplete: ((Region) -> Void)? { get set }
@@ -71,6 +72,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
+  var pinStyle: MarkerPinStyle?
 
   var onRegionChange: ((Region) -> Void)?
   var onRegionChangeComplete: ((Region) -> Void)?

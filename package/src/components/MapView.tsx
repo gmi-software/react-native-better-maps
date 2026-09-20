@@ -1,15 +1,16 @@
 import {
   useCallback,
+  useEffect,
   useImperativeHandle,
   useMemo,
-  useRef,
+  useState,
   type Ref,
-  type RefObject,
 } from 'react';
 import { useValidCamera } from '../camera/useValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
 import { useNitroCallback } from '../hooks/useNitroCallback';
 import { useStableValue } from '../hooks/useStableValue';
+import { MapViewCommands } from '../native/mapViewCommands';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
@@ -31,20 +32,6 @@ import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-
-const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
-
-function withHybridRef<T>(
-  hybridRef: RefObject<NativeMapViewHybrid | null>,
-  run: (hybrid: NativeMapViewHybrid) => T,
-): T {
-  const hybrid = hybridRef.current;
-  if (hybrid == null) {
-    return Promise.reject(new Error(MAP_VIEW_NOT_MOUNTED_ERROR)) as T;
-  }
-
-  return run(hybrid);
-}
 
 export function MapView({
   ref,
@@ -87,7 +74,20 @@ export function MapView({
   onCirclePress: onCirclePressProp,
 }: MapViewProps & { ref?: Ref<MapViewRef> }) {
   const resolvedProvider = resolveMapProvider(provider);
-  const hybridRef = useRef<NativeMapViewHybrid>(null);
+  // Identity of the native view. Both are creation-time SDK configuration, so
+  // changing either remounts it and the handle we hold becomes a dead object.
+  const nativeViewKey = `${resolvedProvider}:${googleMapId ?? ''}`;
+  const [commands, setCommands] = useState(
+    () => new MapViewCommands<NativeMapViewHybrid>(),
+  );
+  const [commandsKey, setCommandsKey] = useState(nativeViewKey);
+  if (commandsKey !== nativeViewKey) {
+    // Start a fresh channel for the incoming view so calls made during the swap
+    // are buffered again instead of dispatched to the outgoing one. The effect
+    // below rejects whatever the old channel still held.
+    setCommandsKey(nativeViewKey);
+    setCommands(new MapViewCommands<NativeMapViewHybrid>());
+  }
   const {
     markers: collectedMarkers,
     polylines: collectedPolylines,
@@ -151,9 +151,17 @@ export function MapView({
     | ((event: PoiPressEvent) => void)
     | undefined;
 
-  const handleHybridRef = useCallback((nativeRef: NativeMapViewHybrid) => {
-    hybridRef.current = nativeRef;
-  }, []);
+  const handleHybridRef = useCallback(
+    (nativeRef: NativeMapViewHybrid) => {
+      commands.attach(nativeRef);
+    },
+    [commands],
+  );
+
+  useEffect(() => {
+    commands.mount();
+    return () => commands.unmount();
+  }, [commands]);
 
   const handleMarkerPress = useCallback(
     (id: string) => {
@@ -256,18 +264,15 @@ export function MapView({
   useImperativeHandle(
     ref,
     () => ({
-      getCamera: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.fetchCamera()),
+      getCamera: () => commands.run((hybrid) => hybrid.fetchCamera()),
       setCamera: (nextCamera) =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.applyCamera(nextCamera)),
+        commands.run((hybrid) => hybrid.applyCamera(nextCamera)),
       animateCamera: (nextCamera, duration) =>
-        withHybridRef(hybridRef, (hybrid) =>
-          hybrid.animateCamera(nextCamera, duration),
-        ),
+        commands.run((hybrid) => hybrid.animateCamera(nextCamera, duration)),
       getVisibleRegion: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.getVisibleRegion()),
+        commands.run((hybrid) => hybrid.getVisibleRegion()),
       fitToCoordinates: (coordinates, padding, animated) =>
-        withHybridRef(hybridRef, (hybrid) =>
+        commands.run((hybrid) =>
           hybrid.fitToCoordinates(
             resolveFitCoordinates(coordinates),
             padding,
@@ -275,12 +280,12 @@ export function MapView({
           ),
         ),
     }),
-    [],
+    [commands],
   );
 
   return (
     <NativeMapView
-      key={`${resolvedProvider}:${googleMapId ?? ''}`}
+      key={nativeViewKey}
       style={style}
       hybridRef={hybridRefCallback}
       provider={resolvedProvider}

@@ -252,6 +252,40 @@ function ControlledMap() {
 }
 ```
 
+#### When the ref is usable
+
+The native map is created after React commits, so `mapRef.current` is populated
+before there is anything native behind it. Calls made in that window are held
+and replayed, in the order they were made, as soon as the native map exists:
+
+```tsx
+import { useEffect, useRef } from 'react';
+import {
+  MapView,
+  type Coordinate,
+  type MapViewRef,
+} from 'react-native-better-maps';
+
+function FittedMap({ points }: { points: Coordinate[] }) {
+  const mapRef = useRef<MapViewRef>(null);
+
+  useEffect(() => {
+    // Runs before the native map exists, and still moves the camera.
+    mapRef.current?.fitToCoordinates(points, undefined, true);
+  }, [points]);
+
+  return <MapView ref={mapRef} style={{ flex: 1 }} />;
+}
+```
+
+So no call needs `setTimeout`, a retry, or an `onMapReady` handler to be safe.
+`onMapReady` reports something later and different - that the map finished
+loading its tiles - and is the right hook for showing your own UI on top of a
+map that has actually drawn.
+
+A call still waiting when the map view unmounts rejects, as does any call made
+afterwards.
+
 ## Map providers
 
 `MapView` accepts an optional `provider` prop:
@@ -702,6 +736,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 | Provider throws before rendering            | Check the [supported platforms](#supported-platforms) table. `openstreetmap` and `mapbox` are reserved for future support but do not render yet.               |
 | Expo Go does not load native maps           | Use a development build after `expo prebuild`; native Nitro modules are not available in Expo Go.                                                              |
 | Marker animations affect gesture smoothness | For very large marker sets, prefer clustering, shorter durations, or disable marker/cluster entering animations.                                               |
+| `MapView is not mounted` from a ref call    | The map view has unmounted. Calls made before the native map exists are held and replayed, so a freshly mounted map is not the cause.                          |
 
 ## Development
 

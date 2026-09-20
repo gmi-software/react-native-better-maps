@@ -4,8 +4,6 @@ import android.Manifest
 import android.content.ComponentCallbacks
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewTreeObserver
@@ -38,7 +36,7 @@ class GoogleMapProviderAdapter(
   private var pendingPolylines: Array<PolylineDescriptor>? = null
   private var pendingPolygons: Array<PolygonDescriptor>? = null
   private var pendingCircles: Array<CircleDescriptor>? = null
-  private val mainHandler = Handler(Looper.getMainLooper())
+  private val deferredMap = DeferredGoogleMap()
 
   private val googleMapIdAtCreation: String? = normalizeGoogleMapId(initialGoogleMapId)
 
@@ -118,7 +116,7 @@ class GoogleMapProviderAdapter(
     set(value) {
       _camera = value
       if (value != null && !isUserGesture) {
-        updateMapCamera(value, animated = false)
+        applyCameraProp(value)
       }
     }
 
@@ -318,66 +316,42 @@ class GoogleMapProviderAdapter(
       syncMarkerPressHandlers()
     }
 
-  override fun fetchCamera(): Promise<Camera> =
-    promiseOnMain {
-      googleMap?.cameraPosition?.toCamera() ?: fallbackCamera()
+  override fun fetchCamera(): Promise<Camera> = deferredMap.promise { map -> map.cameraPosition.toCamera() }
+
+  override fun applyCamera(camera: Camera): Promise<Unit> =
+    deferredMap.promise { map ->
+      updateMapCamera(map, camera, animated = false)
     }
-
-  /** The camera the caller last asked for, used until the map itself can answer. */
-  private fun fallbackCamera(): Camera {
-    val camera = _camera
-    if (camera != null) {
-      return camera
-    }
-
-    return Camera(
-      center =
-        Coordinate(
-          latitude = _region?.latitude ?: 0.0,
-          longitude = _region?.longitude ?: 0.0,
-        ),
-      zoom = 10.0,
-      heading = null,
-      pitch = null,
-      altitude = null,
-    )
-  }
-
-  override fun applyCamera(camera: Camera) {
-    updateMapCamera(camera, animated = false)
-  }
 
   override fun animateCamera(
     camera: Camera,
     duration: Double?,
-  ) {
+  ): Promise<Unit> {
     val animationDuration = duration ?: 0.25
-    updateMapCamera(camera, animated = true, durationMs = (animationDuration * 1000).toInt())
+    return deferredMap.promise { map ->
+      updateMapCamera(map, camera, animated = true, durationMs = (animationDuration * 1000).toInt())
+    }
   }
 
-  override fun getVisibleRegion(): Promise<VisibleRegion> =
-    promiseOnMain {
-      googleMap?.projection?.toNitroVisibleRegion() ?: emptyVisibleRegion()
-    }
+  override fun getVisibleRegion(): Promise<VisibleRegion> = deferredMap.promise { map -> map.projection.toNitroVisibleRegion() }
 
   override fun fitToCoordinates(
     coordinates: Array<Coordinate>,
     padding: EdgePadding?,
     animated: Boolean?,
-  ) {
-    // Filtered before the main-thread hop: a throw out of `LatLngBounds` inside
-    // `runOnMain` lands on the looper, where the JS caller cannot catch it.
+  ): Promise<Unit> {
+    // Filtered up front: `LatLngBounds` throws on a coordinate outside the world,
+    // and a skipped one deserves a warning rather than a rejected promise.
     val validCoordinates = coordinates.filter { it.isValid() }
     val skipped = coordinates.size - validCoordinates.size
     if (skipped > 0) {
       Log.w(NITRO_MAPS_LOG_TAG, "fitToCoordinates skipped $skipped coordinate(s) outside the world.")
     }
     if (validCoordinates.isEmpty()) {
-      return
+      return Promise.resolved(Unit)
     }
 
-    runOnMain {
-      val map = googleMap ?: return@runOnMain
+    return deferredMap.promise { map ->
       val builder = LatLngBounds.Builder()
       for (coordinate in validCoordinates) {
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
@@ -385,7 +359,8 @@ class GoogleMapProviderAdapter(
       val bounds = builder.build()
       val paddingPx = padding.toPaddingPixels()
 
-      val runUpdate = {
+      // `newLatLngBounds` throws on a map that has no size yet.
+      runWhenMapViewLaidOut {
         val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
         if (animated == true) {
           map.animateCamera(update)
@@ -393,8 +368,6 @@ class GoogleMapProviderAdapter(
           map.moveCamera(update)
         }
       }
-
-      runWhenMapViewLaidOut(runUpdate)
     }
   }
 
@@ -535,7 +508,18 @@ class GoogleMapProviderAdapter(
         applyRegion(region)
       }
     }
-    _camera?.let { updateMapCamera(it, animated = false) }
+    _camera?.let { camera -> updateMapCamera(map, camera, animated = false) }
+
+    // Last, so an imperative call made while the map was still loading wins over
+    // the `region`/`camera` props it was issued after.
+    deferredMap.attach(map)
+  }
+
+  private fun applyCameraProp(camera: Camera) {
+    runOnMain {
+      val map = googleMap ?: return@runOnMain
+      updateMapCamera(map, camera, animated = false)
+    }
   }
 
   private fun syncMarkerPressHandlers() {
@@ -635,35 +619,34 @@ class GoogleMapProviderAdapter(
   }
 
   private fun updateMapCamera(
+    map: GoogleMap,
     camera: Camera,
     animated: Boolean,
     durationMs: Int = 0,
   ) {
-    // Checked before the main-thread hop: `runOnMain` posts to the looper when called from
-    // anywhere else, so a throw out of `CameraPosition` would surface as an uncaught main-looper
-    // exception the JS caller cannot catch.
+    // Every camera path ends here - the `camera` prop, its replay in `configureMap`, and
+    // `setCamera`/`animateCamera` - so this one check covers them all. An invalid camera is
+    // skipped rather than thrown: the prop path has no promise to reject, so a throw out of
+    // `CameraPosition` would surface as an uncaught main-thread exception.
     if (!camera.isValid()) {
       Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid camera: $camera.")
       return
     }
 
-    runOnMain {
-      val map = googleMap ?: return@runOnMain
-      val target = camera.toCameraPosition(map.cameraPosition)
-      if (map.cameraPosition.approximatelyEquals(target)) {
-        return@runOnMain
-      }
+    val target = camera.toCameraPosition(map.cameraPosition)
+    if (map.cameraPosition.approximatelyEquals(target)) {
+      return
+    }
 
-      val update = CameraUpdateFactory.newCameraPosition(target)
-      if (animated) {
-        if (durationMs > 0) {
-          map.animateCamera(update, durationMs, null)
-        } else {
-          map.animateCamera(update)
-        }
+    val update = CameraUpdateFactory.newCameraPosition(target)
+    if (animated) {
+      if (durationMs > 0) {
+        map.animateCamera(update, durationMs, null)
       } else {
-        map.moveCamera(update)
+        map.animateCamera(update)
       }
+    } else {
+      map.moveCamera(update)
     }
   }
 
@@ -711,26 +694,6 @@ class GoogleMapProviderAdapter(
 
   private fun updateOverlayViewportSize() {
     overlayController.setViewportSize(view.width, view.height)
-  }
-
-  private fun runOnMain(block: () -> Unit) {
-    if (Looper.myLooper() == Looper.getMainLooper()) {
-      block()
-    } else {
-      mainHandler.post(block)
-    }
-  }
-
-  private fun <T> promiseOnMain(block: () -> T): Promise<T> {
-    val promise = Promise<T>()
-    runOnMain {
-      try {
-        promise.resolve(block())
-      } catch (error: Throwable) {
-        promise.reject(error)
-      }
-    }
-    return promise
   }
 
   private fun handleRegionWillChange(userInteracting: Boolean) {
@@ -804,6 +767,8 @@ class GoogleMapProviderAdapter(
    * detaching from the window deliberately does not come here.
    */
   private fun destroyMapView() {
+    deferredMap.release()
+
     if (lifecycle.isDestroyed) {
       return
     }
@@ -817,8 +782,3 @@ class GoogleMapProviderAdapter(
 }
 
 private fun normalizeGoogleMapId(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }
-
-private fun emptyVisibleRegion(): VisibleRegion {
-  val zero = Coordinate(latitude = 0.0, longitude = 0.0)
-  return VisibleRegion(nearLeft = zero, nearRight = zero, farLeft = zero, farRight = zero)
-}

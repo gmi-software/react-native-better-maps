@@ -67,8 +67,8 @@ export default function BenchmarkApp() {
   const [provider, setProvider] = useState<BenchmarkProvider>(PROVIDERS[0]);
   const [manualActive, setManualActive] = useState(false);
   const [scenarioIndex, setScenarioIndex] = useState(0);
-  const [mapProps, setMapProps] = useState<BenchmarkMapProps>(
-    SCENARIOS[0].props,
+  const [mapProps, setMapProps] = useState<BenchmarkMapProps>(() =>
+    SCENARIOS[0].props(),
   );
   const [mapKey, setMapKey] = useState(0);
   const [results, setResults] = useState<ScenarioResult[]>([]);
@@ -104,7 +104,7 @@ export default function BenchmarkApp() {
         clearTimeout(timeout);
         resolve();
       };
-      setMapProps(next.props);
+      setMapProps(next.props());
       setMapKey((key) => key + 1);
     });
   }, []);
@@ -176,8 +176,15 @@ export default function BenchmarkApp() {
     const active = manualRecording.current;
     if (active == null) {
       const beforeBytes = await memoryFootprintBytes();
-      manualRecording.current = { lag: startJsLagSampler(), beforeBytes };
-      await startFrameRecording();
+      const lag = startJsLagSampler();
+      try {
+        await startFrameRecording();
+      } catch (error) {
+        lag.stop();
+        setStatus(`Failed: ${String(error)}`);
+        return;
+      }
+      manualRecording.current = { lag, beforeBytes };
       setManualActive(true);
       setStatus('Recording: gesture now, then tap Stop');
       return;
@@ -226,7 +233,7 @@ export default function BenchmarkApp() {
         return;
       }
       setScenarioIndex(index);
-      setMapProps(SCENARIOS[index].props);
+      setMapProps(SCENARIOS[index].props());
       setMapKey((key) => key + 1);
     },
     [running],
@@ -250,7 +257,8 @@ export default function BenchmarkApp() {
   const commonMapProps = {
     style: styles.map,
     region: mapProps.region,
-    markers: mapProps.markers,
+    markers: mapProps.markerCollection == null ? mapProps.markers : undefined,
+    markerCollection: mapProps.markerCollection,
     polylines: mapProps.polylines,
     polygons: mapProps.polygons,
     clusteringEnabled: mapProps.clusteringEnabled,

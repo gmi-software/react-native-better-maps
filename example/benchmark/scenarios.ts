@@ -1,8 +1,9 @@
-import type {
-  Camera,
-  MapViewRef,
-  MarkerDescriptor,
-  Region,
+import {
+  MarkerCollection,
+  type Camera,
+  type MapViewRef,
+  type MarkerDescriptor,
+  type Region,
 } from 'react-native-better-maps';
 import {
   POLAND_REGION,
@@ -11,6 +12,7 @@ import {
   markers,
   polygonGrid,
   stepMarkers,
+  stepPositions,
   type PolygonDescriptor,
   type PolylineDescriptor,
 } from './datasets';
@@ -19,6 +21,7 @@ import {
 export interface BenchmarkMapProps {
   region: Region;
   markers?: MarkerDescriptor[];
+  markerCollection?: MarkerCollection;
   polylines?: PolylineDescriptor[];
   polygons?: PolygonDescriptor[];
   clusteringEnabled?: boolean;
@@ -36,12 +39,36 @@ export interface BenchmarkScenario {
   id: string;
   name: string;
   description: string;
-  props: BenchmarkMapProps;
+  /** Built at mount time so native collections are created lazily. */
+  props(): BenchmarkMapProps;
   /** Extra settle time after `onMapReady` before recording starts. */
   settleMs?: number;
   /** Also fail the scenario when the JS thread cannot keep up with the frame budget. */
   checkJsLag?: boolean;
   run(context: ScenarioContext): Promise<void>;
+}
+
+const collectionCache = new Map<number, MarkerCollection>();
+
+/**
+ * One `MarkerCollection` per dataset size so `props()` and `run()` share the
+ * same instance. Pass `reset: true` from `props()` so each mount starts from
+ * the baseline dataset; `run()` must reuse the instance without resetting, or
+ * the reset `set()` would land inside the recording window.
+ */
+function collectionOf(
+  count: number,
+  options: { reset?: boolean } = {},
+): MarkerCollection {
+  let collection = collectionCache.get(count);
+  if (collection == null) {
+    collection = new MarkerCollection();
+    collection.set(markers(count));
+    collectionCache.set(count, collection);
+  } else if (options.reset) {
+    collection.set(markers(count));
+  }
+  return collection;
 }
 
 function cameraAt(region: Region, overrides: Partial<Camera> = {}): Camera {
@@ -129,7 +156,7 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'A-empty-idle',
     name: 'A · Empty map',
     description: 'No overlays. 3 s idle, then a short pan.',
-    props: { region: WARSAW_REGION },
+    props: () => ({ region: WARSAW_REGION }),
     async run(context) {
       await context.sleep(3000);
       await pan(context, WARSAW_REGION, 3);
@@ -139,21 +166,21 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'B-markers-100',
     name: 'B · 100 markers',
     description: 'Pan with 100 markers.',
-    props: { region: WARSAW_REGION, markers: markers(100) },
+    props: () => ({ region: WARSAW_REGION, markers: markers(100) }),
     run: (context) => pan(context, WARSAW_REGION),
   },
   {
     id: 'C-markers-1k',
     name: 'C · 1,000 markers',
     description: 'Pan with 1,000 markers (viewport pipeline, no clustering).',
-    props: { region: WARSAW_REGION, markers: markers(1_000) },
+    props: () => ({ region: WARSAW_REGION, markers: markers(1_000) }),
     run: (context) => pan(context, WARSAW_REGION),
   },
   {
     id: 'D-markers-10k',
     name: 'D · 10,000 markers',
     description: 'Pan with 10,000 markers (viewport LOD, no clustering).',
-    props: { region: WARSAW_REGION, markers: markers(10_000) },
+    props: () => ({ region: WARSAW_REGION, markers: markers(10_000) }),
     settleMs: 2500,
     run: (context) => pan(context, WARSAW_REGION),
   },
@@ -161,11 +188,11 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'E-clustered-10k',
     name: 'E · 10,000 clustered',
     description: 'Zoom sweep across octaves, then a pan, with clustering on.',
-    props: {
+    props: () => ({
       region: POLAND_REGION,
       markers: markers(10_000),
       clusteringEnabled: true,
-    },
+    }),
     settleMs: 2500,
     async run(context) {
       await zoomSweep(context, POLAND_REGION);
@@ -176,7 +203,7 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'F-pan-10k',
     name: 'F · Long pan',
     description: 'Ten animated pan legs with 10,000 markers.',
-    props: { region: WARSAW_REGION, markers: markers(10_000) },
+    props: () => ({ region: WARSAW_REGION, markers: markers(10_000) }),
     settleMs: 2500,
     run: (context) => pan(context, WARSAW_REGION, 10, 0.02, 500),
   },
@@ -184,7 +211,7 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'G-zoom-10k',
     name: 'G · Zoom sweep',
     description: 'Zoom across five levels with 10,000 markers.',
-    props: { region: WARSAW_REGION, markers: markers(10_000) },
+    props: () => ({ region: WARSAW_REGION, markers: markers(10_000) }),
     settleMs: 2500,
     run: (context) => zoomSweep(context, WARSAW_REGION),
   },
@@ -192,16 +219,35 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'H-rotate-10k',
     name: 'H · Rotation',
     description: 'Four heading changes with 10,000 markers.',
-    props: { region: WARSAW_REGION, markers: markers(10_000) },
+    props: () => ({ region: WARSAW_REGION, markers: markers(10_000) }),
     settleMs: 2500,
     run: (context) => rotate(context, WARSAW_REGION),
   },
   {
-    id: 'I-animated-markers',
-    name: 'I · Animated markers',
+    id: 'I-animated-collection',
+    name: 'I · Animated markers (collection)',
     description:
-      '100 of 1,000 markers move at 10 Hz for 5 s through prop updates.',
-    props: { region: WARSAW_REGION, markers: markers(1_000) },
+      '100 of 1,000 markers move at 10 Hz for 5 s through MarkerCollection.updatePositions.',
+    props: () => ({
+      region: WARSAW_REGION,
+      markerCollection: collectionOf(1_000, { reset: true }),
+    }),
+    checkJsLag: true,
+    async run(context) {
+      const collection = collectionOf(1_000);
+      const base = markers(1_000);
+      for (let tick = 1; tick <= 50; tick += 1) {
+        collection.updatePositions(stepPositions(base, 100, tick));
+        await context.sleep(100);
+      }
+    },
+  },
+  {
+    id: 'I2-animated-prop',
+    name: 'I2 · Animated markers (prop)',
+    description:
+      '100 of 1,000 markers move at 10 Hz for 5 s through new `markers` arrays, compiled to deltas.',
+    props: () => ({ region: WARSAW_REGION, markers: markers(1_000) }),
     checkJsLag: true,
     async run(context) {
       let current = markers(1_000);
@@ -217,11 +263,11 @@ export const SCENARIOS: BenchmarkScenario[] = [
     name: 'K · Polylines and polygons',
     description:
       'A 5,000-point route and 200 polygons; five style changes, then a pan.',
-    props: {
+    props: () => ({
       region: WARSAW_REGION,
       polylines: [longRoute()],
       polygons: polygonGrid(),
-    },
+    }),
     async run(context) {
       const colors = ['#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#FF3B30'];
       for (const color of colors) {
@@ -235,11 +281,41 @@ export const SCENARIOS: BenchmarkScenario[] = [
     id: 'L-idle-after-pan',
     name: 'L · Idle after a pan',
     description: 'Three pan legs with 10,000 markers, then 5 s of nothing.',
-    props: { region: WARSAW_REGION, markers: markers(10_000) },
+    props: () => ({ region: WARSAW_REGION, markers: markers(10_000) }),
     settleMs: 2500,
     async run(context) {
       await pan(context, WARSAW_REGION, 3);
       await context.sleep(5000);
+    },
+  },
+  {
+    id: 'M-one-of-10k',
+    name: 'M · One marker of 10,000',
+    description:
+      'One marker of a 10,000-marker collection is upserted every 100 ms for 3 s.',
+    props: () => ({
+      region: WARSAW_REGION,
+      markerCollection: collectionOf(10_000, { reset: true }),
+    }),
+    settleMs: 2500,
+    checkJsLag: true,
+    async run(context) {
+      const collection = collectionOf(10_000);
+      const base = markers(10_000);
+      for (let tick = 1; tick <= 30; tick += 1) {
+        const marker = base[tick];
+        collection.upsert([
+          {
+            ...marker,
+            title: `Moved ${tick}`,
+            coordinate: {
+              latitude: marker.coordinate.latitude + 0.0004 * tick,
+              longitude: marker.coordinate.longitude,
+            },
+          },
+        ]);
+        await context.sleep(100);
+      }
     },
   },
 ];

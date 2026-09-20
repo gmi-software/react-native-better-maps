@@ -1,0 +1,10 @@
+{
+  "name": "frame-stats",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frame-interval recorder for the react-native-better-maps benchmark harness",
+  "main": "index.ts",
+  "license": "MIT",
+  "author": "gmi.software",
+  "homepage": "https://github.com/gmi-software/react-native-better-maps"
+}

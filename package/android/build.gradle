@@ -29,6 +29,16 @@ apply plugin: 'org.jetbrains.kotlin.android'
 apply from: '../nitrogen/generated/android/NitroMaps+autolinking.gradle'
 apply plugin: 'com.facebook.react'
 
+react {
+    // Nitrogen generates this library's bindings; React Native's codegen has
+    // nothing to generate here. Its default root is the package directory, and
+    // with an isolated installer (bun, pnpm) that directory contains
+    // `node_modules/react-native`, so the plugin generated React Native's own
+    // core specs into this library and release dex merging then failed with
+    // "Type com.facebook.fbreact.specs.* is defined multiple times".
+    jsRootDir = file("$projectDir/../src")
+}
+
 android {
     namespace 'com.margelo.nitro.nitromaps'
 

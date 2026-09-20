@@ -222,6 +222,9 @@ final class GoogleMapOverlayController {
       return
     }
 
+    let signpost = MapTrace.begin("applyMarkerDiff")
+    defer { MapTrace.end("applyMarkerDiff", signpost) }
+
     for key in diff.removedKeys {
       markers.removeValue(forKey: key)?.map = nil
       markerVersions.removeValue(forKey: key)

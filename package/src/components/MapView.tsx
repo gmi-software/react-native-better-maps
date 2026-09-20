@@ -86,6 +86,7 @@ export function MapView({
   showsCompass,
   showsScale,
   pinStyle,
+  markerRendering,
   customMapStyle,
   clusteringEnabled,
   mapPadding,
@@ -375,6 +376,7 @@ export function MapView({
       showsCompass={showsCompass}
       showsScale={showsScale}
       pinStyle={pinStyle}
+      markerRendering={markerRendering}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
       mapPadding={stableMapPadding}

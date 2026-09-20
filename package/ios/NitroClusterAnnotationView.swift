@@ -76,7 +76,7 @@ final class NitroClusterAnnotationView: MKAnnotationView {
     accessibilityHint = NSLocalizedString("Double tap to zoom in", comment: "Map marker cluster hint")
   }
 
-  private static func format(_ count: Int) -> String {
+  static func format(_ count: Int) -> String {
     if count >= 1000 {
       return String(format: "%.1fk", Double(count) / 1000)
     }

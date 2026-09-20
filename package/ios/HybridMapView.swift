@@ -167,6 +167,11 @@ final class HybridMapView: HybridMapViewSpec {
     set { setBackedOnMain(newValue, store: \.pinStyle) { $0.pinStyle = $1 } }
   }
 
+  var markerRendering: MarkerRendering? {
+    get { getBacked(\.markerRendering) }
+    set { setBackedOnMain(newValue, store: \.markerRendering) { $0.markerRendering = $1 } }
+  }
+
   var onRegionChange: ((Region) -> Void)? {
     get { getBacked(\.onRegionChange) }
     set { setBackedOnMain(newValue, store: \.onRegionChange) { $0.onRegionChange = $1 } }

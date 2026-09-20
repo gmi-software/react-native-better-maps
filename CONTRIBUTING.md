@@ -23,6 +23,69 @@ Thank you for your interest in contributing!
    bun run example start
    ```
 
+## Building the native code
+
+`bun run lint`, `bun run typecheck` and `bun run build` never touch `package/ios` or
+`package/android` — they stop at TypeScript. The Swift, Kotlin and C++ sources are compiled by
+the **Native** workflow, which runs on pull requests that change them and gates the npm publish.
+
+Nothing native is committed: `package/nitrogen/`, `package/plugin/build/`, `example/ios/` and
+`example/android/` are all gitignored, and the Gradle wrapper and Xcode workspace only exist
+after an Expo prebuild. To reproduce a red native job locally, run the same chain CI does:
+
+```bash
+bun install
+bun run --filter react-native-better-maps build:plugin   # app.plugin.js resolves to plugin/build
+bun run nitrogen                                         # the podspec and build.gradle load generated files
+```
+
+Then, for iOS. Keep `--scratch-path` on `swift test`: its default is `package/ios/.build`, which sits
+inside the podspec's `ios/**/*.swift` glob.
+
+```bash
+swift test --package-path package/ios --scratch-path "$TMPDIR/spm-build"
+
+(cd example && bunx expo prebuild --platform ios --no-install)
+(cd example/ios && pod install)
+xcodebuild build \
+  -workspace example/ios/NitroMapsExample.xcworkspace \
+  -scheme react-native-better-maps \
+  -configuration Debug \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath "$TMPDIR/better-maps-dd" \
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO
+```
+
+`ARCHS` is pinned because a generic destination has no active arch, so the Debug default of
+`ONLY_ACTIVE_ARCH=YES` would otherwise build arm64 and x86_64 for no extra signal.
+
+Set `GOOGLE_MAPS_IOS_API_KEY` to any non-empty string before `expo prebuild` to compile the
+Google Maps adapters as well. The config plugin writes `betterMaps.iosGoogleProvider` into
+`Podfile.properties.json`, and the podspec only depends on `GoogleMaps` when that flag is set —
+so without it every file behind `#if canImport(GoogleMaps)` compiles to nothing. CI builds both
+configurations for exactly this reason.
+
+And for Android:
+
+```bash
+(cd example && bunx expo prebuild --platform android --no-install)
+(cd example/android && ./gradlew \
+  :react-native-better-maps:assembleDebug \
+  :react-native-better-maps:testDebugUnitTest \
+  -PreactNativeArchitectures=arm64-v8a)
+```
+
+Both tasks go in one invocation: a second `./gradlew` pays the configuration phase, which shells out
+to node, all over again. No Google Maps key is needed to build Android; it is only read at runtime.
+
+Two things that waste time if you do not know them:
+
+- Name the Xcode scheme explicitly. `xcodebuild -list` returns the pod schemes first, so
+  letting it pick the default gives a green `BUILD SUCCEEDED` that never compiled the library.
+- Re-run `pod install` after switching branches. `example/ios` is gitignored, so the Pods
+  project is whatever the previous checkout left behind and can reference files that no longer
+  exist.
+
 ## Scripts
 
 | Script | Description |

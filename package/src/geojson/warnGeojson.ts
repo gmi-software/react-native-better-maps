@@ -1,7 +1,3 @@
-export function warnGeojson(message: string): void {
-  if ((globalThis as { __DEV__?: boolean }).__DEV__ !== true) {
-    return;
-  }
+import { createWarn } from '../utils/warn';
 
-  console.warn(`[react-native-better-maps] Geojson: ${message}`);
-}
+export const warnGeojson = createWarn('Geojson');

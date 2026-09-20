@@ -36,6 +36,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Google Maps setup](#google-maps-setup)
 - [Marker entering animations](#marker-entering-animations)
 - [Re-renders](#re-renders)
+- [Invalid input](#invalid-input)
 - [Capability matrix](#capability-matrix)
 - [Public API](#public-api)
 - [Example app](#example-app)
@@ -539,6 +540,20 @@ setMarkers((current) =>
   ),
 );
 ```
+
+## Invalid input
+
+A coordinate that arrives as `NaN` or out of range is dropped instead of being forwarded to MapKit and the Google Maps SDK, which throw on it:
+
+- An invalid `region` is ignored, and the map keeps the region it already had.
+- An overlay whose coordinates, ring length or radius cannot be drawn is skipped; its neighbours still render.
+- Anything supplied through `region` or through a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
+
+Where the check runs depends on the entry point. `region` and `fitToCoordinates` are guarded natively on both platforms, so a `hybridRef` call cannot reach the SDKs either. Overlay descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down; those skips are reported to logcat rather than `console.warn`.
+
+Two gaps are worth knowing about: the `camera` prop is not validated anywhere, and descriptors passed through the bulk `markers` prop are checked on neither side - only the `<Marker>` child is.
+
+Valid means: latitude and longitude finite and within ±90 / ±180, region deltas finite and greater than 0, two coordinates for a polyline, three per polygon ring, and a finite radius of at least 0 for a circle. A region whose span would run past a pole is pulled back to what the map can show rather than rejected.
 
 ## Capability matrix
 

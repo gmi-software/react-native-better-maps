@@ -6,6 +6,7 @@ import {
   type Ref,
   type RefObject,
 } from 'react';
+import { useValidCamera } from '../camera/useValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
 import { useNitroCallback } from '../hooks/useNitroCallback';
 import { useStableValue } from '../hooks/useStableValue';
@@ -134,6 +135,7 @@ export function MapView({
     enteringAnimationsEqual,
   );
   const validRegion = useValidRegion(region);
+  const validCamera = useValidCamera(camera);
 
   const hasMarkerPress =
     onMarkerPressProp != null || hasCollectedMarkerPress;
@@ -285,7 +287,7 @@ export function MapView({
       googleMapId={googleMapId}
       mapType={mapType}
       region={validRegion}
-      camera={camera}
+      camera={validCamera}
       scrollEnabled={scrollEnabled}
       zoomEnabled={zoomEnabled}
       rotateEnabled={rotateEnabled}

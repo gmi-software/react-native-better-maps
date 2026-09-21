@@ -271,6 +271,15 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double = 0) {
+    // `setCamera` raises an Objective-C NSException - `Invalid camera
+    // centerCoordinate` - from `-[MKMapCamera _validate]` for a center MapKit
+    // cannot place, and Swift cannot catch that. The framing values do not
+    // raise, but a non-finite one collapses the altitude or leaves
+    // `view.region` reading back as `NaN`.
+    guard camera.isValid else {
+      return
+    }
+
     let mapCamera = camera.toMKMapCamera()
     guard !view.camera.approximatelyEquals(mapCamera) else {
       return

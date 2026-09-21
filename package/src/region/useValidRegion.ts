@@ -3,8 +3,8 @@ import type { Region } from '../types/region';
 import { resolveRegionProp } from './resolveRegionProp';
 
 /**
- * Holds the last region the native view accepted, so an invalid one can be
- * dropped without the prop ever transitioning back to `undefined`.
+ * Holds the last region the native view accepted, so an unset or invalid one
+ * never makes the prop transition back to `undefined`.
  *
  * Memoized on region identity so a stable object is checked - and warned about
  * - once rather than on every render. The ref is written after commit, as in

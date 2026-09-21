@@ -45,6 +45,15 @@ describe('resolveRegionProp', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
+  test('holds the last accepted region when the prop is unset', () => {
+    (globalThis as { __DEV__?: boolean }).__DEV__ = true;
+
+    // `region={enabled ? region : undefined}` on a mounted view: unsetting it
+    // reaches the native view as `null`, which throws in the struct converter.
+    expect(resolveRegionProp(undefined, validRegion)).toBe(validRegion);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   test('drops an invalid region and warns in development', () => {
     (globalThis as { __DEV__?: boolean }).__DEV__ = true;
 

@@ -19,7 +19,7 @@ class LatLngBoundsEdgePaddingTest {
     val grown =
       requireNotNull(
         bounds().expandedForEdgePadding(
-          padding(top = 200.0),
+          padding(top = 200),
           mapPadding = null,
           viewportWidthPx = 400,
           viewportHeightPx = 800,
@@ -38,7 +38,7 @@ class LatLngBoundsEdgePaddingTest {
     val grown =
       requireNotNull(
         bounds().expandedForEdgePadding(
-          padding(top = 50.0, right = 50.0, bottom = 50.0, left = 50.0),
+          padding(top = 50, right = 50, bottom = 50, left = 50),
           mapPadding = null,
           viewportWidthPx = 400,
           viewportHeightPx = 800,
@@ -56,8 +56,8 @@ class LatLngBoundsEdgePaddingTest {
     val grown =
       requireNotNull(
         bounds().expandedForEdgePadding(
-          padding(top = 200.0),
-          mapPadding = padding(left = 100.0),
+          padding(top = 200),
+          mapPadding = padding(left = 100),
           viewportWidthPx = 400,
           viewportHeightPx = 800,
         ),
@@ -70,28 +70,11 @@ class LatLngBoundsEdgePaddingTest {
   }
 
   @Test
-  fun wrapsAWestEdgeGrownPastTheAntimeridian() {
-    val grown =
-      requireNotNull(
-        LatLngBounds(LatLng(-0.01, -179.0), LatLng(0.01, -174.0)).expandedForEdgePadding(
-          padding(left = 200.0),
-          mapPadding = null,
-          viewportWidthPx = 600,
-          viewportHeightPx = 800,
-        ),
-      )
-
-    // -179 minus 2.5 degrees, wrapped back into range.
-    assertEquals(178.5, grown.southwest.longitude, TOLERANCE)
-    assertEquals(-174.0, grown.northeast.longitude, TOLERANCE)
-  }
-
-  @Test
-  fun ignoresInsetsAFitCannotUse() {
+  fun growsTheBottomEdgeOnItsOwn() {
     val grown =
       requireNotNull(
         bounds().expandedForEdgePadding(
-          padding(top = Double.NaN, bottom = 200.0, left = -100.0),
+          padding(bottom = 200),
           mapPadding = null,
           viewportWidthPx = 400,
           viewportHeightPx = 800,
@@ -104,11 +87,28 @@ class LatLngBoundsEdgePaddingTest {
   }
 
   @Test
+  fun wrapsAWestEdgeGrownPastTheAntimeridian() {
+    val grown =
+      requireNotNull(
+        LatLngBounds(LatLng(-0.01, -179.0), LatLng(0.01, -174.0)).expandedForEdgePadding(
+          padding(left = 200),
+          mapPadding = null,
+          viewportWidthPx = 600,
+          viewportHeightPx = 800,
+        ),
+      )
+
+    // -179 minus 2.5 degrees, wrapped back into range.
+    assertEquals(178.5, grown.southwest.longitude, TOLERANCE)
+    assertEquals(-174.0, grown.northeast.longitude, TOLERANCE)
+  }
+
+  @Test
   fun keepsTheBoundsWhenThereIsNothingToGrowThemBy() {
     assertNull(
       bounds().expandedForEdgePadding(
         padding = null,
-        mapPadding = padding(top = 100.0),
+        mapPadding = padding(top = 100),
         viewportWidthPx = 400,
         viewportHeightPx = 800,
       ),
@@ -127,7 +127,7 @@ class LatLngBoundsEdgePaddingTest {
   fun keepsTheBoundsWhenTheInsetsFillTheViewport() {
     assertNull(
       bounds().expandedForEdgePadding(
-        padding(right = 200.0, left = 200.0),
+        padding(right = 200, left = 200),
         mapPadding = null,
         viewportWidthPx = 400,
         viewportHeightPx = 800,
@@ -135,8 +135,8 @@ class LatLngBoundsEdgePaddingTest {
     )
     assertNull(
       bounds().expandedForEdgePadding(
-        padding(top = 100.0),
-        mapPadding = padding(top = 400.0, bottom = 400.0),
+        padding(top = 100),
+        mapPadding = padding(top = 400, bottom = 400),
         viewportWidthPx = 400,
         viewportHeightPx = 800,
       ),
@@ -147,7 +147,7 @@ class LatLngBoundsEdgePaddingTest {
   fun keepsBoundsWithoutAnyExtent() {
     assertNull(
       LatLngBounds(LatLng(1.0, 1.0), LatLng(1.0, 1.0)).expandedForEdgePadding(
-        padding(top = 100.0),
+        padding(top = 100),
         mapPadding = null,
         viewportWidthPx = 400,
         viewportHeightPx = 800,
@@ -158,9 +158,9 @@ class LatLngBoundsEdgePaddingTest {
   private fun bounds(): LatLngBounds = LatLngBounds(LatLng(-0.01, -0.02), LatLng(0.01, 0.02))
 
   private fun padding(
-    top: Double = 0.0,
-    right: Double = 0.0,
-    bottom: Double = 0.0,
-    left: Double = 0.0,
-  ): EdgePadding = EdgePadding(top = top, right = right, bottom = bottom, left = left)
+    top: Int = 0,
+    right: Int = 0,
+    bottom: Int = 0,
+    left: Int = 0,
+  ): EdgePaddingPixels = EdgePaddingPixels(top = top, right = right, bottom = bottom, left = left)
 }

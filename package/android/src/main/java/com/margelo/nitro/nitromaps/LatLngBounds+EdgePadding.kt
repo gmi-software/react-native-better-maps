@@ -34,34 +34,24 @@ private const val MAX_MERCATOR_LATITUDE = 85.05112877980659
  * bounds inside the region its own padding leaves over and centres them there already, so
  * adding it here would count it twice.
  *
- * Returns null when the caller should just fit the bounds it has: when there is no
- * [padding], when the insets fill the viewport, or for bounds without extent on either axis
- * (every coordinate in one spot), which the SDK fits at its maximum zoom rather than at a
- * scale these bounds imply.
+ * Returns null when the caller should just fit the bounds it has: when there are no
+ * [padding] insets, when they fill the viewport, or for bounds without extent on either
+ * axis (every coordinate in one spot), which the SDK fits at its maximum zoom rather than
+ * at a scale these bounds imply.
  */
 internal fun LatLngBounds.expandedForEdgePadding(
-  padding: EdgePadding?,
-  mapPadding: EdgePadding?,
+  padding: EdgePaddingPixels?,
+  mapPadding: EdgePaddingPixels?,
   viewportWidthPx: Int,
   viewportHeightPx: Int,
 ): LatLngBounds? {
-  if (padding == null) {
+  if (padding == null || padding.isEmpty) {
     return null
   }
 
-  val left = insetPixels(padding.left)
-  val top = insetPixels(padding.top)
-  val right = insetPixels(padding.right)
-  val bottom = insetPixels(padding.bottom)
-  if (left == 0.0 && top == 0.0 && right == 0.0 && bottom == 0.0) {
-    return null
-  }
-
-  val contentWidth =
-    viewportWidthPx - left - right - insetPixels(mapPadding?.left) - insetPixels(mapPadding?.right)
-  val contentHeight =
-    viewportHeightPx - top - bottom - insetPixels(mapPadding?.top) - insetPixels(mapPadding?.bottom)
-  if (contentWidth <= 0.0 || contentHeight <= 0.0) {
+  val contentWidth = viewportWidthPx - padding.horizontal - (mapPadding?.horizontal ?: 0)
+  val contentHeight = viewportHeightPx - padding.vertical - (mapPadding?.vertical ?: 0)
+  if (contentWidth <= 0 || contentHeight <= 0) {
     return null
   }
 
@@ -81,7 +71,7 @@ internal fun LatLngBounds.expandedForEdgePadding(
     return null
   }
 
-  val grownLongitudeSpan = longitudeSpan + (left + right) / scale * 360.0
+  val grownLongitudeSpan = longitudeSpan + padding.horizontal / scale * 360.0
   if (grownLongitudeSpan >= 360.0) {
     return null
   }
@@ -90,23 +80,14 @@ internal fun LatLngBounds.expandedForEdgePadding(
   // across the antimeridian need.
   return LatLngBounds(
     LatLng(
-      latitudeAtMercatorY((southEdge + bottom / scale).coerceAtMost(1.0)),
-      southwest.longitude - left / scale * 360.0,
+      latitudeAtMercatorY((southEdge + padding.bottom / scale).coerceAtMost(1.0)),
+      southwest.longitude - padding.left / scale * 360.0,
     ),
     LatLng(
-      latitudeAtMercatorY((northEdge - top / scale).coerceAtLeast(0.0)),
-      northeast.longitude + right / scale * 360.0,
+      latitudeAtMercatorY((northEdge - padding.top / scale).coerceAtLeast(0.0)),
+      northeast.longitude + padding.right / scale * 360.0,
     ),
   )
-}
-
-/** Drops the insets a fit cannot use: `NaN`, infinity and negative values all read as none. */
-private fun insetPixels(value: Double?): Double {
-  if (value == null || !value.isFinite()) {
-    return 0.0
-  }
-
-  return value.coerceAtLeast(0.0)
 }
 
 /** Web Mercator y in `0.0..1.0`, 0 at the northern edge of the projection and 1 at the southern. */

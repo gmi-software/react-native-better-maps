@@ -119,6 +119,13 @@ describeFieldCoverage(
       'image.scale',
       (d) => ({ ...d, image: { ...d.image, uri: 'asset:/pin.png', scale: 3 } }),
     ],
+    [
+      'image.origin',
+      (d) => ({
+        ...d,
+        image: { ...d.image, uri: 'asset:/pin.png', origin: 'bundled' as const },
+      }),
+    ],
     ['a cleared image', (d) => ({ ...d, image: undefined })],
     ['markerColor', (d) => ({ ...d, markerColor: '#007AFF' })],
     ['a cleared markerColor', (d) => ({ ...d, markerColor: undefined })],

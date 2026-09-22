@@ -369,7 +369,19 @@ Supported image sources:
 | ------------- | ---------------------- | ----------------------------------------- |
 | Bundled asset | `require('./pin.png')` | Resolved on JS side before crossing Nitro |
 | Local URI     | `{ uri: 'file:///…' }` | Platform file paths                       |
-| Remote URL    | `{ uri: 'https://…' }` | Async fetch with in-memory cache          |
+| Remote URL    | `{ uri: 'https://…' }` | Async fetch with in-memory cache; Android restricts the host, see below |
+
+### Remote image hosts on Android
+
+A remote URL you pass yourself — `image={{ uri: someUrl }}` — is checked before Android fetches
+it. The URL must use `http`/`https`, must not carry `user:password@`, and its host must not
+resolve to a private address: loopback, link-local, site-local, multicast, IPv6 unique-local, a
+`.local`/`.localhost` name, or a cloud metadata endpoint. This guards the common case of a marker
+icon URL arriving as data from an API. A rejected URL falls back to the default pin and logs
+`Rejected remote marker image URI` under the `NitroMaps` tag.
+
+`require()`d assets are exempt, including the packager URL Metro resolves them to in a
+development build. iOS does not apply this policy today.
 
 Additional props:
 

@@ -5,12 +5,22 @@ import {
   isMarkerImage,
   markerImageFromResolvedAsset,
 } from './markerImageFromResolvedAsset';
+import { warnOverlay } from './warnOverlay';
 
 const MARKER_IMAGE_CACHE_SIZE = 64;
 const resolvedImageCache = new LruCache<string, MarkerImage>(MARKER_IMAGE_CACHE_SIZE);
 
 function markerImageCacheKey(image: MarkerImage): string {
   return `${image.uri}|${image.width ?? ''}|${image.height ?? ''}|${image.scale ?? ''}`;
+}
+
+/**
+ * Provenance is stamped by this module alone: an image whose fields come from an API
+ * response must not be able to claim `'bundled'` and skip the Android host policy.
+ */
+function withoutOrigin(image: MarkerImage): MarkerImage {
+  const { origin: _origin, ...rest } = image;
+  return rest;
 }
 
 export function resolveMarkerImage(
@@ -21,13 +31,20 @@ export function resolveMarkerImage(
   }
 
   if (isMarkerImage(source)) {
-    const key = markerImageCacheKey(source);
+    const image = source.origin === undefined ? source : withoutOrigin(source);
+    const key = markerImageCacheKey(image);
     const cached = resolvedImageCache.get(key);
     if (cached != null) {
       return cached;
     }
-    resolvedImageCache.set(key, source);
-    return source;
+    if (source.origin !== undefined) {
+      // On the cache miss only, so a re-rendering marker list does not repeat it.
+      warnOverlay(
+        `marker image "${image.uri}": "origin" is set by the library and was ignored`,
+      );
+    }
+    resolvedImageCache.set(key, image);
+    return image;
   }
 
   if (typeof source === 'number') {

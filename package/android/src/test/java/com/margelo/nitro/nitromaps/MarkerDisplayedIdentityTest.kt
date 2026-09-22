@@ -11,8 +11,8 @@ class MarkerDisplayedIdentityTest {
     val pairs =
       listOf(
         "image" to (
-          marker(image = MarkerImage("asset:/pin.png", 32.0, 32.0, 2.0)) to
-            marker(image = MarkerImage("asset:/pin-alt.png", 32.0, 32.0, 2.0))
+          marker(image = MarkerImage("asset:/pin.png", 32.0, 32.0, 2.0, MarkerImageOrigin.BUNDLED)) to
+            marker(image = MarkerImage("asset:/pin-alt.png", 32.0, 32.0, 2.0, MarkerImageOrigin.BUNDLED))
         ),
         "rotation" to (marker(rotation = 0.0) to marker(rotation = 45.0)),
         "opacity" to (marker(opacity = 1.0) to marker(opacity = 0.4)),

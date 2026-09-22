@@ -101,7 +101,8 @@ function markerImagesEqual(
     left.uri === right.uri &&
     left.width === right.width &&
     left.height === right.height &&
-    left.scale === right.scale
+    left.scale === right.scale &&
+    left.origin === right.origin
   );
 }
 

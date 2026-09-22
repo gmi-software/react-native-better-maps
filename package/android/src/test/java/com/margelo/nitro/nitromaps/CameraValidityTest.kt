@@ -56,6 +56,35 @@ class CameraValidityTest {
     assertEquals(45.0f, camera(pitch = 45.0).toCameraPosition().tilt, 0.0f)
   }
 
+  /**
+   * Zoom and bearing are narrowed to `Float` on the way into `CameraPosition`, so a `Double` past
+   * `Float.MAX_VALUE` is not something the map can be handed, however finite it is as a `Double`.
+   */
+  @Test
+  fun rejectsAFramingValueThatOverflowsAFloat() {
+    assertFalse(camera(zoom = Double.MAX_VALUE).isValid())
+    assertFalse(camera(heading = -Double.MAX_VALUE).isValid())
+  }
+
+  /**
+   * What the guard above prevents, pinned against the real SDK: the builder takes the overflowed
+   * value without complaint, and its `% 360` normalization turns an infinite bearing into `NaN`.
+   */
+  @Test
+  fun anOverflowingFramingValueWouldReachTheSdkAsInfinity() {
+    val position = camera(zoom = Double.MAX_VALUE, heading = Double.MAX_VALUE).toCameraPosition()
+
+    assertEquals(Float.POSITIVE_INFINITY, position.zoom, 0.0f)
+    assertTrue(position.bearing.isNaN())
+  }
+
+  /** Pitch is coerced into the drawable range before it is narrowed, so an absurd one still draws. */
+  @Test
+  fun clampsAPitchThatOverflowsAFloat() {
+    assertTrue(camera(pitch = Double.MAX_VALUE).isValid())
+    assertEquals(90.0f, camera(pitch = Double.MAX_VALUE).toCameraPosition().tilt, 0.0f)
+  }
+
   private fun camera(
     latitude: Double = 52.23,
     longitude: Double = 21.01,

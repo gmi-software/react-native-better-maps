@@ -582,7 +582,7 @@ Where the check runs depends on the entry point. `region`, `camera` and `fitToCo
 
 One gap is worth knowing about: descriptors passed through the bulk `markers` prop are checked on neither side - only the `<Marker>` child is.
 
-Valid means: latitude and longitude finite and within ±90 / ±180, region deltas finite and greater than 0, camera `zoom` / `heading` / `pitch` / `altitude` finite when supplied, two coordinates for a polyline, three per polygon ring, and a finite radius of at least 0 for a circle. A region whose span would run past a pole is pulled back to what the map can show rather than rejected.
+Valid means: latitude and longitude finite and within ±90 / ±180, region deltas finite and greater than 0, camera `zoom` / `heading` / `pitch` / `altitude` finite when supplied (with `zoom` and `heading` also small enough for the 32-bit float the SDKs keep them in), two coordinates for a polyline, three per polygon ring, and a finite radius of at least 0 for a circle. A region whose span would run past a pole is pulled back to what the map can show rather than rejected.
 
 ## Capability matrix
 

@@ -72,4 +72,28 @@ describe('isValidCamera', () => {
     expect(isValidCamera({ ...validCamera, pitch: 120 })).toBe(true);
     expect(isValidCamera({ ...validCamera, pitch: -10 })).toBe(true);
   });
+
+  // Zoom, and bearing on Android, are narrowed to a 32-bit float before the SDK
+  // sees them, so a number past that range arrives as `Infinity` however finite
+  // it is here.
+  test('rejects a framing value that overflows a 32-bit float', () => {
+    expect(isValidCamera({ ...validCamera, zoom: Number.MAX_VALUE })).toBe(
+      false,
+    );
+    expect(isValidCamera({ ...validCamera, heading: -Number.MAX_VALUE })).toBe(
+      false,
+    );
+    expect(isValidCamera({ ...validCamera, zoom: 3.4e38 })).toBe(true);
+  });
+
+  // Pitch and altitude stay 64-bit on both platforms - pitch is clamped before
+  // it is narrowed, and altitude never reaches the Android camera at all.
+  test('accepts a large pitch or altitude', () => {
+    expect(isValidCamera({ ...validCamera, pitch: Number.MAX_VALUE })).toBe(
+      true,
+    );
+    expect(isValidCamera({ ...validCamera, altitude: Number.MAX_VALUE })).toBe(
+      true,
+    );
+  });
 });

@@ -24,7 +24,7 @@ export function resolveCameraProp(
   }
 
   warnCamera(
-    'camera ignored: invalid center coordinate, or non-finite zoom, heading, pitch or altitude',
+    'camera ignored: invalid center coordinate, or a zoom, heading, pitch or altitude the map cannot use',
   );
 
   return lastAccepted;

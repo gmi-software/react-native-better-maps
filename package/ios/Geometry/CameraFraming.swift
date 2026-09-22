@@ -13,10 +13,23 @@ enum CameraFraming {
     pitch: Double?,
     altitude: Double?
   ) -> Bool {
-    isRealOrAbsent(zoom)
+    isRealAsFloatOrAbsent(zoom)
       && isRealOrAbsent(heading)
       && isRealOrAbsent(pitch)
       && isRealOrAbsent(altitude)
+  }
+
+  /// `GMSCameraPosition` holds zoom as a `Float`, and `CameraPosition` does the
+  /// same on Android, so the value the SDK receives is the narrowed one: a
+  /// `Double` past `Float.greatestFiniteMagnitude` arrives as `infinity`. Zoom
+  /// is the only value narrowed that way - heading, pitch and altitude stay
+  /// `Double` through `CLLocationDirection` and `MKMapCamera`.
+  private static func isRealAsFloatOrAbsent(_ value: Double?) -> Bool {
+    guard let value else {
+      return true
+    }
+
+    return value.isFinite && Float(value).isFinite
   }
 
   /// An omitted value is filled in from the camera the map already has, so only

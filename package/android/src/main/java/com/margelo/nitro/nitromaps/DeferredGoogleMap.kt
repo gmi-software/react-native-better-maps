@@ -18,9 +18,18 @@ internal class DeferredGoogleMap {
   private var isReleased = false
   private val waiting = mutableListOf<(Result<GoogleMap>) -> Unit>()
 
-  /** Publishes the map and drains everything waiting for it, in call order. */
+  /**
+   * Publishes the map and drains everything waiting for it, in call order.
+   *
+   * Ignored once [release] has happened: `getMapAsync` can deliver after the
+   * adapter destroyed its `MapView`, and that map must not come back to life.
+   */
   fun attach(map: GoogleMap) {
     runOnMain {
+      if (isReleased) {
+        return@runOnMain
+      }
+
       this.map = map
       drain(Result.success(map))
     }

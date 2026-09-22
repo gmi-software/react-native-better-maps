@@ -559,12 +559,25 @@ function useMountCameraFit({
     }
 
     onResult('Mount fit · pending');
+    // A scene that is swapped out while the call is in flight must not report
+    // its own rejection over the incoming scene's status.
+    let isCurrentScene = true;
     handle
       .fitToCoordinates(coordinates, mapPadding, true)
-      .then(() => onResult('Mount fit · resolved'))
-      .catch((error: Error) =>
-        onResult(`Mount fit · rejected: ${error.message}`),
-      );
+      .then(() => {
+        if (isCurrentScene) {
+          onResult('Mount fit · resolved');
+        }
+      })
+      .catch((error: Error) => {
+        if (isCurrentScene) {
+          onResult(`Mount fit · rejected: ${error.message}`);
+        }
+      });
+
+    return () => {
+      isCurrentScene = false;
+    };
     // Mount only: this scene is keyed to the native map view it drives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

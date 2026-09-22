@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { MapViewCommands } from '../native/mapViewCommands';
 import type { MapView as NativeMapViewHybrid } from '../native/specs/MapView.nitro';
 
@@ -21,9 +21,14 @@ export function useMapViewCommands(nativeViewKey: string) {
     setCommands(new MapViewCommands<NativeMapViewHybrid>());
   }
 
-  // Also rejects whatever the outgoing channel still held: React runs this
-  // cleanup for the old instance before arming the new one.
-  useEffect(() => {
+  // Layout phase, not passive: the cleanup has to close the channel while the
+  // native view is still there. React removes the view before passive effects
+  // run, and until the channel knows it is gone a retained handle would reach
+  // the dead native object instead of being rejected here.
+  //
+  // It also rejects whatever the outgoing channel still held, because React
+  // runs this cleanup for the old instance before arming the new one.
+  useLayoutEffect(() => {
     commands.mount();
     return () => commands.unmount();
   }, [commands]);

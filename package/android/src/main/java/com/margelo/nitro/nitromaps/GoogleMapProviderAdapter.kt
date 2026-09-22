@@ -32,7 +32,7 @@ class GoogleMapProviderAdapter(
   private var googleMap: GoogleMap? = null
   private var isUserGesture = false
   private var hasFiredMapReady = false
-  private val overlayController = MapOverlayController(null, context)
+  private val overlayController = MapOverlayController(context)
   private var pendingMarkers: Array<MarkerDescriptor>? = null
   private var pendingPolylines: Array<PolylineDescriptor>? = null
   private var pendingPolygons: Array<PolygonDescriptor>? = null
@@ -214,7 +214,10 @@ class GoogleMapProviderAdapter(
           }
         }
       }
-      overlayController.setMarkers(_markers)
+      // Without a map the markers are parked, not drawn, so they must not be redelivered.
+      if (googleMap != null) {
+        overlayController.setMarkers(_markers)
+      }
     }
 
   private var _mapPadding: EdgePadding? = null

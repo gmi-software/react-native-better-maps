@@ -369,19 +369,26 @@ Supported image sources:
 | ------------- | ---------------------- | ----------------------------------------- |
 | Bundled asset | `require('./pin.png')` | Resolved on JS side before crossing Nitro |
 | Local URI     | `{ uri: 'file:///…' }` | Platform file paths                       |
-| Remote URL    | `{ uri: 'https://…' }` | Async fetch with in-memory cache; Android restricts the host, see below |
+| Remote URL    | `{ uri: 'https://…' }` | Async fetch with in-memory cache; the host is restricted, see below |
 
-### Remote image hosts on Android
+### Remote image hosts
 
-A remote URL you pass yourself — `image={{ uri: someUrl }}` — is checked before Android fetches
-it. The URL must use `http`/`https`, must not carry `user:password@`, and its host must not
-resolve to a private address: loopback, link-local, site-local, multicast, IPv6 unique-local, a
-`.local`/`.localhost` name, or a cloud metadata endpoint. This guards the common case of a marker
-icon URL arriving as data from an API. A rejected URL falls back to the default pin and logs
-`Rejected remote marker image URI` under the `NitroMaps` tag.
+A remote URL you pass yourself — `image={{ uri: someUrl }}` — is checked on both platforms before
+the image is fetched. The URL must use `http`/`https`, must not carry `user:password@`, and its
+host must not resolve to a private address: loopback, any-local, link-local, site-local,
+multicast, IPv6 unique-local, a `.local`/`.localhost` name, or a cloud metadata endpoint. This
+guards the common case of a marker icon URL arriving as data from an API.
+
+A rejected URL logs `Rejected remote marker image URI` — under the `NitroMaps` logcat tag on
+Android, and under the `NitroMaps` category of the `com.nitromaps` subsystem in the unified log
+on iOS. The marker itself falls back to the default pin on both Google providers. On Apple Maps
+it draws with no image at all, the same as any marker image that fails to load.
 
 `require()`d assets are exempt, including the packager URL Metro resolves them to in a
-development build. iOS does not apply this policy today.
+development build.
+
+If you need markers served from a private host, resolve it to an image yourself and pass the
+bytes as a local file, or proxy it through a public endpoint.
 
 Additional props:
 

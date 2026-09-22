@@ -16,6 +16,10 @@ let package = Package(
       name: "NitroMapsGeometry",
       path: "Geometry"
     ),
+    .target(
+      name: "NitroMapsRemoteImagePolicy",
+      path: "RemoteImagePolicy"
+    ),
     .testTarget(
       name: "NitroMapsColorParserTests",
       dependencies: ["NitroMapsColorParser"],
@@ -25,6 +29,11 @@ let package = Package(
       name: "NitroMapsGeometryTests",
       dependencies: ["NitroMapsGeometry"],
       path: "Tests/Geometry"
+    ),
+    .testTarget(
+      name: "NitroMapsRemoteImagePolicyTests",
+      dependencies: ["NitroMapsRemoteImagePolicy"],
+      path: "Tests/RemoteImagePolicy"
     ),
   ]
 )

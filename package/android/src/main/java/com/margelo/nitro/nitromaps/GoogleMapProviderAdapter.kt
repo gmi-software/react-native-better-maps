@@ -383,10 +383,12 @@ class GoogleMapProviderAdapter(
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
       }
       val bounds = builder.build()
-      val paddingPx = padding.toPaddingPixels()
 
       val runUpdate = {
-        val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
+        // Inside the runnable: converting the insets needs the size the map was laid out with.
+        val target =
+          bounds.expandedForEdgePadding(padding, _mapPadding, view.width, view.height) ?: bounds
+        val update = CameraUpdateFactory.newLatLngBounds(target, 0)
         if (animated == true) {
           map.animateCamera(update)
         } else {
@@ -620,10 +622,11 @@ class GoogleMapProviderAdapter(
 
     val map = googleMap ?: return
     val bounds = region.toLatLngBounds()
-    val paddingPx = _mapPadding.toPaddingPixels()
 
     val runUpdate = {
-      val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
+      // No padding argument: Google Maps already fits bounds inside the region `setPadding`
+      // leaves over, so passing `mapPadding` here as well would inset the region twice.
+      val update = CameraUpdateFactory.newLatLngBounds(bounds, 0)
       if (animated) {
         map.animateCamera(update)
       } else {

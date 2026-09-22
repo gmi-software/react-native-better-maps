@@ -54,14 +54,51 @@ internal class DeferredGoogleMap {
   fun <T> promise(block: (GoogleMap) -> T): Promise<T> {
     val promise = Promise<T>()
 
-    runOnMain {
-      val deliver: (Result<GoogleMap>) -> Unit = { result ->
-        result
-          .mapCatching(block)
-          .onSuccess { value -> promise.resolve(value) }
-          .onFailure { error -> promise.reject(error) }
+    whenAvailable { result ->
+      result
+        .mapCatching(block)
+        .onSuccess { value -> promise.resolve(value) }
+        .onFailure { error -> promise.reject(error) }
+    }
+
+    return promise
+  }
+
+  /**
+   * Like [promise], but for work that finishes in a later native callback: the
+   * promise settles when [block] calls the completion it is handed, not when
+   * [block] returns.
+   *
+   * A camera update that has to wait for the view's first layout pass finishes
+   * long after the call that scheduled it, and resolving before it ran would
+   * report success for a camera that has not moved.
+   */
+  fun promiseCompletion(block: (GoogleMap, complete: (Result<Unit>) -> Unit) -> Unit): Promise<Unit> {
+    val promise = Promise<Unit>()
+
+    whenAvailable { result ->
+      // Everything funnels through `complete`, so the promise settles exactly
+      // once whether the work finished, failed, or never started.
+      var isSettled = false
+      val complete: (Result<Unit>) -> Unit = { outcome ->
+        if (!isSettled) {
+          isSettled = true
+          outcome
+            .onSuccess { promise.resolve(Unit) }
+            .onFailure { error -> promise.reject(error) }
+        }
       }
 
+      result
+        .mapCatching { map -> block(map, complete) }
+        .onFailure { error -> complete(Result.failure(error)) }
+    }
+
+    return promise
+  }
+
+  private fun whenAvailable(deliver: (Result<GoogleMap>) -> Unit) {
+    runOnMain {
       val currentMap = map
       when {
         currentMap != null -> deliver(Result.success(currentMap))
@@ -69,8 +106,6 @@ internal class DeferredGoogleMap {
         else -> waiting += deliver
       }
     }
-
-    return promise
   }
 
   private fun drain(result: Result<GoogleMap>) {

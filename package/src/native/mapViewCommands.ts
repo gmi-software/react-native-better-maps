@@ -3,6 +3,23 @@ export const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
 export const MAP_VIEW_UNMOUNTED_BEFORE_READY_ERROR =
   'MapView was unmounted before the native map became available';
 
+/**
+ * Keeps a command's failure on the promise it returned. A native call that
+ * throws instead of rejecting would otherwise surface differently depending on
+ * whether the handle had arrived yet - the same call, caught or not caught
+ * purely by timing.
+ */
+function runCommand<Target, Result>(
+  command: (target: Target) => Promise<Result>,
+  target: Target,
+): Promise<Result> {
+  try {
+    return command(target);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
 interface BufferedCommand<Target> {
   /** Runs the command against the arrived target and settles the caller's promise. */
   flush(target: Target): void;
@@ -39,20 +56,13 @@ export class MapViewCommands<Target> {
 
     const target = this.target;
     if (target != null) {
-      return command(target);
+      return runCommand(command, target);
     }
 
     return new Promise<Result>((resolve, reject) => {
       this.buffered.push({
-        // A buffered caller already holds a promise, so a command that throws
-        // instead of rejecting has to be turned into a rejection here. Letting
-        // it escape would abandon every command queued behind it.
         flush: (arrivedTarget) => {
-          try {
-            command(arrivedTarget).then(resolve, reject);
-          } catch (error) {
-            reject(error);
-          }
+          runCommand(command, arrivedTarget).then(resolve, reject);
         },
         cancel: reject,
       });

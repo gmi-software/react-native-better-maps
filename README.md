@@ -271,7 +271,9 @@ function FittedMap({ points }: { points: Coordinate[] }) {
 
   useEffect(() => {
     // Runs before the native map exists, and still moves the camera.
-    mapRef.current?.fitToCoordinates(points, undefined, true);
+    mapRef.current
+      ?.fitToCoordinates(points, undefined, true)
+      .catch((error: Error) => console.warn(error.message));
   }, [points]);
 
   return <MapView ref={mapRef} style={{ flex: 1 }} />;
@@ -284,7 +286,10 @@ loading its tiles - and is the right hook for showing your own UI on top of a
 map that has actually drawn.
 
 A call still waiting when the map view unmounts rejects, as does any call made
-afterwards.
+afterwards, so handle the rejection the way the example above does. Development
+builds wrapped in React's `<StrictMode>` see this on every mount: React tears
+the effect down and sets it up again, the first call is rejected by that
+teardown, and the second one does the work.
 
 ## Map providers
 

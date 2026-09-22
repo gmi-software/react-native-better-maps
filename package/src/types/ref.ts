@@ -18,7 +18,9 @@ import type { EdgePadding, VisibleRegion } from './region';
  * const mapRef = useRef<MapViewRef>(null);
  *
  * useEffect(() => {
- *   mapRef.current?.fitToCoordinates(points);
+ *   mapRef.current
+ *     ?.fitToCoordinates(points)
+ *     .catch((error: Error) => console.warn(error.message));
  * }, []);
  * ```
  */

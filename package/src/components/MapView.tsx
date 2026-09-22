@@ -1,16 +1,14 @@
 import {
   useCallback,
-  useEffect,
   useImperativeHandle,
   useMemo,
-  useState,
   type Ref,
 } from 'react';
 import { useValidCamera } from '../camera/useValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
+import { useMapViewCommands } from '../hooks/useMapViewCommands';
 import { useNitroCallback } from '../hooks/useNitroCallback';
 import { useStableValue } from '../hooks/useStableValue';
-import { MapViewCommands } from '../native/mapViewCommands';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
@@ -74,20 +72,10 @@ export function MapView({
   onCirclePress: onCirclePressProp,
 }: MapViewProps & { ref?: Ref<MapViewRef> }) {
   const resolvedProvider = resolveMapProvider(provider);
-  // Identity of the native view. Both are creation-time SDK configuration, so
-  // changing either remounts it and the handle we hold becomes a dead object.
+  // Both are creation-time SDK configuration, so changing either remounts the
+  // native view.
   const nativeViewKey = `${resolvedProvider}:${googleMapId ?? ''}`;
-  const [commands, setCommands] = useState(
-    () => new MapViewCommands<NativeMapViewHybrid>(),
-  );
-  const [commandsKey, setCommandsKey] = useState(nativeViewKey);
-  if (commandsKey !== nativeViewKey) {
-    // Start a fresh channel for the incoming view so calls made during the swap
-    // are buffered again instead of dispatched to the outgoing one. The effect
-    // below rejects whatever the old channel still held.
-    setCommandsKey(nativeViewKey);
-    setCommands(new MapViewCommands<NativeMapViewHybrid>());
-  }
+  const commands = useMapViewCommands(nativeViewKey);
   const {
     markers: collectedMarkers,
     polylines: collectedPolylines,
@@ -157,11 +145,6 @@ export function MapView({
     },
     [commands],
   );
-
-  useEffect(() => {
-    commands.mount();
-    return () => commands.unmount();
-  }, [commands]);
 
   const handleMarkerPress = useCallback(
     (id: string) => {

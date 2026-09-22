@@ -351,7 +351,7 @@ class GoogleMapProviderAdapter(
       return Promise.resolved(Unit)
     }
 
-    return deferredMap.promise { map ->
+    return deferredMap.promiseCompletion { map, complete ->
       val builder = LatLngBounds.Builder()
       for (coordinate in validCoordinates) {
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
@@ -359,14 +359,19 @@ class GoogleMapProviderAdapter(
       val bounds = builder.build()
       val paddingPx = padding.toPaddingPixels()
 
-      // `newLatLngBounds` throws on a map that has no size yet.
+      // `newLatLngBounds` throws on a map that has no size yet, so the camera
+      // update waits for the first layout pass -- and so does the promise.
       runWhenMapViewLaidOut {
-        val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
-        if (animated == true) {
-          map.animateCamera(update)
-        } else {
-          map.moveCamera(update)
-        }
+        complete(
+          runCatching {
+            val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
+            if (animated == true) {
+              map.animateCamera(update)
+            } else {
+              map.moveCamera(update)
+            }
+          },
+        )
       }
     }
   }

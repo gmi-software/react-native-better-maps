@@ -71,6 +71,17 @@ describe('MapViewCommands', () => {
     await expect(pending).rejects.toThrow('native failure');
   });
 
+  test('rejects rather than throwing when an attached command throws', async () => {
+    const commands = new MapViewCommands<FakeHybrid>();
+    commands.attach(fakeHybrid());
+
+    await expect(
+      commands.run(() => {
+        throw new Error('nitro argument conversion failed');
+      }),
+    ).rejects.toThrow('nitro argument conversion failed');
+  });
+
   test('settles the whole buffer when one command throws instead of rejecting', async () => {
     const commands = new MapViewCommands<FakeHybrid>();
     const target = fakeHybrid();

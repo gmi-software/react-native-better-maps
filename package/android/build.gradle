@@ -27,7 +27,23 @@ def getExtOrIntegerDefault(name) {
 apply plugin: 'com.android.library'
 apply plugin: 'org.jetbrains.kotlin.android'
 apply from: '../nitrogen/generated/android/NitroMaps+autolinking.gradle'
-apply plugin: 'com.facebook.react'
+
+// 'com.facebook.react' is deliberately NOT applied here.
+//
+// Its only library-scoped job is React Native's codegen, and this module has no
+// TurboModule or Fabric specs to codegen — nitrogen generates the native bindings
+// into ../nitrogen/generated instead. Worse, the plugin always runs codegen for a
+// library and defaults its scan root to the Gradle project's parent, and the schema
+// CLI globs that root without excluding node_modules. So it scanned all of package/,
+// picked up every Native*/*NativeComponent spec under package/node_modules — React
+// Native's own plus those of any library hoisted there, e.g. reanimated — and
+// compiled 75 foreign classes into our AAR. They then exist twice on the release
+// dex path and D8 fails :app:mergeDexRelease (#123).
+//
+// The app's own 'com.facebook.react' reaches this module anyway: configureRepositories,
+// configureDependencies (which resolves the versionless react-android below),
+// configureBuildConfigFieldsForLibraries and configureNamespaceForLibraries all run
+// over rootProject.allprojects.
 
 android {
     namespace 'com.margelo.nitro.nitromaps'

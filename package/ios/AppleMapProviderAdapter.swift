@@ -226,12 +226,13 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     padding: EdgePadding?,
     animated: Bool?
   ) throws {
-    guard !coordinates.isEmpty else {
+    let validCoordinates = coordinates.filter { $0.isValid }
+    guard !validCoordinates.isEmpty else {
       return
     }
 
     var mapRect = MKMapRect.null
-    for coordinate in coordinates {
+    for coordinate in validCoordinates {
       let mapPoint = MKMapPoint(
         CLLocationCoordinate2D(
           latitude: coordinate.latitude,
@@ -252,7 +253,16 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func applyRegion(_ region: Region, animated: Bool = false) {
-    let targetRegion = region.toMKCoordinateRegion()
+    // `setRegion` raises an NSException Swift cannot catch, so there is no
+    // recovery once an invalid region has been handed over. `regionThatFits`
+    // pulls a span whose edges run past a pole back to something MapKit can
+    // show, as `animateToClusterRegion` already does; the guard covers what it
+    // cannot fix - a non-finite or out-of-range center.
+    guard region.isValid else {
+      return
+    }
+
+    let targetRegion = view.regionThatFits(region.toMKCoordinateRegion())
     guard !view.region.approximatelyEquals(targetRegion) else {
       return
     }

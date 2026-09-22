@@ -24,6 +24,8 @@ import {
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
 import { resolveMapProvider } from '../providers';
+import { resolveFitCoordinates } from '../region/resolveFitCoordinates';
+import { useValidRegion } from '../region/useValidRegion';
 import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
@@ -131,6 +133,7 @@ export function MapView({
     normalizeEnteringAnimation(clusterEnteringAnimation),
     enteringAnimationsEqual,
   );
+  const validRegion = useValidRegion(region);
 
   const hasMarkerPress =
     onMarkerPressProp != null || hasCollectedMarkerPress;
@@ -263,7 +266,11 @@ export function MapView({
         withHybridRef(hybridRef, (hybrid) => hybrid.getVisibleRegion()),
       fitToCoordinates: (coordinates, padding, animated) =>
         withHybridRef(hybridRef, (hybrid) =>
-          hybrid.fitToCoordinates(coordinates, padding, animated),
+          hybrid.fitToCoordinates(
+            resolveFitCoordinates(coordinates),
+            padding,
+            animated,
+          ),
         ),
     }),
     [],
@@ -277,7 +284,7 @@ export function MapView({
       provider={resolvedProvider}
       googleMapId={googleMapId}
       mapType={mapType}
-      region={region}
+      region={validRegion}
       camera={camera}
       scrollEnabled={scrollEnabled}
       zoomEnabled={zoomEnabled}

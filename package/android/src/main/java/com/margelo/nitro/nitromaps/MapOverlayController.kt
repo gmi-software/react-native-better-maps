@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import com.facebook.react.uimanager.ThemedReactContext
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -534,17 +535,27 @@ internal class MapOverlayController(
     val map = googleMap ?: return
     reconcile(
       current = polylines,
-      next = descriptors?.associateBy { it.id } ?: emptyMap(),
+      next =
+        validDescriptorsById(
+          descriptors = descriptors,
+          kind = "polyline",
+          id = { it.id },
+          isValid = { it.isValid() },
+        ),
       remove = { it.remove() },
       add = { descriptor ->
-        map.addPolyline(descriptor.toPolylineOptions()).also { polyline ->
-          polyline.tag = descriptor.id
+        addedOrNull(kind = "polyline", id = descriptor.id) {
+          map.addPolyline(descriptor.toPolylineOptions()).also { polyline ->
+            polyline.tag = descriptor.id
+          }
         }
       },
       update = { polyline, descriptor ->
         polyline.remove()
-        map.addPolyline(descriptor.toPolylineOptions()).also { replacement ->
-          replacement.tag = descriptor.id
+        addedOrNull(kind = "polyline", id = descriptor.id) {
+          map.addPolyline(descriptor.toPolylineOptions()).also { replacement ->
+            replacement.tag = descriptor.id
+          }
         }
       },
     )
@@ -554,17 +565,27 @@ internal class MapOverlayController(
     val map = googleMap ?: return
     reconcile(
       current = polygons,
-      next = descriptors?.associateBy { it.id } ?: emptyMap(),
+      next =
+        validDescriptorsById(
+          descriptors = descriptors,
+          kind = "polygon",
+          id = { it.id },
+          isValid = { it.isValid() },
+        ),
       remove = { it.remove() },
       add = { descriptor ->
-        map.addPolygon(descriptor.toPolygonOptions()).also { polygon ->
-          polygon.tag = descriptor.id
+        addedOrNull(kind = "polygon", id = descriptor.id) {
+          map.addPolygon(descriptor.toPolygonOptions()).also { polygon ->
+            polygon.tag = descriptor.id
+          }
         }
       },
       update = { polygon, descriptor ->
         polygon.remove()
-        map.addPolygon(descriptor.toPolygonOptions()).also { replacement ->
-          replacement.tag = descriptor.id
+        addedOrNull(kind = "polygon", id = descriptor.id) {
+          map.addPolygon(descriptor.toPolygonOptions()).also { replacement ->
+            replacement.tag = descriptor.id
+          }
         }
       },
     )
@@ -574,28 +595,80 @@ internal class MapOverlayController(
     val map = googleMap ?: return
     reconcile(
       current = circles,
-      next = descriptors?.associateBy { it.id } ?: emptyMap(),
+      next =
+        validDescriptorsById(
+          descriptors = descriptors,
+          kind = "circle",
+          id = { it.id },
+          isValid = { it.isValid() },
+        ),
       remove = { it.remove() },
       add = { descriptor ->
-        map.addCircle(descriptor.toCircleOptions()).also { circle ->
-          circle.tag = descriptor.id
+        addedOrNull(kind = "circle", id = descriptor.id) {
+          map.addCircle(descriptor.toCircleOptions()).also { circle ->
+            circle.tag = descriptor.id
+          }
         }
       },
       update = { circle, descriptor ->
         circle.remove()
-        map.addCircle(descriptor.toCircleOptions()).also { replacement ->
-          replacement.tag = descriptor.id
+        addedOrNull(kind = "circle", id = descriptor.id) {
+          map.addCircle(descriptor.toCircleOptions()).also { replacement ->
+            replacement.tag = descriptor.id
+          }
         }
       },
     )
   }
+
+  /** Dropping the id also removes what it used to render, since `reconcile` treats a missing id as a removal. */
+  private fun <Descriptor> validDescriptorsById(
+    descriptors: Array<Descriptor>?,
+    kind: String,
+    id: (Descriptor) -> String,
+    isValid: (Descriptor) -> Boolean,
+  ): Map<String, Descriptor> {
+    if (descriptors == null) {
+      return emptyMap()
+    }
+
+    val valid = LinkedHashMap<String, Descriptor>(descriptors.size)
+    for (descriptor in descriptors) {
+      if (!isValid(descriptor)) {
+        Log.w(NITRO_MAPS_LOG_TAG, "Skipped $kind \"${id(descriptor)}\": it cannot be drawn.")
+        continue
+      }
+
+      valid[id(descriptor)] = descriptor
+    }
+
+    return valid
+  }
+
+  /**
+   * The pre-filter only models what the descriptors declare; `GoogleMap.add*`
+   * can still reject a value for a reason of its own, and `reconcile` runs
+   * inside a view prop setter, where an escaping throw aborts the whole mount
+   * transaction.
+   */
+  private fun <T> addedOrNull(
+    kind: String,
+    id: String,
+    add: () -> T,
+  ): T? =
+    try {
+      add()
+    } catch (error: IllegalArgumentException) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Skipped $kind \"$id\": the Google Maps SDK rejected it.", error)
+      null
+    }
 
   private fun <T, Descriptor> reconcile(
     current: MutableMap<String, T>,
     next: Map<String, Descriptor>,
     remove: (T) -> Unit,
     add: (Descriptor) -> T?,
-    update: (T, Descriptor) -> T,
+    update: (T, Descriptor) -> T?,
   ) {
     val nextIds = next.keys
     val existingIds = current.keys
@@ -611,7 +684,12 @@ internal class MapOverlayController(
           current[id] = created
         }
       } else {
-        current[id] = update(existing, descriptor)
+        val updated = update(existing, descriptor)
+        if (updated == null) {
+          current.remove(id)
+        } else {
+          current[id] = updated
+        }
       }
     }
   }

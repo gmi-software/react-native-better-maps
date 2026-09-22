@@ -2,18 +2,29 @@
 
 import PackageDescription
 
+// Holds the parts of package/ios that need no MapKit, UIKit or Nitro-generated
+// types, so `swift test` can cover them. The podspec compiles them as well.
 let package = Package(
-  name: "NitroMapsColorParser",
+  name: "NitroMapsSupport",
   platforms: [.macOS(.v13)],
   targets: [
     .target(
       name: "NitroMapsColorParser",
       path: "ColorParser"
     ),
+    .target(
+      name: "NitroMapsGeometry",
+      path: "Geometry"
+    ),
     .testTarget(
       name: "NitroMapsColorParserTests",
       dependencies: ["NitroMapsColorParser"],
-      path: "Tests"
+      path: "Tests/ColorParser"
+    ),
+    .testTarget(
+      name: "NitroMapsGeometryTests",
+      dependencies: ["NitroMapsGeometry"],
+      path: "Tests/Geometry"
     ),
   ]
 )

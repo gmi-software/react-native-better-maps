@@ -249,12 +249,13 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     padding: EdgePadding?,
     animated: Bool?
   ) throws {
-    guard !coordinates.isEmpty else {
+    let validCoordinates = coordinates.filter { $0.isValid }
+    guard !validCoordinates.isEmpty else {
       return
     }
 
     var bounds = GMSCoordinateBounds()
-    for coordinate in coordinates {
+    for coordinate in validCoordinates {
       bounds = bounds.includingCoordinate(coordinate.toCLLocationCoordinate2D())
     }
     let edgePadding = padding?.toUIEdgeInsets() ?? .zero
@@ -307,6 +308,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func applyRegion(_ region: Region, animated: Bool = false) {
+    guard region.isValid else {
+      return
+    }
+
     applyCameraUpdate(
       GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: mapPadding?.toUIEdgeInsets() ?? .zero),
       animated: animated,

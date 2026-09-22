@@ -23,7 +23,7 @@ import {
   isValidCoordinate,
   isValidCoordinateList,
   isValidRadius,
-} from './validateOverlay';
+} from '../utils/validateGeometry';
 import { warnOverlay } from './warnOverlay';
 import {
   collectMarkerOverlay,

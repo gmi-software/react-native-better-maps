@@ -258,7 +258,7 @@ internal class MarkerIconFactory(
         cacheBitmap(key, resizeBitmap(bitmap, image))
       }
     } catch (error: Exception) {
-      Log.w(TAG, "Failed to load marker image: ${image.uri}", error)
+      Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image: ${image.uri}", error)
       null
     }
   }
@@ -503,7 +503,7 @@ internal class MarkerIconFactory(
     uri: String,
     reason: String,
   ) {
-    Log.w(TAG, "Rejected remote marker image URI ($reason): $uri")
+    Log.w(NITRO_MAPS_LOG_TAG, "Rejected remote marker image URI ($reason): $uri")
   }
 
   private fun resizeBitmap(
@@ -523,7 +523,6 @@ internal class MarkerIconFactory(
   }
 
   private companion object {
-    const val TAG = "NitroMaps"
     const val DEFAULT_ICON_KEY = "__default__"
     private const val DEFAULT_MARKER_WIDTH_DP = 40f
     private const val DEFAULT_MARKER_HEIGHT_DP = 52f

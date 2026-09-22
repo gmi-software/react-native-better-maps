@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.annotation.Keep
@@ -364,14 +365,21 @@ class GoogleMapProviderAdapter(
     padding: EdgePadding?,
     animated: Boolean?,
   ) {
-    if (coordinates.isEmpty()) {
+    // Filtered before the main-thread hop: a throw out of `LatLngBounds` inside
+    // `runOnMain` lands on the looper, where the JS caller cannot catch it.
+    val validCoordinates = coordinates.filter { it.isValid() }
+    val skipped = coordinates.size - validCoordinates.size
+    if (skipped > 0) {
+      Log.w(NITRO_MAPS_LOG_TAG, "fitToCoordinates skipped $skipped coordinate(s) outside the world.")
+    }
+    if (validCoordinates.isEmpty()) {
       return
     }
 
     runOnMain {
       val map = googleMap ?: return@runOnMain
       val builder = LatLngBounds.Builder()
-      for (coordinate in coordinates) {
+      for (coordinate in validCoordinates) {
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
       }
       val bounds = builder.build()
@@ -605,6 +613,11 @@ class GoogleMapProviderAdapter(
     region: Region,
     animated: Boolean = false,
   ) {
+    if (!region.isValid()) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid region: $region.")
+      return
+    }
+
     val map = googleMap ?: return
     val bounds = region.toLatLngBounds()
     val paddingPx = _mapPadding.toPaddingPixels()

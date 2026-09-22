@@ -3,9 +3,9 @@ import {
   isValidCoordinate,
   isValidCoordinateList,
   isValidRadius,
-} from '../validateOverlay';
+} from '../validateGeometry';
 
-describe('overlay validation', () => {
+describe('geometry validation', () => {
   test('validates coordinate bounds and finite values', () => {
     expect(isValidCoordinate({ latitude: 90, longitude: 180 })).toBe(true);
     expect(isValidCoordinate({ latitude: -90, longitude: -180 })).toBe(true);

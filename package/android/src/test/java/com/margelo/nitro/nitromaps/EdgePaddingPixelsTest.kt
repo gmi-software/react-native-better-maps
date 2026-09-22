@@ -38,6 +38,15 @@ class EdgePaddingPixelsTest {
     assertTrue(pixels.isEmpty)
   }
 
+  @Test
+  fun addsUpInsetsThatSaturatedOnTheWayIn() {
+    val pixels = padding(top = 1e12, bottom = 1e12).toPixels(3f)
+
+    assertEquals(Int.MAX_VALUE, pixels.top)
+    assertEquals(Int.MAX_VALUE, pixels.bottom)
+    assertEquals(2L * Int.MAX_VALUE, pixels.vertical)
+  }
+
   private fun padding(
     top: Double = 0.0,
     right: Double = 0.0,

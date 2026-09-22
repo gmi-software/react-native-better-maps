@@ -144,6 +144,18 @@ class LatLngBoundsEdgePaddingTest {
   }
 
   @Test
+  fun keepsTheBoundsWhenTwoInsetsOfAnAxisSaturate() {
+    assertNull(
+      bounds().expandedForEdgePadding(
+        padding(top = Int.MAX_VALUE, bottom = Int.MAX_VALUE),
+        mapPadding = null,
+        viewportWidthPx = 400,
+        viewportHeightPx = 800,
+      ),
+    )
+  }
+
+  @Test
   fun keepsBoundsWithoutAnyExtent() {
     assertNull(
       LatLngBounds(LatLng(1.0, 1.0), LatLng(1.0, 1.0)).expandedForEdgePadding(

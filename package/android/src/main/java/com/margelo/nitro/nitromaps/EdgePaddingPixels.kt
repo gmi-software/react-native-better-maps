@@ -13,7 +13,9 @@ internal data class EdgePaddingPixels(
   val bottom: Int,
   val left: Int,
 ) {
-  val horizontal: Int get() = left + right
-  val vertical: Int get() = top + bottom
+  // Long, because two insets that saturated at `Int.MAX_VALUE` on the way in would wrap
+  // their sum negative and read back as a viewport with room to spare.
+  val horizontal: Long get() = left.toLong() + right.toLong()
+  val vertical: Long get() = top.toLong() + bottom.toLong()
   val isEmpty: Boolean get() = top == 0 && right == 0 && bottom == 0 && left == 0
 }

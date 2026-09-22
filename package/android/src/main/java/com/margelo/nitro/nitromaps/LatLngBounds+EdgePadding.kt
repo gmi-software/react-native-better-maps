@@ -49,8 +49,8 @@ internal fun LatLngBounds.expandedForEdgePadding(
     return null
   }
 
-  val contentWidth = viewportWidthPx - padding.horizontal - (mapPadding?.horizontal ?: 0)
-  val contentHeight = viewportHeightPx - padding.vertical - (mapPadding?.vertical ?: 0)
+  val contentWidth = viewportWidthPx - padding.horizontal - (mapPadding?.horizontal ?: 0L)
+  val contentHeight = viewportHeightPx - padding.vertical - (mapPadding?.vertical ?: 0L)
   if (contentWidth <= 0 || contentHeight <= 0) {
     return null
   }

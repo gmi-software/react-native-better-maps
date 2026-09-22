@@ -66,6 +66,22 @@ enum RemoteMarkerUriPolicy {
     return allowed ? nil : "host not allowlisted"
   }
 
+  /// The parts of a rejected URI that are safe to write to the log.
+  ///
+  /// A rejected URI can carry the very thing that got it rejected — `user:password@` is one of the
+  /// reasons — and a query string can hold a signed token. What is left identifies which image
+  /// failed, which is what a developer reading the log needs.
+  static func loggableURI(_ uriString: String) -> String {
+    guard var components = URLComponents(string: uriString) else {
+      return "<unparseable URI>"
+    }
+    components.user = nil
+    components.password = nil
+    components.query = nil
+    components.fragment = nil
+    return components.string ?? "<unparseable URI>"
+  }
+
   /// The resolving half of the host check, without the URL parsing around it.
   ///
   /// Blocking: only call it off the thread the caller came in on.

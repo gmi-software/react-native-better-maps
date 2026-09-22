@@ -5,7 +5,16 @@ import UIKit
 /// Local images decode off-thread; completions always land on main.
 enum MarkerImageLoader {
   private static let cache = NSCache<NSString, UIImage>()
-  private static let session = URLSession.shared
+  /// Not `URLSession.shared`, which cannot carry a delegate: without one the policy would check
+  /// the URL the app supplied and then follow a redirect anywhere, which is the cheapest way to
+  /// defeat it — an attacker-controlled public host answering 302 to a private address.
+  private static let session: URLSession = {
+    URLSession(
+      configuration: .default,
+      delegate: RedirectPolicyDelegate(),
+      delegateQueue: nil
+    )
+  }()
   private static let decodeQueue = DispatchQueue(
     label: "com.nitromaps.markerImageDecode",
     qos: .userInitiated
@@ -135,8 +144,20 @@ enum MarkerImageLoader {
     }
   }
 
+  /// Logged twice on purpose. A rejected URI can carry the very thing that got it rejected —
+  /// `user:password@` is one of the reasons — and a query string can hold a signed token, so the
+  /// public half is stripped of both. The full URI follows as private: the unified log keeps it
+  /// out of a shipped app's logs, and a developer attached to the simulator or a debugger still
+  /// sees it. That matters because Metro puts the asset's identity in the query string, so the
+  /// stripped form alone does not say which image was refused.
   private static func logRejected(uri: String, reason: String) {
-    logger.warning("Rejected remote marker image URI (\(reason, privacy: .public)): \(uri, privacy: .public)")
+    logger.warning(
+      """
+      Rejected remote marker image URI (\(reason, privacy: .public)): \
+      \(RemoteMarkerUriPolicy.loggableURI(uri), privacy: .public) \
+      [full: \(uri, privacy: .private)]
+      """
+    )
   }
 
   private static func startRemoteTask(
@@ -145,7 +166,7 @@ enum MarkerImageLoader {
     image: MarkerImage,
     completion: @escaping (UIImage?) -> Void
   ) {
-    session.dataTask(with: url) { data, _, _ in
+    let task = session.dataTask(with: url) { data, _, _ in
       let uiImage: UIImage?
       if let data, let decoded = UIImage(data: data) {
         uiImage = resize(decoded, image: image)
@@ -159,7 +180,49 @@ enum MarkerImageLoader {
       DispatchQueue.main.async {
         completion(uiImage)
       }
-    }.resume()
+    }
+    // The delegate sees tasks, not images, so the exemption has to travel with the task.
+    task.taskDescription = image.origin == .bundled ? bundledTaskDescription : nil
+    task.resume()
+  }
+
+  private static let bundledTaskDescription = "com.nitromaps.bundledMarkerImage"
+
+  /// Re-runs the host policy on every redirect destination. Without it the policy would only ever
+  /// see the URL the app supplied.
+  private final class RedirectPolicyDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+      _ session: URLSession,
+      task: URLSessionTask,
+      willPerformHTTPRedirection response: HTTPURLResponse,
+      newRequest request: URLRequest,
+      completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+      if task.taskDescription == MarkerImageLoader.bundledTaskDescription {
+        completionHandler(request)
+        return
+      }
+
+      guard let uri = request.url?.absoluteString else {
+        completionHandler(nil)
+        return
+      }
+
+      // Off the delegate queue: resolving blocks, and this queue also delivers completions.
+      MarkerImageLoader.policyQueue.async {
+        if let reason = RemoteMarkerUriPolicy.rejectReason(
+          uri: uri,
+          isBundled: false,
+          resolveHostAddress: true
+        ) {
+          MarkerImageLoader.logRejected(uri: uri, reason: "redirect: \(reason)")
+          // `nil` stops the redirect; the task completes with the redirect response body.
+          completionHandler(nil)
+          return
+        }
+        completionHandler(request)
+      }
+    }
   }
 
   private static func resize(_ uiImage: UIImage, image: MarkerImage) -> UIImage {

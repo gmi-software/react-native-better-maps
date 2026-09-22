@@ -379,6 +379,10 @@ host must not resolve to a private address: loopback, any-local, link-local, sit
 multicast, IPv6 unique-local, a `.local`/`.localhost` name, or a cloud metadata endpoint. This
 guards the common case of a marker icon URL arriving as data from an API.
 
+On iOS every redirect destination is checked the same way, so a permitted host cannot forward the
+fetch to a blocked one. Android follows redirects without re-checking them; until that is fixed,
+treat the Android check as covering the URL you pass, not the address finally reached.
+
 A rejected URL logs `Rejected remote marker image URI` — under the `NitroMaps` logcat tag on
 Android, and under the `NitroMaps` category of the `com.nitromaps` subsystem in the unified log
 on iOS. The marker itself falls back to the default pin on both Google providers. On Apple Maps

@@ -127,3 +127,31 @@ func classifiesWhatTheResolverAnswers() {
   #expect(!RemoteMarkerUriPolicy.isAllowlistedResolvedHost("::ffff:10.0.2.2"))
   #expect(RemoteMarkerUriPolicy.isAllowlistedResolvedHost("2606:2800:220:1:248:1893:25c8:1946"))
 }
+
+@Test
+func classifiesARedirectDestinationTheSameWayAsAnOriginalUri() {
+  // A redirect destination goes through the same call the delegate makes, so an attacker-controlled
+  // public host answering 302 to a private address gains nothing over naming it directly.
+  #expect(rejectReason("http://169.254.169.254/latest/meta-data/") == "host not allowlisted")
+  #expect(rejectReason("http://127.0.0.1/pin.png") == "host not allowlisted")
+  #expect(rejectReason("ftp://example.com/pin.png") == "unsupported scheme")
+  #expect(rejectReason("https://cdn.example.com/pin.png") == nil)
+}
+
+@Test
+func stripsCredentialsAndQueryFromALoggedUri() {
+  #expect(
+    RemoteMarkerUriPolicy.loggableURI("https://user:secret@example.com/pin.png")
+      == "https://example.com/pin.png")
+  #expect(
+    RemoteMarkerUriPolicy.loggableURI("https://example.com/pin.png?token=abc123&x=1")
+      == "https://example.com/pin.png")
+  #expect(
+    RemoteMarkerUriPolicy.loggableURI("https://example.com/pin.png#frag")
+      == "https://example.com/pin.png")
+  // The part a developer needs to recognise the image survives untouched.
+  #expect(
+    RemoteMarkerUriPolicy.loggableURI("http://10.0.2.2:8095/assets/pin.png")
+      == "http://10.0.2.2:8095/assets/pin.png")
+  #expect(RemoteMarkerUriPolicy.loggableURI("http://exa mple.com/x") == "<unparseable URI>")
+}

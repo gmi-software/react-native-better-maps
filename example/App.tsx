@@ -39,6 +39,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   MapView,
+  type ApplePoiDetailPresentation,
   type Coordinate,
   type EdgePadding,
   type MapProvider,
@@ -49,11 +50,15 @@ import {
   Region,
 } from 'react-native-better-maps';
 import {
+  APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
+  APPLE_POI_DETAILS_SCENARIO_ID,
   MAP_SCENARIOS,
   type MapScenario,
+  createApplePoiDetailsScenario,
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
+  nextApplePoiDetailPresentation,
 } from './examples';
 
 const MAP_TYPES: MapType[] = ['standard', 'satellite', 'hybrid'];
@@ -294,6 +299,7 @@ type ScenarioDockProps = {
   customMarkerFlat: boolean;
   onCycleCustomMarkerRotation: () => void;
   onToggleCustomMarkerFlat: () => void;
+  onCycleApplePoiDetailMode: () => void;
 };
 
 const ScenarioDock = memo(function ScenarioDock({
@@ -316,7 +322,10 @@ const ScenarioDock = memo(function ScenarioDock({
   customMarkerFlat,
   onCycleCustomMarkerRotation,
   onToggleCustomMarkerFlat,
+  onCycleApplePoiDetailMode,
 }: ScenarioDockProps) {
+  const applePoiDetailPresentation =
+    scenario.advanced?.applePoiDetailPresentation;
   const chevronRotation = useSharedValue(0);
 
   useEffect(() => {
@@ -455,6 +464,20 @@ const ScenarioDock = memo(function ScenarioDock({
               </ScalePressable>
             </View>
           ) : null}
+
+          {applePoiDetailPresentation != null ? (
+            <View style={styles.actionRow}>
+              <ScalePressable
+                onPress={onCycleApplePoiDetailMode}
+                style={[styles.actionButton, styles.actionButtonAccent]}
+              >
+                <Text style={styles.actionButtonIcon}>◉</Text>
+                <Text style={styles.actionButtonText}>
+                  POI · {applePoiDetailPresentation}
+                </Text>
+              </ScalePressable>
+            </View>
+          ) : null}
         </Animated.View>
       ) : null}
 
@@ -565,6 +588,9 @@ const MapScene = memo(function MapScene({
         {...commonMapProps}
         provider="apple"
         showsScale={scenario.advanced?.showsScale}
+        applePoiDetailPresentation={
+          scenario.advanced?.applePoiDetailPresentation
+        }
       />
     );
   }
@@ -655,18 +681,30 @@ export default function App() {
   const [dockExpanded, setDockExpanded] = useState(false);
   const [customMarkerRotation, setCustomMarkerRotation] = useState(45);
   const [customMarkerFlat, setCustomMarkerFlat] = useState(true);
+  const [applePoiDetailPresentation, setApplePoiDetailPresentation] =
+    useState<ApplePoiDetailPresentation>(
+      APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
+    );
 
   const baseScenario = MAP_SCENARIOS[scenarioIndex];
   const scenario = useMemo(() => {
-    if (baseScenario.id !== CUSTOM_MARKER_IMAGES_SCENARIO_ID) {
-      return baseScenario;
+    switch (baseScenario.id) {
+      case CUSTOM_MARKER_IMAGES_SCENARIO_ID:
+        return createCustomMarkerImagesScenario({
+          rotation: customMarkerRotation,
+          flat: customMarkerFlat,
+        });
+      case APPLE_POI_DETAILS_SCENARIO_ID:
+        return createApplePoiDetailsScenario(applePoiDetailPresentation);
+      default:
+        return baseScenario;
     }
-
-    return createCustomMarkerImagesScenario({
-      rotation: customMarkerRotation,
-      flat: customMarkerFlat,
-    });
-  }, [baseScenario, customMarkerRotation, customMarkerFlat]);
+  }, [
+    baseScenario,
+    customMarkerRotation,
+    customMarkerFlat,
+    applePoiDetailPresentation,
+  ]);
   const provider = SUPPORTED_MAP_PROVIDERS[providerIndex] ?? 'google';
   const animationOption = ANIMATION_OPTIONS[animationOptionIndex];
   const showsScale = scenario.advanced?.showsScale === true;
@@ -721,19 +759,29 @@ export default function App() {
     setCustomMarkerFlat((current) => !current);
   }, []);
 
-  const cycleProvider = useCallback(() => {
-    setProviderIndex((current) => {
-      if (SUPPORTED_MAP_PROVIDERS.length <= 1) {
-        setStatus(PROVIDER_LABELS[provider]);
-        return current;
-      }
+  const cycleApplePoiDetailMode = useCallback(() => {
+    const next = nextApplePoiDetailPresentation(applePoiDetailPresentation);
+    setApplePoiDetailPresentation(next);
+    setStatus(
+      provider === 'apple'
+        ? `POI details · ${next}`
+        : 'POI details · Apple Maps only',
+    );
+  }, [applePoiDetailPresentation, provider]);
 
-      const next = (current + 1) % SUPPORTED_MAP_PROVIDERS.length;
-      setMapReady(false);
-      setStatus(PROVIDER_LABELS[SUPPORTED_MAP_PROVIDERS[next] ?? provider]);
-      return next;
-    });
-  }, [provider]);
+  const cycleProvider = useCallback(() => {
+    // Keep the updater pure: React may run it twice, so status and ready are
+    // set from the handler with the index it computed.
+    if (SUPPORTED_MAP_PROVIDERS.length <= 1) {
+      setStatus(PROVIDER_LABELS[provider]);
+      return;
+    }
+
+    const next = (providerIndex + 1) % SUPPORTED_MAP_PROVIDERS.length;
+    setProviderIndex(next);
+    setMapReady(false);
+    setStatus(PROVIDER_LABELS[SUPPORTED_MAP_PROVIDERS[next] ?? provider]);
+  }, [provider, providerIndex]);
 
   const selectScenario = useCallback(
     (index: number) => {
@@ -894,6 +942,7 @@ export default function App() {
         customMarkerFlat={customMarkerFlat}
         onCycleCustomMarkerRotation={cycleCustomMarkerRotation}
         onToggleCustomMarkerFlat={toggleCustomMarkerFlat}
+        onCycleApplePoiDetailMode={cycleApplePoiDetailMode}
       />
       <StatusBar style="light" />
     </View>

@@ -39,6 +39,7 @@ class GoogleMapProviderAdapter(
   private var pendingPolygons: Array<PolygonDescriptor>? = null
   private var pendingCircles: Array<CircleDescriptor>? = null
   private val mainHandler = Handler(Looper.getMainLooper())
+  private val density: Float = context.resources.displayMetrics.density
 
   private val googleMapIdAtCreation: String? = normalizeGoogleMapId(initialGoogleMapId)
 
@@ -387,7 +388,12 @@ class GoogleMapProviderAdapter(
       val runUpdate = {
         // Inside the runnable: converting the insets needs the size the map was laid out with.
         val target =
-          bounds.expandedForEdgePadding(padding, _mapPadding, view.width, view.height) ?: bounds
+          bounds.expandedForEdgePadding(
+            padding?.toPixels(density),
+            _mapPadding?.toPixels(density),
+            view.width,
+            view.height,
+          ) ?: bounds
         val update = CameraUpdateFactory.newLatLngBounds(target, 0)
         if (animated == true) {
           map.animateCamera(update)
@@ -587,18 +593,13 @@ class GoogleMapProviderAdapter(
   }
 
   private fun applyMapPadding(map: GoogleMap? = googleMap) {
-    val padding = _mapPadding
+    val padding = _mapPadding?.toPixels(density)
     if (padding == null) {
       map?.setPadding(0, 0, 0, 0)
       return
     }
 
-    map?.setPadding(
-      padding.left.toInt(),
-      padding.top.toInt(),
-      padding.right.toInt(),
-      padding.bottom.toInt(),
-    )
+    map?.setPadding(padding.left, padding.top, padding.right, padding.bottom)
   }
 
   private fun applyCustomMapStyle(map: GoogleMap? = googleMap) {

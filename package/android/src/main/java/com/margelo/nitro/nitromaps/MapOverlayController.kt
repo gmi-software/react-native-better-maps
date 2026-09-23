@@ -33,7 +33,10 @@ internal class MapOverlayController(
   private val polygons = LinkedHashMap<String, Polygon>()
   private val circles = LinkedHashMap<String, Circle>()
   private val markerEnterAnimators = HashMap<String, Animator>()
-  private val renderState = MarkerRenderState()
+  private val renderState =
+    MarkerRenderState { descriptor ->
+      Log.w(NITRO_MAPS_LOG_TAG, "Skipped marker \"${descriptor.id}\": it cannot be drawn.")
+    }
   private var onMarkerPress: ((String) -> Unit)? = null
   private var onClusterPress: ((List<String>, Coordinate) -> Unit)? = null
   private var spatialIndex: MarkerSpatialIndex? = null

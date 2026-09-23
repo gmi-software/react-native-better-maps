@@ -150,4 +150,56 @@ class MarkerRenderStateTest {
 
     assertTrue(state.usesViewportPipeline)
   }
+
+  @Test
+  fun `markers that cannot be placed are dropped and reported`() {
+    val skipped = ArrayList<String>()
+    val state = MarkerRenderState { skipped.add(it.id) }
+    state.attachMap()
+
+    val redraw =
+      state.setMarkers(
+        arrayOf(
+          marker(id = "first"),
+          marker(id = "nan", coordinate = Coordinate(Double.NaN, Double.NaN)),
+          marker(id = "infinite", coordinate = Coordinate(Double.POSITIVE_INFINITY, 0.0)),
+          marker(id = "past-the-pole", coordinate = Coordinate(90.0001, 0.0)),
+          marker(id = "last"),
+        ),
+      )
+
+    assertTrue(redraw)
+    assertEquals(listOf("first", "last"), state.descriptors.map { it.id })
+    assertEquals(listOf("nan", "infinite", "past-the-pole"), skipped)
+  }
+
+  @Test
+  fun `redelivering markers that cannot be placed does not report them again`() {
+    val skipped = ArrayList<String>()
+    val state = MarkerRenderState { skipped.add(it.id) }
+    val markers = arrayOf(marker(id = "a"), marker(id = "nan", coordinate = Coordinate(Double.NaN, 0.0)))
+    state.attachMap()
+    state.setMarkers(markers)
+
+    assertFalse(state.setMarkers(markers))
+    assertEquals(listOf("nan"), skipped)
+  }
+
+  @Test
+  fun `markers that cannot be placed leave nothing to draw on an attaching map`() {
+    val state = MarkerRenderState()
+    state.setMarkers(arrayOf(marker(id = "nan", coordinate = Coordinate(Double.NaN, Double.NaN))))
+
+    assertFalse(state.attachMap())
+    assertTrue(state.descriptors.isEmpty())
+  }
+
+  @Test
+  fun `only markers that can be placed count towards the viewport pipeline`() {
+    val state = MarkerRenderState()
+
+    state.setMarkers(Array(500) { marker(id = "m$it") } + marker(id = "nan", coordinate = Coordinate(Double.NaN, 0.0)))
+
+    assertFalse(state.usesViewportPipeline)
+  }
 }

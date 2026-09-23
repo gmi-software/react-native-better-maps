@@ -115,7 +115,8 @@ internal class MapOverlayController(
     renderState.reset()
     spatialIndex = null
     refreshGeneration += 1
-    computeExecutor.shutdown()
+    // Queued work would only be discarded by the generation check, so drop it.
+    computeExecutor.shutdownNow()
     computeExecutor = Executors.newSingleThreadExecutor()
   }
 
@@ -159,7 +160,7 @@ internal class MapOverlayController(
     refreshGeneration += 1
     val generation = refreshGeneration
 
-    computeExecutor.execute {
+    executeCompute {
       val candidates = index.candidates(bounds)
       val elements: List<ClusterElement> =
         if (clustering) {
@@ -186,7 +187,7 @@ internal class MapOverlayController(
     refreshGeneration += 1
     val generation = refreshGeneration
 
-    computeExecutor.execute {
+    executeCompute {
       val index = MarkerSpatialIndex(descriptors)
       mainHandler.post {
         if (generation != refreshGeneration) {
@@ -194,6 +195,20 @@ internal class MapOverlayController(
         }
         spatialIndex = index
         refreshViewportMarkers()
+      }
+    }
+  }
+
+  /**
+   * An exception escaping a [computeExecutor] task would reach the thread's uncaught exception
+   * handler and kill the app; a failed refresh just leaves the markers on screen as they are.
+   */
+  private fun executeCompute(task: () -> Unit) {
+    computeExecutor.execute {
+      try {
+        task()
+      } catch (error: Exception) {
+        Log.e(NITRO_MAPS_LOG_TAG, "Marker computation failed; the markers on screen were left as they are.", error)
       }
     }
   }

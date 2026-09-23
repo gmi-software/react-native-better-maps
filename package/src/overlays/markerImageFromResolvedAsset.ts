@@ -1,5 +1,9 @@
 import type { MarkerImage } from '../native/specs/overlays';
 
+/**
+ * Converts `Image.resolveAssetSource` output into a `MarkerImage`. Only a `require()`d
+ * asset reaches this function, so the result carries `origin: 'bundled'`.
+ */
 export function markerImageFromResolvedAsset(
   resolved: MarkerImage | null | undefined,
 ): MarkerImage | undefined {
@@ -12,6 +16,7 @@ export function markerImageFromResolvedAsset(
     width: resolved.width,
     height: resolved.height,
     scale: resolved.scale,
+    origin: 'bundled',
   };
 }
 

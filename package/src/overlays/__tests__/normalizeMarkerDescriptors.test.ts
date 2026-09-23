@@ -58,6 +58,7 @@ describe('normalizeMarkerDescriptors', () => {
       width: 32,
       height: 32,
       scale: 2,
+      origin: 'bundled',
     });
   });
 

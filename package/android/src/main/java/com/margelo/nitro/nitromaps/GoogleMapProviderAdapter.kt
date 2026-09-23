@@ -409,6 +409,9 @@ class GoogleMapProviderAdapter(
   override fun onHostResume() {
     isHostResumed = true
     syncLifecycleState()
+    // A location permission granted while the host was paused (the system dialog
+    // pauses it) only reaches the map when the layer is applied again.
+    applyUserLocationSettings()
   }
 
   override fun onHostPause() {

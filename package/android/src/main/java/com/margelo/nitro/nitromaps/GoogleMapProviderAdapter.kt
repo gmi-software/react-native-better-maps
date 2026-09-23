@@ -630,9 +630,11 @@ class GoogleMapProviderAdapter(
     durationMs: Int = 0,
   ) {
     // Every camera path ends here - the `camera` prop, its replay in `configureMap`, and
-    // `setCamera`/`animateCamera` - so this one check covers them all. An invalid camera is
+    // `applyCamera`/`animateCamera` - so this one check covers them all. An invalid camera is
     // skipped rather than thrown: the prop path has no promise to reject, so a throw out of
-    // `CameraPosition` would surface as an uncaught main-thread exception.
+    // `CameraPosition` would surface as an uncaught main-thread exception. For the two
+    // imperative calls it is only a backstop: `MapViewRef` rejects an invalid camera in JS
+    // before the call is queued.
     if (!camera.isValid()) {
       Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid camera: $camera.")
       return

@@ -614,6 +614,7 @@ A coordinate that arrives as `NaN` or out of range is dropped instead of being f
 
 - An invalid `region` is ignored, and the map keeps the region it already had.
 - An invalid `camera` is ignored the same way, and a pitch past the range the SDKs draw is pulled back to it rather than rejected.
+- `setCamera` and `animateCamera` reject an invalid camera instead of ignoring it, straight away and on both platforms - unlike a prop, they have a promise to report it on. A pitch past the drawable range is pulled back for them too.
 - An overlay whose coordinates, ring length or radius cannot be drawn is skipped; its neighbours still render.
 - Anything supplied through `region`, `camera`, or a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
 

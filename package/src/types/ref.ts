@@ -28,12 +28,20 @@ export interface MapViewRef {
   /** Returns the current camera position. */
   getCamera(): Promise<Camera>;
 
-  /** Sets the camera position immediately. */
+  /**
+   * Sets the camera position immediately.
+   *
+   * Rejects straight away, and leaves the map where it is, for a camera the
+   * map cannot use: a center outside the world, or a zoom, heading, pitch or
+   * altitude that is `NaN`, infinite, or - for zoom and heading - too large for
+   * a 32-bit float. The `camera` prop skips such a camera instead.
+   */
   setCamera(camera: Camera): Promise<void>;
 
   /**
    * Animates the camera to the given position. Resolves once the animation has
-   * been handed to the native map, not when it finishes.
+   * been handed to the native map, not when it finishes, and rejects for a
+   * camera the map cannot use, as {@linkcode MapViewRef.setCamera} does.
    *
    * @param duration Animation duration in seconds. Defaults to `0.25`.
    */

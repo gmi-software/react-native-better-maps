@@ -102,7 +102,8 @@ neither uses a timer:
   after the mount transaction, so `MapViewCommands` (`package/src/native/mapViewCommands.ts`)
   holds every call made before it arrives and replays them in call order. Calls
   left waiting when the view unmounts are rejected, and later calls reject
-  without reaching native.
+  without reaching native. `setCamera`/`animateCamera` check the camera before
+  it is queued, so an invalid one rejects at once instead of waiting here.
 - **Android** — `MapView.getMapAsync` answers later still, so
   `DeferredGoogleMap` holds camera work until the `GoogleMap` exists, and
   `configureMap` drains it after replaying the `region`/`camera` props. Without

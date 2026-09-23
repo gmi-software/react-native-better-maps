@@ -4,6 +4,7 @@ import {
   useMemo,
   type Ref,
 } from 'react';
+import { runWithValidCamera } from '../camera/runWithValidCamera';
 import { useValidCamera } from '../camera/useValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
 import { useMapViewCommands } from '../hooks/useMapViewCommands';
@@ -249,9 +250,13 @@ export function MapView({
     () => ({
       getCamera: () => commands.run((hybrid) => hybrid.fetchCamera()),
       setCamera: (nextCamera) =>
-        commands.run((hybrid) => hybrid.applyCamera(nextCamera)),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.applyCamera(nextCamera)),
+        ),
       animateCamera: (nextCamera, duration) =>
-        commands.run((hybrid) => hybrid.animateCamera(nextCamera, duration)),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.animateCamera(nextCamera, duration)),
+        ),
       getVisibleRegion: () =>
         commands.run((hybrid) => hybrid.getVisibleRegion()),
       fitToCoordinates: (coordinates, padding, animated) =>

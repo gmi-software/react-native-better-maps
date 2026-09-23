@@ -90,8 +90,8 @@ const overlayCollectors: OverlayCollector[] = [
       state.polylines.push({
         id,
         coordinates: props.coordinates,
-        strokeColor: props.strokeColor,
-        strokeWidth: props.strokeWidth,
+        strokeColor: props.strokeColor ?? undefined,
+        strokeWidth: props.strokeWidth ?? undefined,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
       state.registry.set(overlayCallbackKey(OverlayType.Polyline, id), {
@@ -118,9 +118,9 @@ const overlayCollectors: OverlayCollector[] = [
       state.polygons.push({
         id,
         coordinates: props.coordinates,
-        fillColor: props.fillColor,
-        strokeColor: props.strokeColor,
-        strokeWidth: props.strokeWidth,
+        fillColor: props.fillColor ?? undefined,
+        strokeColor: props.strokeColor ?? undefined,
+        strokeWidth: props.strokeWidth ?? undefined,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
       state.registry.set(overlayCallbackKey(OverlayType.Polygon, id), {
@@ -154,9 +154,9 @@ const overlayCollectors: OverlayCollector[] = [
         id,
         center: props.center,
         radius: props.radius,
-        fillColor: props.fillColor,
-        strokeColor: props.strokeColor,
-        strokeWidth: props.strokeWidth,
+        fillColor: props.fillColor ?? undefined,
+        strokeColor: props.strokeColor ?? undefined,
+        strokeWidth: props.strokeWidth ?? undefined,
         tappable: tappableFromPress(props.onPress, props.tappable),
       });
       state.registry.set(overlayCallbackKey(OverlayType.Circle, id), {

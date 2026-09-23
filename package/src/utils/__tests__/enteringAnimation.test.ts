@@ -28,6 +28,17 @@ describe('normalizeEnteringAnimation', () => {
     });
   });
 
+  test('treats null timing fields as absent', () => {
+    expect(
+      normalizeEnteringAnimation({
+        preset: 'fade',
+        duration: null,
+        delay: null,
+        reduceMotion: null,
+      } as never),
+    ).toEqual({ kind: 'fade' });
+  });
+
   test('carries the timing fields across', () => {
     expect(
       normalizeEnteringAnimation({

@@ -32,8 +32,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   lazy var view: GMSMapView = {
-    let camera =
-      self.camera?.toGMSCameraPosition()
+    // The map is created from the stored prop directly, so it is checked here
+    // too: `updateMapCamera` never runs for the camera the map starts with.
+    let initialCamera =
+      self.camera.flatMap { $0.isValid ? $0.toGMSCameraPosition() : nil }
       ?? GMSCameraPosition(latitude: 0, longitude: 0, zoom: 10)
     let mapView: GMSMapView
     if let googleMapId = _googleMapId?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -42,10 +44,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
       mapView = GMSMapView(
         frame: .zero,
         mapID: GMSMapID(identifier: googleMapId),
-        camera: camera
+        camera: initialCamera
       )
     } else {
-      mapView = GMSMapView(frame: .zero, camera: camera)
+      mapView = GMSMapView(frame: .zero, camera: initialCamera)
     }
 
     mapView.delegate = self
@@ -320,6 +322,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
+    guard camera.isValid else {
+      return
+    }
+
     let target = camera.toGMSCameraPosition(current: view.camera)
     guard !view.camera.approximatelyEquals(target) else {
       return

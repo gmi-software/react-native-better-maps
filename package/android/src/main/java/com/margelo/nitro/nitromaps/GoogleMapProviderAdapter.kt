@@ -639,6 +639,14 @@ class GoogleMapProviderAdapter(
     animated: Boolean,
     durationMs: Int = 0,
   ) {
+    // Checked before the main-thread hop: `runOnMain` posts to the looper when called from
+    // anywhere else, so a throw out of `CameraPosition` would surface as an uncaught main-looper
+    // exception the JS caller cannot catch.
+    if (!camera.isValid()) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid camera: $camera.")
+      return
+    }
+
     runOnMain {
       val map = googleMap ?: return@runOnMain
       val target = camera.toCameraPosition(map.cameraPosition)

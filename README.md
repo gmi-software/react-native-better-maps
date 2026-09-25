@@ -576,11 +576,11 @@ A coordinate that arrives as `NaN` or out of range is dropped instead of being f
 - An invalid `region` is ignored, and the map keeps the region it already had.
 - An invalid `camera` is ignored the same way, and a pitch past the range the SDKs draw is pulled back to it rather than rejected.
 - An overlay whose coordinates, ring length or radius cannot be drawn is skipped; its neighbours still render.
-- Anything supplied through `region`, `camera`, or a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
+- Anything supplied through `region`, `camera`, the bulk `markers` prop, or a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
 
-Where the check runs depends on the entry point. `region`, `camera` and `fitToCoordinates` are guarded natively on both platforms, so a `hybridRef` call - `setCamera` and `animateCamera` included - cannot reach the SDKs either. Overlay descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down; those skips are reported to logcat rather than `console.warn`.
+Where the check runs depends on the entry point. `region`, `camera`, `fitToCoordinates` and marker descriptors are guarded natively on both platforms, so a `hybridRef` call - `setCamera` and `animateCamera` included - cannot reach the SDKs either. Polyline, polygon and circle descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down. Native skips are reported to logcat on Android rather than through `console.warn`.
 
-One gap is worth knowing about: descriptors passed through the bulk `markers` prop are checked on neither side - only the `<Marker>` child is.
+One gap is worth knowing about: descriptors passed through the bulk `polylines` / `polygons` / `circles` props are checked only natively on Android - on iOS they reach MapKit and the Google Maps SDK unchecked, and neither platform warns about them in development.
 
 Valid means: latitude and longitude finite and within ±90 / ±180, region deltas finite and greater than 0, camera `zoom` / `heading` / `pitch` / `altitude` finite when supplied (with `zoom` and `heading` also small enough for the 32-bit float the SDKs keep them in), two coordinates for a polyline, three per polygon ring, and a finite radius of at least 0 for a circle. A region whose span would run past a pole is pulled back to what the map can show rather than rejected.
 

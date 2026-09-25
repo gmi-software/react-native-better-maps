@@ -2,6 +2,7 @@ package com.margelo.nitro.nitromaps
 
 internal fun marker(
   id: String = "marker-1",
+  coordinate: Coordinate = Coordinate(37.77, -122.41),
   image: MarkerImage? = null,
   markerColor: String? = null,
   anchor: MarkerAnchor? = null,
@@ -17,7 +18,7 @@ internal fun marker(
   // shifts every positional argument after it.
   return MarkerDescriptor(
     id = id,
-    coordinate = Coordinate(37.77, -122.41),
+    coordinate = coordinate,
     title = "Title",
     subtitle = "Subtitle",
     draggable = false,

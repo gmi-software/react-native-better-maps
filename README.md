@@ -597,8 +597,9 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Map types                  | Standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain       | Standard, satellite, hybrid, terrain       |
 | Gestures                   | Supported                                                   | Supported                                  | Supported                                  |
 | User location              | Supported; host app owns permission prompt                  | Supported; host app owns permission prompt | Supported; host app owns permission prompt |
+| Follow user location       | Supported                                                   | Supported                                  | Unsupported; debug builds log a warning    |
 | Compass                    | Supported                                                   | Supported                                  | Supported                                  |
-| Scale control              | Supported                                                   | Unsupported                                | Unsupported                                |
+| Scale control              | Supported                                                   | Unsupported                                | Unsupported; debug builds log a warning    |
 | Markers / overlays         | Supported                                                   | Supported                                  | Supported                                  |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |

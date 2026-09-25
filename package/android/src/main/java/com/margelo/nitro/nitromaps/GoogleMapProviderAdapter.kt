@@ -32,6 +32,7 @@ class GoogleMapProviderAdapter(
   private var hasFiredMapReady = false
   private val overlayController = MapOverlayController(context)
   private val locationSource = FusedLocationSource(context)
+  private val unsupportedProps = UnsupportedPropWarnings(enabled = context.isDebuggable)
   private var pendingMarkers: Array<MarkerDescriptor>? = null
   private var pendingPolylines: Array<PolylineDescriptor>? = null
   private var pendingPolygons: Array<PolygonDescriptor>? = null
@@ -158,7 +159,11 @@ class GoogleMapProviderAdapter(
     get() = _followsUserLocation
     set(value) {
       _followsUserLocation = value
-      applyUserLocationSettings()
+      unsupportedProps.onSet(
+        "followsUserLocation",
+        value,
+        "Google Maps on Android has no follow mode. Call animateCamera from a location listener instead.",
+      )
     }
 
   private var _showsCompass: Boolean? = null
@@ -174,6 +179,7 @@ class GoogleMapProviderAdapter(
     get() = _showsScale
     set(value) {
       _showsScale = value
+      unsupportedProps.onSet("showsScale", value, "the Google Maps SDK has no scale control.")
     }
 
   private var _customMapStyle: String? = null
@@ -578,9 +584,6 @@ class GoogleMapProviderAdapter(
 
     if (context.hasFineLocationPermission || context.hasCoarseLocationPermission) {
       map?.isMyLocationEnabled = true
-      if (_followsUserLocation == true) {
-        // Google Maps does not have a direct follow mode; host apps can animate camera separately.
-      }
     }
   }
 

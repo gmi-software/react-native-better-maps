@@ -88,7 +88,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `customMapStyle` | JSON string. The `google` provider uses Google Maps JSON styles on iOS and Android. The `apple` provider maps a curated subset to `MKMapConfiguration` on iOS 16+. |
 | `onPoiPress` | Reports provider-owned points of interest, not app-owned `Marker` overlays. It is enabled automatically when the callback is present. |
 | `showsUserLocation` / `followsUserLocation` | Toggles the native user-location layer. Host app must request location permission (`NSLocationWhenInUseUsageDescription` on iOS; `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION` on Android). On Android the layer reads the fused location provider (`play-services-location`) and picks up a permission granted while the map is mounted, at the accuracy that permission allows. |
-| `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only (`showsScale` is a no-op on Android). |
+| `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only: Android ignores `showsScale`, and debug builds log a warning. |
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 
@@ -96,9 +96,9 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 
 - **Provider availability** — `apple` and `google` are implemented on iOS, and `google` is implemented on Android. `openstreetmap` and `mapbox` are planned provider adapters.
 - **Custom styles on Apple MapKit** — no full Google Maps JSON parity; only a curated subset is mapped to MapKit configuration.
-- **Scale control on Google Maps** — Google Maps SDK has no native scale bar; `showsScale` is rejected for the `google` provider.
+- **Scale control on Google Maps** — Google Maps SDK has no native scale bar; `showsScale` is rejected for the `google` provider. With the provider omitted it still type-checks, so Android ignores it and logs a warning in debug builds.
 - **User location** — the library toggles the layer only; permission prompts and manifest/Info.plist entries are the host app's responsibility.
-- **`followsUserLocation` on Android** — enables the location layer when permitted; continuous camera follow is not built into Google Maps and may require host-app camera updates.
+- **`followsUserLocation` on Android** — ignored, because Google Maps has no follow mode; debug builds log a warning. `showsUserLocation` still shows the location layer. To follow the user, call `animateCamera` from a location listener in the host app.
 
 ### Overlay components
 

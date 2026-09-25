@@ -331,8 +331,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
       return
     }
 
+    // No insets of its own: Google Maps already fits bounds inside the area
+    // `GMSMapView.padding` leaves over, so passing `mapPadding` here as well would
+    // inset the region twice. `.zero` rather than `fit(_:)`, which pads by 64 pt.
     applyCameraUpdate(
-      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: mapPadding?.toUIEdgeInsets() ?? .zero),
+      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
       animated: animated,
       duration: nil
     )

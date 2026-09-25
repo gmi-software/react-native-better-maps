@@ -340,6 +340,29 @@ class GoogleMapProviderAdapter(
     }
   }
 
+  override fun animateToRegion(
+    region: Region,
+    duration: Double?,
+  ): Promise<Unit> {
+    // Skipped like an invalid `region` prop: `LatLngBounds` throws for a span that is not positive.
+    if (!region.isValid()) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid region: $region.")
+      return Promise.resolved(Unit)
+    }
+
+    val durationMs = cameraAnimationDurationMs(duration)
+    return deferredMap.promiseCompletion { map, complete ->
+      // Waits for the first layout pass, as `fitToCoordinates` does, and so does the promise.
+      runWhenMapViewLaidOut(
+        onCancel = {
+          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
+        },
+      ) {
+        complete(runCatching { moveToRegion(map, region, durationMs) })
+      }
+    }
+  }
+
   override fun getVisibleRegion(): Promise<VisibleRegion> = deferredMap.promise { map -> map.projection.toNitroVisibleRegion() }
 
   override fun fitToCoordinates(
@@ -603,30 +626,34 @@ class GoogleMapProviderAdapter(
     map?.setMapStyle(MapStyleOptions(styleJson))
   }
 
-  private fun applyRegion(
-    region: Region,
-    animated: Boolean = false,
-  ) {
+  private fun applyRegion(region: Region) {
     if (!region.isValid()) {
       Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid region: $region.")
       return
     }
 
     val map = googleMap ?: return
-    val bounds = region.toLatLngBounds()
+    runWhenMapViewLaidOut { moveToRegion(map, region, durationMs = 0) }
+  }
 
-    val runUpdate = {
-      // No padding argument: Google Maps already fits bounds inside the region `setPadding`
-      // leaves over, so passing `mapPadding` here as well would inset the region twice.
-      val update = CameraUpdateFactory.newLatLngBounds(bounds, 0)
-      if (animated) {
-        map.animateCamera(update)
-      } else {
-        map.moveCamera(update)
-      }
+  /**
+   * Frames [region], animating over [durationMs] when it is positive and jumping there
+   * otherwise: `animateCamera` throws for a duration that is not. Needs a laid-out map
+   * view, since `newLatLngBounds` throws on one without a size.
+   */
+  private fun moveToRegion(
+    map: GoogleMap,
+    region: Region,
+    durationMs: Int,
+  ) {
+    // No padding argument: Google Maps already fits bounds inside the region `setPadding`
+    // leaves over, so passing `mapPadding` here as well would inset the region twice.
+    val update = CameraUpdateFactory.newLatLngBounds(region.toLatLngBounds(), 0)
+    if (durationMs > 0) {
+      map.animateCamera(update, durationMs, null)
+    } else {
+      map.moveCamera(update)
     }
-
-    runWhenMapViewLaidOut(block = runUpdate)
   }
 
   private fun updateMapCamera(

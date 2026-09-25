@@ -3,6 +3,8 @@ import NitroModules
 import UIKit
 
 final class AppleMapProviderAdapter: MapProviderAdapter {
+  private static let defaultAnimationDuration: TimeInterval = 0.25
+
   private let mapViewDelegate = HybridMapViewDelegate()
   private var isUserRegionChange = false
   private var isMapReady = false
@@ -213,8 +215,33 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func animateCamera(camera: Camera, duration: Double?) throws {
-    let animationDuration = duration ?? 0.25
+    let animationDuration = duration ?? Self.defaultAnimationDuration
     updateMapCamera(camera, animated: true, duration: animationDuration)
+  }
+
+  func animateToRegion(region: Region, duration: TimeInterval?) throws {
+    // `setRegion` raises an NSException Swift cannot catch - see `applyRegion`.
+    guard region.isValid else {
+      return
+    }
+
+    // A map without a size has no camera that frames the region, and nothing
+    // on screen to animate. `setRegion` places the region all the same.
+    guard !view.bounds.isEmpty else {
+      applyRegion(region)
+      return
+    }
+
+    // `setRegion(_:animated:)` takes no duration, and wrapping it in
+    // `UIView.animate` does not give it one: MapKit still jumps whenever it
+    // judges the region far from the one on screen. An assignment to `camera`
+    // honours the animation's duration at any distance, so the region goes in
+    // as the camera `setRegion` would pick for it.
+    moveMapCamera(
+      to: view.camera(framing: region.toMKCoordinateRegion()),
+      animated: true,
+      duration: duration ?? Self.defaultAnimationDuration
+    )
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
@@ -280,7 +307,13 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       return
     }
 
-    let mapCamera = camera.toMKMapCamera()
+    moveMapCamera(to: camera.toMKMapCamera(), animated: animated, duration: duration)
+  }
+
+  /// Moves to a camera MapKit can place. Animated, the move takes `duration`
+  /// however far it goes: MapKit honours the enclosing `UIView.animate` for a
+  /// `camera` assignment, and jumps straight there for a duration of 0.
+  private func moveMapCamera(to mapCamera: MKMapCamera, animated: Bool, duration: Double) {
     guard !view.camera.approximatelyEquals(mapCamera) else {
       return
     }

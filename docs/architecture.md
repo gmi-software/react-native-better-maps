@@ -91,6 +91,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only: Android ignores `showsScale`, and debug builds log a warning. |
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
+| `animateToRegion(region, duration?)` | Imperative ref method; frames a `Region` as the `region` prop does, over `duration` milliseconds. Apple MapKit turns the region into the camera `setRegion` would pick, on an off-screen `MKMapView`, and animates that camera: `setRegion` takes no duration and jumps rather than animates when the target is far away. |
 
 ### Imperative ref readiness
 
@@ -102,15 +103,17 @@ neither uses a timer:
   after the mount transaction, so `MapViewCommands` (`package/src/native/mapViewCommands.ts`)
   holds every call made before it arrives and replays them in call order. Calls
   left waiting when the view unmounts are rejected, and later calls reject
-  without reaching native. `setCamera`/`animateCamera` check the camera before
-  it is queued, so an invalid one rejects at once instead of waiting here.
+  without reaching native. `setCamera`/`animateCamera` check the camera, and
+  `animateToRegion` the region, before it is queued, so an invalid one rejects
+  at once instead of waiting here.
 - **Android** — `MapView.getMapAsync` answers later still, so
   `DeferredGoogleMap` holds camera work until the `GoogleMap` exists, and
   `configureMap` drains it after replaying the `region`/`camera` props. Without
   it the adapter would accept a camera call and quietly do nothing.
-  `fitToCoordinates` then waits once more, in `DeferredLayout`, for the map
-  view's first layout pass, because `newLatLngBounds` throws on a view without a
-  size. It rejects if the view is released before that pass comes. iOS has no
+  `fitToCoordinates` and `animateToRegion` then wait once more, in
+  `DeferredLayout`, for the map view's first layout pass, because
+  `newLatLngBounds` throws on a view without a size. They reject if the view is
+  released before that pass comes. iOS has no
   equivalent window: `MKMapView`/`GMSMapView` exist as soon as the adapter is
   installed.
 

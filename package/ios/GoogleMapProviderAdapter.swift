@@ -9,6 +9,7 @@ import UIKit
 final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private static let liveGestureRefreshInterval: CFTimeInterval = 0.18
   private static let liveGestureAnimationBudget = 24
+  private static let defaultAnimationDuration: TimeInterval = 0.25
 
   private var isMapReady = false
   private var hasDeliveredMapReady = false
@@ -239,7 +240,23 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   func animateCamera(camera: Camera, duration: Double?) throws {
-    updateMapCamera(camera, animated: true, duration: duration ?? 0.25)
+    updateMapCamera(camera, animated: true, duration: duration ?? Self.defaultAnimationDuration)
+  }
+
+  func animateToRegion(region: Region, duration: TimeInterval?) throws {
+    guard region.isValid else {
+      return
+    }
+
+    // No insets: `mapPadding` is the map view's `padding` already, and a fit
+    // keeps clear of that padding as well as of the insets it is given, so
+    // passing it again would frame the region inside it twice.
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    applyCameraUpdate(
+      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
+      animated: animationDuration > 0,
+      duration: animationDuration
+    )
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {

@@ -25,7 +25,7 @@
 - [x] Add MapKit framework dependency
 - [x] Render MKMapView in HybridMapView
 - [x] Support `mapType` (standard, satellite, hybrid; `terrain` falls back to standard on iOS)
-- [x] Camera control (setCamera, animateCamera)
+- [x] Camera control (setCamera, animateCamera, animateToRegion)
 - [x] Region change events
 - [x] Press and long-press events
 

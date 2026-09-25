@@ -52,6 +52,11 @@ interface MapProviderAdapter {
     duration: Double?,
   ): Promise<Unit>
 
+  fun animateToRegion(
+    region: Region,
+    duration: Double?,
+  ): Promise<Unit>
+
   fun getVisibleRegion(): Promise<VisibleRegion>
 
   fun fitToCoordinates(

@@ -1,6 +1,6 @@
 import type { Camera } from './camera';
 import type { Coordinate } from './coordinate';
-import type { EdgePadding, VisibleRegion } from './region';
+import type { EdgePadding, Region, VisibleRegion } from './region';
 
 /**
  * Imperative handle for controlling the map view.
@@ -46,6 +46,24 @@ export interface MapViewRef {
    * @param duration Animation duration in seconds. Defaults to `0.25`.
    */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
+
+  /**
+   * Animates the camera to frame the given region, north up and flat: the
+   * whole region is in view, and the axis where its proportions differ from
+   * the view's shows more than it asks for, as with the `region` prop. A
+   * region from {@linkcode MapViewProps.onRegionChangeComplete} passed back
+   * returns the map to that view.
+   *
+   * Resolves once the animation has been handed to the native map, not when
+   * it finishes. Rejects straight away, and leaves the map where it is, for a
+   * region the map cannot use: a center outside the world, or a
+   * `latitudeDelta` or `longitudeDelta` that is not a finite number greater
+   * than 0. The `region` prop skips such a region instead.
+   *
+   * @param duration Animation duration in milliseconds. Defaults to `250`;
+   * `0` moves the camera without animating.
+   */
+  animateToRegion(region: Region, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */
   getVisibleRegion(): Promise<VisibleRegion>;

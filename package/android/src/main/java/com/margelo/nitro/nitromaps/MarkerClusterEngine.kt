@@ -49,6 +49,9 @@ internal sealed interface ClusterElement {
  * Pure function over descriptor data (no map projection), so it is safe to call
  * from a background thread. Output is bounded by the number of grid cells that
  * fit on screen, keeping per-frame Google Maps work small and constant.
+ *
+ * Every coordinate must be placeable: a `NaN` one joins a cluster whose
+ * `LatLngBounds` throws. [MarkerRenderState] drops those on the way in.
  */
 internal object MarkerClusterEngine {
   private const val CELL_DP = 64.0

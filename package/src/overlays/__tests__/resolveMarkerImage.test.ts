@@ -50,6 +50,22 @@ describe('markerImageFromResolvedAsset', () => {
     });
   });
 
+  test('leaves out null dimensions', () => {
+    // React Native types resolved asset dimensions `?number`.
+    const resolved = {
+      uri: 'asset:/pin.png',
+      width: null,
+      height: null,
+      scale: 2,
+    };
+
+    expect(markerImageFromResolvedAsset(resolved as never)).toEqual({
+      uri: 'asset:/pin.png',
+      scale: 2,
+    });
+    expect(isMarkerImage(resolved)).toBe(true);
+  });
+
   test('detects MarkerImage objects', () => {
     expect(isMarkerImage({ uri: 'https://example.com/pin.png' })).toBe(true);
     expect(

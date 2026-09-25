@@ -36,6 +36,7 @@ class GoogleMapProviderAdapter(
   private var pendingPolylines: Array<PolylineDescriptor>? = null
   private var pendingPolygons: Array<PolygonDescriptor>? = null
   private var pendingCircles: Array<CircleDescriptor>? = null
+  private val density: Float = context.resources.displayMetrics.density
   private val deferredMap = DeferredGoogleMap()
 
   private val googleMapIdAtCreation: String? = normalizeGoogleMapId(initialGoogleMapId)
@@ -357,14 +358,21 @@ class GoogleMapProviderAdapter(
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
       }
       val bounds = builder.build()
-      val paddingPx = padding.toPaddingPixels()
 
       // `newLatLngBounds` throws on a map that has no size yet, so the camera
       // update waits for the first layout pass -- and so does the promise.
       runWhenMapViewLaidOut {
         complete(
           runCatching {
-            val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
+            // Inside the callback: converting the insets needs the size the map was laid out with.
+            val target =
+              bounds.expandedForEdgePadding(
+                padding?.toPixels(density),
+                _mapPadding?.toPixels(density),
+                view.width,
+                view.height,
+              ) ?: bounds
+            val update = CameraUpdateFactory.newLatLngBounds(target, 0)
             if (animated == true) {
               map.animateCamera(update)
             } else {
@@ -574,18 +582,13 @@ class GoogleMapProviderAdapter(
   }
 
   private fun applyMapPadding(map: GoogleMap? = googleMap) {
-    val padding = _mapPadding
+    val padding = _mapPadding?.toPixels(density)
     if (padding == null) {
       map?.setPadding(0, 0, 0, 0)
       return
     }
 
-    map?.setPadding(
-      padding.left.toInt(),
-      padding.top.toInt(),
-      padding.right.toInt(),
-      padding.bottom.toInt(),
-    )
+    map?.setPadding(padding.left, padding.top, padding.right, padding.bottom)
   }
 
   private fun applyCustomMapStyle(map: GoogleMap? = googleMap) {
@@ -609,10 +612,11 @@ class GoogleMapProviderAdapter(
 
     val map = googleMap ?: return
     val bounds = region.toLatLngBounds()
-    val paddingPx = _mapPadding.toPaddingPixels()
 
     val runUpdate = {
-      val update = CameraUpdateFactory.newLatLngBounds(bounds, paddingPx)
+      // No padding argument: Google Maps already fits bounds inside the region `setPadding`
+      // leaves over, so passing `mapPadding` here as well would inset the region twice.
+      val update = CameraUpdateFactory.newLatLngBounds(bounds, 0)
       if (animated) {
         map.animateCamera(update)
       } else {

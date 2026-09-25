@@ -24,6 +24,11 @@ import {
 } from '../overlays/descriptorEquality';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
+import {
+  normalizeCircleDescriptors,
+  normalizePolygonDescriptors,
+  normalizePolylineDescriptors,
+} from '../overlays/normalizeShapeDescriptors';
 import { resolveMapProvider } from '../providers';
 import { resolveFitCoordinates } from '../region/resolveFitCoordinates';
 import { useValidRegion } from '../region/useValidRegion';
@@ -94,6 +99,23 @@ export function MapView({
       markersProp != null ? normalizeMarkerDescriptors(markersProp) : null,
     [markersProp],
   );
+  const normalizedBulkPolylines = useMemo(
+    () =>
+      polylinesProp != null
+        ? normalizePolylineDescriptors(polylinesProp)
+        : null,
+    [polylinesProp],
+  );
+  const normalizedBulkPolygons = useMemo(
+    () =>
+      polygonsProp != null ? normalizePolygonDescriptors(polygonsProp) : null,
+    [polygonsProp],
+  );
+  const normalizedBulkCircles = useMemo(
+    () =>
+      circlesProp != null ? normalizeCircleDescriptors(circlesProp) : null,
+    [circlesProp],
+  );
 
   // Everything below is rebuilt whenever `children`, a bulk prop or an animation
   // prop changes identity - which for inline JSX is every render. Nitro would
@@ -104,15 +126,15 @@ export function MapView({
     markerListsEqual,
   );
   const polylines = useStableValue(
-    polylinesProp ?? collectedPolylines,
+    normalizedBulkPolylines ?? collectedPolylines,
     polylineListsEqual,
   );
   const polygons = useStableValue(
-    polygonsProp ?? collectedPolygons,
+    normalizedBulkPolygons ?? collectedPolygons,
     polygonListsEqual,
   );
   const circles = useStableValue(
-    circlesProp ?? collectedCircles,
+    normalizedBulkCircles ?? collectedCircles,
     circleListsEqual,
   );
   const markerEntering = useStableValue(

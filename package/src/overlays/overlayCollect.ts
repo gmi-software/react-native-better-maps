@@ -45,5 +45,5 @@ export function tappableFromPress(
   onPress: unknown,
   tappable: boolean | undefined,
 ): boolean | undefined {
-  return onPress != null ? (tappable ?? true) : tappable;
+  return onPress != null ? (tappable ?? true) : (tappable ?? undefined);
 }

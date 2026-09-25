@@ -584,6 +584,8 @@ One gap is worth knowing about: descriptors passed through the bulk `markers` pr
 
 Valid means: latitude and longitude finite and within ±90 / ±180, region deltas finite and greater than 0, camera `zoom` / `heading` / `pitch` / `altitude` finite when supplied (with `zoom` and `heading` also small enough for the 32-bit float the SDKs keep them in), two coordinates for a polyline, three per polygon ring, and a finite radius of at least 0 for a circle. A region whose span would run past a pole is pulled back to what the map can show rather than rejected.
 
+An optional overlay field set to `null` - the way JSON data usually says "no value" - is treated as if it were left out: `title: null`, `image: null` or `strokeColor: null` behave like no title, no image and the default stroke, in overlay children and bulk props alike.
+
 ## Capability matrix
 
 | Capability                 | `apple` iOS                                                 | `google` iOS                               | `google` Android                           |

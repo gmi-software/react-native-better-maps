@@ -4,6 +4,7 @@ import { LruCache } from './lruCache';
 import {
   isMarkerImage,
   markerImageFromResolvedAsset,
+  markerImageWithoutNulls,
 } from './markerImageFromResolvedAsset';
 
 const MARKER_IMAGE_CACHE_SIZE = 64;
@@ -26,8 +27,9 @@ export function resolveMarkerImage(
     if (cached != null) {
       return cached;
     }
-    resolvedImageCache.set(key, source);
-    return source;
+    const image = markerImageWithoutNulls(source);
+    resolvedImageCache.set(key, image);
+    return image;
   }
 
   if (typeof source === 'number') {

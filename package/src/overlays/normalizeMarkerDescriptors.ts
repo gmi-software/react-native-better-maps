@@ -1,32 +1,11 @@
 import type { MarkerDescriptor as PublicMarkerDescriptor } from '../types/overlays';
 import type { MarkerDescriptor } from '../native/specs/overlays';
+import { buildMarkerDescriptor } from './collectMarkerOverlay';
 import { resolveMarkerImage } from './resolveMarkerImage';
-import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-
-function normalizeDescriptor(descriptor: PublicMarkerDescriptor): MarkerDescriptor {
-  return {
-    id: descriptor.id,
-    coordinate: descriptor.coordinate,
-    title: descriptor.title,
-    subtitle: descriptor.subtitle,
-    draggable: descriptor.draggable,
-    clusterable: descriptor.clusterable,
-    image:
-      descriptor.image != null ? resolveMarkerImage(descriptor.image) : undefined,
-    markerColor: descriptor.markerColor,
-    anchor: descriptor.anchor,
-    centerOffset: descriptor.centerOffset,
-    rotation: descriptor.rotation,
-    flat: descriptor.flat,
-    opacity: descriptor.opacity,
-    zIndex: descriptor.zIndex,
-    enteringAnimation: normalizeEnteringAnimation(descriptor.enteringAnimation),
-  };
-}
 
 /**
- * Widens the public marker descriptors into the shape the native view expects,
- * mainly by resolving `require()` image sources.
+ * Widens the public marker descriptors into the shape the native view expects:
+ * `require()` image sources are resolved and `null` optional fields dropped.
  *
  * Reference identity of the result does not matter here: `MapView` stabilizes
  * the array structurally before it reaches the native prop.
@@ -34,5 +13,7 @@ function normalizeDescriptor(descriptor: PublicMarkerDescriptor): MarkerDescript
 export function normalizeMarkerDescriptors(
   descriptors: PublicMarkerDescriptor[],
 ): MarkerDescriptor[] {
-  return descriptors.map(normalizeDescriptor);
+  return descriptors.map((descriptor) =>
+    buildMarkerDescriptor(descriptor.id, descriptor, resolveMarkerImage),
+  );
 }

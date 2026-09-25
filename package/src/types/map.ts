@@ -78,7 +78,12 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Whether to show the compass control. */
   showsCompass?: boolean;
 
-  /** Padding applied to map edges, in density-independent pixels. */
+  /**
+   * Padding applied to map edges, in density-independent pixels.
+   *
+   * `region` is fitted into the area the padding leaves over, and
+   * `fitToCoordinates` padding is added on top of it.
+   */
   mapPadding?: EdgePadding;
 
   /**

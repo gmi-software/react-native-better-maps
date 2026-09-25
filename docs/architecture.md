@@ -89,7 +89,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `onPoiPress` | Reports provider-owned points of interest, not app-owned `Marker` overlays. It is enabled automatically when the callback is present. |
 | `showsUserLocation` / `followsUserLocation` | Toggles the native user-location layer. Host app must request location permission (`NSLocationWhenInUseUsageDescription` on iOS; `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION` on Android). On Android the layer reads the fused location provider (`play-services-location`) and picks up a permission granted while the map is mounted, at the accuracy that permission allows. |
 | `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only: Android ignores `showsScale`, and debug builds log a warning. |
-| `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
+| `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (`apple`), `GMSMapView.padding` (`google` on iOS) or `setPadding` (Android). The `region` prop is fitted inside the padded area, and `fitToCoordinates` padding is added on top of it. |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 
 ### Imperative ref readiness

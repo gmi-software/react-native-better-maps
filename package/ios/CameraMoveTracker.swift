@@ -10,7 +10,7 @@ import NitroModules
 final class CameraMoveCompletion {
   private let promise: Promise<Void>
   fileprivate var onSettled: ((CameraMoveCompletion) -> Void)?
-  fileprivate(set) var isSettled = false
+  private var isSettled = false
 
   init(promise: Promise<Void>) {
     self.promise = promise
@@ -56,10 +56,6 @@ final class CameraMoveTracker {
 
   /// Tracks `move` until the camera comes to rest, or until the move settles itself.
   func track(_ move: CameraMoveCompletion, duration: TimeInterval) {
-    guard !move.isSettled else {
-      return
-    }
-
     move.onSettled = { [weak self] settled in
       self?.remove(settled)
     }

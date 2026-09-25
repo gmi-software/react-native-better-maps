@@ -15,22 +15,16 @@ import com.google.android.gms.maps.GoogleMap
  */
 internal class CameraAnimations {
   private val running = mutableListOf<Animation>()
-  private var isReleased = false
 
   /** A callback that runs [onEnd] exactly once, however the animation ends. */
   fun callback(onEnd: () -> Unit): GoogleMap.CancelableCallback {
     val animation = Animation(onEnd)
-    if (isReleased) {
-      animation.end()
-    } else {
-      running += animation
-    }
+    running += animation
     return animation
   }
 
-  /** Ends every animation still running, and any started from now on. */
+  /** Ends every animation still running. */
   fun release() {
-    isReleased = true
     val ended = running.toList()
     running.clear()
     for (animation in ended) {

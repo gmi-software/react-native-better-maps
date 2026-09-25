@@ -395,7 +395,6 @@ class GoogleMapProviderAdapter(
             ) ?: bounds
           val update = CameraUpdateFactory.newLatLngBounds(target, 0)
           if (animated == true) {
-            // Settled by the SDK once the camera has arrived, not here.
             map.animateCamera(update, cameraAnimations.callback { complete(Result.success(Unit)) })
           } else {
             map.moveCamera(update)
@@ -629,8 +628,8 @@ class GoogleMapProviderAdapter(
 
     val runUpdate = {
       // What the map already shows is exactly what an `onRegionChangeComplete` consumer
-      // hands back as the next `region` prop. Fitting it again would move nothing, yet
-      // still report a move - and the echo would answer that one too, for ever.
+      // hands back as the next `region` prop. Fitting it again must not move the camera,
+      // or the echo would answer every move with another one.
       if (!currentRegion().approximatelyEquals(region)) {
         // No padding argument: Google Maps already fits bounds inside the region `setPadding`
         // leaves over, so passing `mapPadding` here as well would inset the region twice.
@@ -670,8 +669,6 @@ class GoogleMapProviderAdapter(
       return
     }
 
-    // Nothing is handed to the SDK for a camera the map is already at, so no `onFinish`
-    // is coming either.
     val target = camera.toCameraPosition(map.cameraPosition)
     if (map.cameraPosition.approximatelyEquals(target)) {
       onEnd()

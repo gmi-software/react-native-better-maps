@@ -341,8 +341,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
 
     // What the map already shows is exactly what an `onRegionChangeComplete` consumer
-    // hands back as the next `region` prop. Fitting it again moves the camera - with
-    // `mapPadding`, a little further out each round - and the echo answers every move.
+    // hands back as the next `region` prop. Fitting it again must not move the camera,
+    // or the echo would answer every move with another one.
     guard
       !view.currentNitroRegion().toMKCoordinateRegion()
         .approximatelyEquals(region.toMKCoordinateRegion())
@@ -563,8 +563,6 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
-    // The camera has stopped, so every move still under way is over - finished,
-    // superseded, or cut short.
     cameraMoves.settleAll()
     regionChanges.cameraStopped()
     notifyMapReadyIfNeeded()

@@ -390,9 +390,6 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   func handleRegionDidChange() {
     stopLiveClustering()
     isRegionChanging = false
-
-    // The camera has stopped, so every move still under way is over - finished,
-    // superseded, or cut short.
     cameraMoves.settleAll()
 
     // MapKit reports the end of each leg of a gesture, including the ones the

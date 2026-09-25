@@ -9,7 +9,7 @@ fun CircleDescriptor.toCircleOptions(): CircleOptions {
       .center(LatLng(center.latitude, center.longitude))
       .radius(radius)
       .strokeWidth((strokeWidth ?: 2.0).toFloat())
-      .clickable(tappable != false)
+      .clickable(tappable == true)
 
   strokeColor?.let { options.strokeColor(it.toColorInt()) }
   fillColor?.let { options.fillColor(it.toColorInt()) }

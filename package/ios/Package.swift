@@ -16,6 +16,10 @@ let package = Package(
       name: "NitroMapsGeometry",
       path: "Geometry"
     ),
+    .target(
+      name: "NitroMapsClusterBadge",
+      path: "ClusterBadge"
+    ),
     .testTarget(
       name: "NitroMapsColorParserTests",
       dependencies: ["NitroMapsColorParser"],
@@ -25,6 +29,12 @@ let package = Package(
       name: "NitroMapsGeometryTests",
       dependencies: ["NitroMapsGeometry"],
       path: "Tests/Geometry"
+    ),
+    .testTarget(
+      name: "NitroMapsClusterBadgeTests",
+      // The color parser checks that every color in the style is valid hex.
+      dependencies: ["NitroMapsClusterBadge", "NitroMapsColorParser"],
+      path: "Tests/ClusterBadge"
     ),
   ]
 )

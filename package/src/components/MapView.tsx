@@ -5,10 +5,10 @@ import {
   type Ref,
 } from 'react';
 import { runWithValidCamera } from '../camera/runWithValidCamera';
-import { useValidCamera } from '../camera/useValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
 import { useMapViewCommands } from '../hooks/useMapViewCommands';
 import { useNitroCallback } from '../hooks/useNitroCallback';
+import { useStableCameraProps } from '../hooks/useStableCameraProps';
 import { useStableValue } from '../hooks/useStableValue';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
@@ -31,16 +31,10 @@ import {
 } from '../overlays/normalizeShapeDescriptors';
 import { resolveMapProvider } from '../providers';
 import { resolveFitCoordinates } from '../region/resolveFitCoordinates';
-import { useValidRegion } from '../region/useValidRegion';
 import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-import {
-  camerasEqual,
-  edgePaddingsEqual,
-  regionsEqual,
-} from '../utils/mapValueEquality';
 
 export function MapView({
   ref,
@@ -150,14 +144,7 @@ export function MapView({
     normalizeEnteringAnimation(clusterEnteringAnimation),
     enteringAnimationsEqual,
   );
-  // `region`, `camera` and `mapPadding` are usually written inline in JSX, so
-  // an equal-but-new object would otherwise reach native on every render, and
-  // every provider answers a re-sent `region` by fitting the camera to it
-  // again - snapping the map back after a pan. The comparison runs on what
-  // validation accepted, because an invalid camera may not even have a `center`.
-  const validRegion = useStableValue(useValidRegion(region), regionsEqual);
-  const validCamera = useStableValue(useValidCamera(camera), camerasEqual);
-  const stableMapPadding = useStableValue(mapPadding, edgePaddingsEqual);
+  const cameraProps = useStableCameraProps({ region, camera, mapPadding });
 
   const hasMarkerPress =
     onMarkerPressProp != null || hasCollectedMarkerPress;
@@ -312,8 +299,8 @@ export function MapView({
       provider={resolvedProvider}
       googleMapId={googleMapId}
       mapType={mapType}
-      region={validRegion}
-      camera={validCamera}
+      region={cameraProps.region}
+      camera={cameraProps.camera}
       scrollEnabled={scrollEnabled}
       zoomEnabled={zoomEnabled}
       rotateEnabled={rotateEnabled}
@@ -325,7 +312,7 @@ export function MapView({
       applePoiDetailPresentation={applePoiDetailPresentation}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
-      mapPadding={stableMapPadding}
+      mapPadding={cameraProps.mapPadding}
       markerEnteringAnimation={markerEntering}
       clusterEnteringAnimation={clusterEntering}
       markers={markers}

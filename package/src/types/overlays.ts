@@ -164,8 +164,10 @@ export interface PolylineProps {
   strokeWidth?: number;
 
   /**
-   * Whether taps on the polyline reach `onPress` and `onPolylinePress` on
-   * `MapView`. Defaults to `true` when `onPress` is set, `false` otherwise.
+   * Whether taps on the polyline fire its `onPress` and `MapView`'s
+   * `onPolylinePress`. Taps on a polyline that is not tappable pass through to
+   * `MapView`'s `onPress`. Defaults to `true` when `onPress` is set, `false`
+   * otherwise.
    */
   tappable?: boolean;
 
@@ -198,8 +200,10 @@ export interface PolygonProps {
   strokeWidth?: number;
 
   /**
-   * Whether taps on the polygon reach `onPress` and `onPolygonPress` on
-   * `MapView`. Defaults to `true` when `onPress` is set, `false` otherwise.
+   * Whether taps on the polygon fire its `onPress` and `MapView`'s
+   * `onPolygonPress`. Taps on a polygon that is not tappable pass through to
+   * `MapView`'s `onPress`. Defaults to `true` when `onPress` is set, `false`
+   * otherwise.
    */
   tappable?: boolean;
 
@@ -235,8 +239,10 @@ export interface CircleProps {
   strokeWidth?: number;
 
   /**
-   * Whether taps on the circle reach `onPress` and `onCirclePress` on
-   * `MapView`. Defaults to `true` when `onPress` is set, `false` otherwise.
+   * Whether taps on the circle fire its `onPress` and `MapView`'s
+   * `onCirclePress`. Taps on a circle that is not tappable pass through to
+   * `MapView`'s `onPress`. Defaults to `true` when `onPress` is set, `false`
+   * otherwise.
    */
   tappable?: boolean;
 

@@ -72,7 +72,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `onPoiPress`                                | `PoiPressEvent`          | Provider-owned base-map POIs only. Apple Maps emits category data; Google Maps emits place ID. POI taps do not also fire map `onPress`.                                                            |
 | `onMapReady`                                | none                     | Fires once after the map finishes loading tiles.                                                                                                                                                   |
 | `Marker.onPress` / `onDragEnd`              | none / `Coordinate`      | Dispatched by overlay `id` from native to JS registry.                                                                                                                                             |
-| Overlay `onPress`                           | none                     | Polyline/polygon/circle with `onPress` default to `tappable` on native.                                                                                                                            |
+| Overlay `onPress`                           | none                     | Polyline/polygon/circle children with `onPress` are sent as `tappable`; any other shape, bulk descriptors included, is untappable on every provider unless `tappable: true` is set.                |
 | `onClusterPress`                            | `string[]`, `Coordinate` | Fires when a marker cluster is tapped; IDs are member marker overlay ids.                                                                                                                          |
 
 ### Advanced MapView props

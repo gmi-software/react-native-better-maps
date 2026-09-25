@@ -37,6 +37,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Marker entering animations](#marker-entering-animations)
 - [Re-renders](#re-renders)
 - [Overlay ids](#overlay-ids)
+- [Overlay presses](#overlay-presses)
 - [Invalid input](#invalid-input)
 - [Capability matrix](#capability-matrix)
 - [Public API](#public-api)
@@ -633,6 +634,29 @@ A keyed list therefore needs nothing more, and the callbacks hand back your own 
 Removing a stop removes one marker and leaves the others alone. With positional ids, every marker after it would take over the id of the one before: it is redrawn, reported under another id, and entering animations play on the wrong marker. React does not warn about a list without keys here, because `MapView` never renders its children, so `MapView` warns once in development instead, when the number of overlays without an `id` or `key` changes.
 
 Ids only have to be unique per kind: a marker and a polyline may share one. Keys only have to be unique within one list, so when two lists hand `MapView` the same key, the later overlay gets `#2` appended (`"42#2"`) and a development warning, rather than one of the two silently not being drawn. An `id` prop is used as given - a key or position that collides with it gets the suffix instead - and two overlays of one kind with the same `id` prop are reported in development, since only one of them is drawn.
+
+## Overlay presses
+
+A polyline, polygon or circle reports taps only when it is tappable. A `<Polyline>`, `<Polygon>` or `<Circle>` child with an `onPress` is tappable automatically. Anything else - a child without `onPress`, and every descriptor in the bulk `polylines` / `polygons` / `circles` props - needs `tappable: true` before `onPolylinePress`, `onPolygonPress` or `onCirclePress` fires for it:
+
+```tsx
+<MapView
+  style={{ flex: 1 }}
+  circles={[
+    {
+      id: 'delivery-zone',
+      center: { latitude: 52.2297, longitude: 21.0122 },
+      radius: 1500,
+      tappable: true,
+    },
+  ]}
+  onCirclePress={(id) => console.log('pressed', id)}
+/>
+```
+
+A tap on a shape that is not tappable passes through to the map and fires `onPress`.
+
+> **Behavior change after 1.2.1:** circles used to be tappable by default on Apple Maps and on Google Maps for Android, but not on Google Maps for iOS. They now default to not tappable on every provider, like polylines and polygons. If you handle presses on bulk `circles`, or on `<Circle>` children without `onPress`, through `onCirclePress`, add `tappable: true` to them.
 
 ## Invalid input
 

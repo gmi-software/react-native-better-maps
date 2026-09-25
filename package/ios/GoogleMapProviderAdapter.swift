@@ -251,19 +251,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   func animateToRegion(region: Region, duration: TimeInterval?) throws {
-    guard region.isValid else {
-      return
-    }
-
-    // No insets: `mapPadding` is the map view's `padding` already, and a fit
-    // keeps clear of that padding as well as of the insets it is given, so
-    // passing it again would frame the region inside it twice.
     let animationDuration = duration ?? Self.defaultAnimationDuration
-    applyCameraUpdate(
-      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
-      animated: animationDuration > 0,
-      duration: animationDuration
-    )
+    applyRegion(region, animated: animationDuration > 0, duration: animationDuration)
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
@@ -335,7 +324,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     clusterEnteringAnimation = nil
   }
 
-  private func applyRegion(_ region: Region, animated: Bool = false) {
+  private func applyRegion(
+    _ region: Region,
+    animated: Bool = false,
+    duration: TimeInterval? = nil
+  ) {
     guard region.isValid else {
       return
     }
@@ -355,7 +348,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     applyCameraUpdate(
       GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
       animated: animated,
-      duration: nil
+      duration: duration
     )
     self.lastAppliedRegion = region
     // `moveCamera` updates `camera` synchronously; an animation does not, so

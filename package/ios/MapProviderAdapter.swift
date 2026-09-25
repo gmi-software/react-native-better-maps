@@ -15,6 +15,7 @@ protocol MapProviderAdapter: AnyObject {
   var followsUserLocation: Bool? { get set }
   var showsCompass: Bool? { get set }
   var showsScale: Bool? { get set }
+  var applePoiDetailPresentation: ApplePoiDetailPresentation? { get set }
   var customMapStyle: String? { get set }
   var googleMapId: String? { get set }
   var clusteringEnabled: Bool? { get set }
@@ -64,6 +65,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var followsUserLocation: Bool?
   var showsCompass: Bool?
   var showsScale: Bool?
+  var applePoiDetailPresentation: ApplePoiDetailPresentation?
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Bool?

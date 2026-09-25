@@ -45,12 +45,12 @@ interface MapProviderAdapter {
 
   fun fetchCamera(): Promise<Camera>
 
-  fun applyCamera(camera: Camera)
+  fun applyCamera(camera: Camera): Promise<Unit>
 
   fun animateCamera(
     camera: Camera,
     duration: Double?,
-  )
+  ): Promise<Unit>
 
   fun getVisibleRegion(): Promise<VisibleRegion>
 
@@ -58,7 +58,7 @@ interface MapProviderAdapter {
     coordinates: Array<Coordinate>,
     padding: EdgePadding?,
     animated: Boolean?,
-  )
+  ): Promise<Unit>
 
   /**
    * Destroys the underlying native map and unregisters everything the adapter owns.

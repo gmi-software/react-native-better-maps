@@ -85,10 +85,15 @@ export interface MarkerDescriptor {
  * Props for a map marker overlay.
  */
 export interface MarkerProps {
-  /** Unique identifier for the marker. */
+  /**
+   * Identifies the marker across renders, and is what `onMarkerPress`,
+   * `onMarkerDragEnd` and `onClusterPress` on `MapView` report. Defaults to
+   * the element's React `key`, then to its position among the markers that
+   * have neither. Must be unique among the map's markers.
+   */
   id?: string;
 
-  /** Geographic position of the marker. */
+  /** Geographic position of the marker. Invalid coordinates skip the marker with a development warning. */
   coordinate: Coordinate;
 
   /** Title displayed in the callout. */
@@ -105,6 +110,12 @@ export interface MarkerProps {
 
   /** Custom marker image. */
   image?: MarkerImageSource;
+
+  /** Color applied to the default marker when no custom image is set. */
+  markerColor?: string;
+
+  /** Drawing order relative to other map overlays. */
+  zIndex?: number;
 
   /** Anchor point on the image relative to the coordinate (default bottom-center). */
   anchor?: MarkerAnchor;
@@ -135,10 +146,15 @@ export interface MarkerProps {
  * Props for a polyline overlay.
  */
 export interface PolylineProps {
-  /** Unique identifier for the polyline. */
+  /**
+   * Identifies the polyline across renders, and is what `onPolylinePress` on
+   * `MapView` reports. Defaults to the element's React `key`, then to its
+   * position among the polylines that have neither. Must be unique among the
+   * map's polylines.
+   */
   id?: string;
 
-  /** Ordered list of coordinates forming the polyline. */
+  /** Ordered list of coordinates forming the polyline. Invalid coordinates or fewer than 2 points skip the polyline with a development warning. */
   coordinates: Coordinate[];
 
   /** Stroke color in hex format (e.g. '#FF0000'). */
@@ -158,10 +174,15 @@ export interface PolylineProps {
  * Props for a polygon overlay.
  */
 export interface PolygonProps {
-  /** Unique identifier for the polygon. */
+  /**
+   * Identifies the polygon across renders, and is what `onPolygonPress` on
+   * `MapView` reports. Defaults to the element's React `key`, then to its
+   * position among the polygons that have neither. Must be unique among the
+   * map's polygons.
+   */
   id?: string;
 
-  /** Ordered list of coordinates forming the polygon boundary. */
+  /** Ordered list of coordinates forming the polygon boundary. Invalid coordinates or fewer than 3 points skip the polygon with a development warning. */
   coordinates: Coordinate[];
 
   /** Fill color in hex format (e.g. '#FF000080'). */
@@ -184,13 +205,18 @@ export interface PolygonProps {
  * Props for a circle overlay.
  */
 export interface CircleProps {
-  /** Unique identifier for the circle. */
+  /**
+   * Identifies the circle across renders, and is what `onCirclePress` on
+   * `MapView` reports. Defaults to the element's React `key`, then to its
+   * position among the circles that have neither. Must be unique among the
+   * map's circles.
+   */
   id?: string;
 
-  /** Center coordinate of the circle. */
+  /** Center coordinate of the circle. An invalid center skips the circle with a development warning. */
   center: Coordinate;
 
-  /** Radius in meters. */
+  /** Radius in meters. A non-finite or negative radius skips the circle with a development warning. */
   radius: number;
 
   /** Fill color in hex format. */

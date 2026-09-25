@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, spyOn, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { warnGeojson } from '../warnGeojson';
 
 const warnSpy = spyOn(console, 'warn');
@@ -13,6 +13,10 @@ function restoreDevFlag(): void {
 
   globalDev.__DEV__ = previousDev;
 }
+
+beforeEach(() => {
+  warnSpy.mockClear();
+});
 
 afterEach(() => {
   warnSpy.mockClear();

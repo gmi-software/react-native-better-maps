@@ -183,6 +183,7 @@ const basePolyline: PolylineDescriptor = {
   strokeColor: '#FF0000',
   strokeWidth: 3,
   tappable: true,
+  zIndex: 4,
 };
 
 describeFieldCoverage(
@@ -209,6 +210,8 @@ describeFieldCoverage(
     ['strokeColor', (d) => ({ ...d, strokeColor: '#00FF00' })],
     ['strokeWidth', (d) => ({ ...d, strokeWidth: 4 })],
     ['tappable', (d) => ({ ...d, tappable: false })],
+    ['zIndex', (d) => ({ ...d, zIndex: 9 })],
+    ['a cleared zIndex', (d) => ({ ...d, zIndex: undefined })],
   ],
 );
 
@@ -223,6 +226,19 @@ const basePolygon: PolygonDescriptor = {
   strokeColor: '#0000FF',
   strokeWidth: 2,
   tappable: true,
+  zIndex: 5,
+  holes: [
+    [
+      { latitude: 52.231, longitude: 21.015 },
+      { latitude: 52.232, longitude: 21.016 },
+      { latitude: 52.233, longitude: 21.015 },
+    ],
+    [
+      { latitude: 52.235, longitude: 21.02 },
+      { latitude: 52.236, longitude: 21.021 },
+      { latitude: 52.237, longitude: 21.02 },
+    ],
+  ],
 };
 
 describeFieldCoverage(
@@ -249,8 +265,35 @@ describeFieldCoverage(
     ['strokeColor', (d) => ({ ...d, strokeColor: '#00FF00' })],
     ['strokeWidth', (d) => ({ ...d, strokeWidth: 5 })],
     ['tappable', (d) => ({ ...d, tappable: false })],
+    ['zIndex', (d) => ({ ...d, zIndex: 9 })],
+    ['a cleared zIndex', (d) => ({ ...d, zIndex: undefined })],
+    [
+      'a hole coordinate',
+      (d) => ({
+        ...d,
+        holes: d.holes?.map((ring, index) =>
+          index === 0
+            ? ring.map((coordinate, coordinateIndex) =>
+                coordinateIndex === 0
+                  ? { ...coordinate, longitude: 22 }
+                  : coordinate,
+              )
+            : ring,
+        ),
+      }),
+    ],
+    [
+      'the hole ring count',
+      (d) => ({ ...d, holes: d.holes?.slice(0, -1) }),
+    ],
+    ['cleared holes', (d) => ({ ...d, holes: undefined })],
   ],
 );
+
+test('polygonDescriptorsEqual detects holes added to an unset polygon', () => {
+  const withoutHoles = { ...basePolygon, holes: undefined };
+  expect(polygonDescriptorsEqual(withoutHoles, basePolygon)).toBe(false);
+});
 
 const baseCircle: CircleDescriptor = {
   id: 'circle-1',

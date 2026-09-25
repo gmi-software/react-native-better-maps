@@ -5,6 +5,9 @@ import MapKit
 /// Runs entirely off descriptor data (no `MKMapView` projection), so it is safe
 /// to call from a background queue. Output is bounded by the number of grid
 /// cells that fit on screen, keeping per-frame MapKit work small and constant.
+///
+/// Every coordinate must be placeable: the grid cell comes from `Int(_:)`, which
+/// traps on NaN and infinity. `MarkerRenderPipeline.setMarkers` drops those.
 enum MarkerClusterEngine {
   /// A single display element: an individual marker or a cluster badge.
   enum Element {
@@ -499,10 +502,19 @@ final class MarkerRenderPipeline {
     }
 
     markersFingerprint = fingerprint
-    allMarkerDescriptors = next
+    allMarkerDescriptors = Self.placeable(next)
     spatialIndex = nil
     advanceDatasetGeneration()
     return true
+  }
+
+  /// JS drops these already, but `hybridRef` reaches the native setter directly.
+  private static func placeable(_ descriptors: [MarkerDescriptor]) -> [MarkerDescriptor] {
+    // Filtering copies every C++-backed descriptor, so skip it when nothing is dropped.
+    guard !descriptors.allSatisfy({ $0.coordinate.isValid }) else {
+      return descriptors
+    }
+    return descriptors.filter { $0.coordinate.isValid }
   }
 
   func reapply(

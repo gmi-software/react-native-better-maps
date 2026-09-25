@@ -32,6 +32,7 @@ class HybridMapView(
   private var _followsUserLocation: Boolean? = null
   private var _showsCompass: Boolean? = null
   private var _showsScale: Boolean? = null
+  private var _applePoiDetailPresentation: ApplePoiDetailPresentation? = null
   private var _customMapStyle: String? = null
   private var _googleMapId: String? = null
   private var _clusteringEnabled: Boolean? = null
@@ -128,6 +129,13 @@ class HybridMapView(
     set(value) {
       _showsScale = value
       adapter?.showsScale = value
+    }
+
+  /** Apple MapKit only; the Google Maps SDK has no native POI detail surface. */
+  override var applePoiDetailPresentation: ApplePoiDetailPresentation?
+    get() = _applePoiDetailPresentation
+    set(value) {
+      _applePoiDetailPresentation = value
     }
 
   override var customMapStyle: String?
@@ -280,8 +288,7 @@ class HybridMapView(
 
   override fun applyCamera(camera: Camera): Promise<Unit> {
     val mounted = adapter ?: return notMountedRejection()
-    mounted.applyCamera(camera)
-    return Promise.resolved(Unit)
+    return mounted.applyCamera(camera)
   }
 
   override fun animateCamera(
@@ -289,8 +296,7 @@ class HybridMapView(
     duration: Double?,
   ): Promise<Unit> {
     val mounted = adapter ?: return notMountedRejection()
-    mounted.animateCamera(camera, duration)
-    return Promise.resolved(Unit)
+    return mounted.animateCamera(camera, duration)
   }
 
   override fun getVisibleRegion(): Promise<VisibleRegion> {
@@ -304,8 +310,7 @@ class HybridMapView(
     animated: Boolean?,
   ): Promise<Unit> {
     val mounted = adapter ?: return notMountedRejection()
-    mounted.fitToCoordinates(coordinates, padding, animated)
-    return Promise.resolved(Unit)
+    return mounted.fitToCoordinates(coordinates, padding, animated)
   }
 
   override fun onDropView() {
@@ -326,6 +331,7 @@ class HybridMapView(
     _followsUserLocation = null
     _showsCompass = null
     _showsScale = null
+    _applePoiDetailPresentation = null
     _customMapStyle = null
     _googleMapId = null
     _clusteringEnabled = null

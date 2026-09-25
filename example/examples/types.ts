@@ -1,4 +1,5 @@
 import type {
+  ApplePoiDetailPresentation,
   EdgePadding,
   GeojsonInput,
   GeojsonProps,
@@ -12,9 +13,11 @@ export interface MapScenarioAdvancedOptions {
   followsUserLocation?: boolean;
   showsCompass?: boolean;
   showsScale?: boolean;
+  applePoiDetailPresentation?: ApplePoiDetailPresentation;
   customMapStyle?: string;
   mapPadding?: EdgePadding;
   fitToCoordinatesOnReady?: boolean;
+  fitToCoordinatesOnMount?: boolean;
 }
 
 export interface MapScenario {

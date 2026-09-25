@@ -39,7 +39,6 @@ final class GoogleMapOverlayController {
   private var circleVersions: [String: ShapeRenderVersion] = [:]
   private let markerPipeline: MarkerRenderPipeline
   private let visualApplier = GoogleMarkerVisualApplier()
-  private var clusterIconCache: [String: UIImage] = [:]
 
   var onMarkerPress: ((String) -> Void)?
   var onMarkerDragEnd: ((String, Coordinate) -> Void)?
@@ -308,68 +307,13 @@ final class GoogleMapOverlayController {
       marker.snippet = nil
       marker.isDraggable = false
       marker.zIndex = 0
-      let icon = clusterIcon(count: count)
+      let icon = ClusterBadgeRenderer.image(count: count)
       if marker.icon !== icon {
         marker.icon = icon
       }
       marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
       marker.userData = MarkerPayload.cluster(memberIds: memberIds, region: region)
     }
-  }
-
-  private func clusterIcon(count: Int) -> UIImage {
-    let diameter = ClusterBadgeMetrics.diameter(for: count)
-    let text = Self.formatClusterCount(count)
-    let cacheKey = "\(Int(diameter)):\(text)"
-    if let icon = clusterIconCache[cacheKey] {
-      return icon
-    }
-
-    let format = UIGraphicsImageRendererFormat.default()
-    format.scale = UIScreen.main.scale
-    let icon = UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter), format: format)
-      .image { context in
-        let rect = CGRect(x: 0, y: 0, width: diameter, height: diameter)
-        let colors =
-          [
-            UIColor(red: 0.30, green: 0.62, blue: 1.0, alpha: 1).cgColor,
-            UIColor(red: 0.04, green: 0.52, blue: 1.0, alpha: 1).cgColor,
-          ] as CFArray
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0, 1])!
-        context.cgContext.addEllipse(in: rect.insetBy(dx: 1, dy: 1))
-        context.cgContext.clip()
-        context.cgContext.drawLinearGradient(
-          gradient,
-          start: CGPoint(x: diameter / 2, y: 0),
-          end: CGPoint(x: diameter / 2, y: diameter),
-          options: []
-        )
-        context.cgContext.resetClip()
-        UIColor.white.setStroke()
-        let borderPath = UIBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
-        borderPath.lineWidth = 2
-        borderPath.stroke()
-
-        let attributes: [NSAttributedString.Key: Any] = [
-          .font: UIFont.systemFont(ofSize: 13, weight: .bold),
-          .foregroundColor: UIColor.white,
-        ]
-        let textSize = text.size(withAttributes: attributes)
-        text.draw(
-          at: CGPoint(x: (diameter - textSize.width) / 2, y: (diameter - textSize.height) / 2),
-          withAttributes: attributes
-        )
-      }
-    clusterIconCache[cacheKey] = icon
-    return icon
-  }
-
-  private static func formatClusterCount(_ count: Int) -> String {
-    if count >= 1000 {
-      return String(format: "%.1fk", Double(count) / 1000)
-    }
-    return String(count)
   }
 
   private func clearMarkers() {

@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import com.facebook.react.uimanager.ThemedReactContext
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -19,10 +20,10 @@ import com.google.android.gms.maps.model.Polyline
 import java.util.concurrent.Executors
 
 /** Reconciles overlay descriptors with Google Maps overlay objects. */
-class MapOverlayController(
-  private var googleMap: GoogleMap?,
+internal class MapOverlayController(
   private val context: ThemedReactContext,
 ) {
+  private var googleMap: GoogleMap? = null
   private val markers = HashMap<String, Marker>()
   private val mainHandler = Handler(Looper.getMainLooper())
   private val density: Float = context.resources.displayMetrics.density
@@ -36,11 +37,12 @@ class MapOverlayController(
   private val polygonVersions = HashMap<String, Long>()
   private val circleVersions = HashMap<String, Long>()
   private val markerEnterAnimators = HashMap<String, Animator>()
-  private var clusteringEnabled = false
+  private val renderState =
+    MarkerRenderState { descriptor ->
+      Log.w(NITRO_MAPS_LOG_TAG, "Skipped marker \"${descriptor.id}\": it cannot be drawn.")
+    }
   private var onMarkerPress: ((String) -> Unit)? = null
   private var onClusterPress: ((List<String>, Coordinate) -> Unit)? = null
-  private var allMarkerDescriptors: Array<MarkerDescriptor> = emptyArray()
-  private var markersFingerprint: Long = 0L
   private var spatialIndex: MarkerSpatialIndex? = null
   /** Invalidates in-flight refresh results (viewport diffs). */
   private var refreshGeneration: Int = 0
@@ -66,7 +68,15 @@ class MapOverlayController(
   fun setGoogleMap(map: GoogleMap?) {
     googleMap = map
     if (map == null) {
+      renderState.detachMap()
       clear()
+      return
+    }
+
+    // A fresh map needs a fresh index.
+    spatialIndex = null
+    if (renderState.attachMap()) {
+      reapplyMarkers()
     }
   }
 
@@ -81,18 +91,15 @@ class MapOverlayController(
 
     viewWidthPx = widthPx
     viewHeightPx = heightPx
-    if (widthPx > 0 && heightPx > 0 && usesViewportPipeline()) {
+    if (widthPx > 0 && heightPx > 0 && renderState.usesViewportPipeline) {
       refreshViewportMarkers()
     }
   }
 
   fun setClusteringEnabled(enabled: Boolean) {
-    if (clusteringEnabled == enabled) {
-      return
+    if (renderState.setClusteringEnabled(enabled)) {
+      reapplyMarkers()
     }
-
-    clusteringEnabled = enabled
-    reapplyMarkers()
   }
 
   fun setMarkerPressHandlers(
@@ -121,44 +128,33 @@ class MapOverlayController(
     polylineVersions.clear()
     polygonVersions.clear()
     circleVersions.clear()
-    allMarkerDescriptors = emptyArray()
-    markersFingerprint = 0L
+    renderState.reset()
     spatialIndex = null
     refreshGeneration += 1
     advanceDatasetGeneration()
+    // Queued work would only be discarded by the generation checks, so drop it -
+    // and with it the inbox slot a dropped refresh task would have released.
     refreshInbox.discardPending()
-    computeExecutor.shutdown()
+    computeExecutor.shutdownNow()
     computeExecutor = Executors.newSingleThreadExecutor()
   }
 
   fun setMarkers(descriptors: Array<MarkerDescriptor>?) {
-    val next = descriptors ?: emptyArray()
-    val fingerprint = next.markersFingerprint()
-    if (fingerprint == markersFingerprint) {
+    if (!renderState.setMarkers(descriptors)) {
       return
     }
 
-    markersFingerprint = fingerprint
-    allMarkerDescriptors = next
     spatialIndex = null
     advanceDatasetGeneration()
     reapplyMarkers()
   }
 
-  /**
-   * Whether markers are driven by the background viewport pipeline (clustering
-   * or large LOD) rather than the synchronous small-dataset path.
-   */
-  private fun usesViewportPipeline(): Boolean {
-    return clusteringEnabled || allMarkerDescriptors.size > ASYNC_THRESHOLD
-  }
-
   private fun reapplyMarkers() {
     googleMap ?: return
-    if (usesViewportPipeline()) {
+    if (renderState.usesViewportPipeline) {
       rebuildIndexAndRefresh()
     } else {
-      applyMarkersSync(allMarkerDescriptors)
+      applyMarkersSync(renderState.descriptors)
     }
   }
 
@@ -168,7 +164,7 @@ class MapOverlayController(
   ) {
     val map = googleMap ?: return
     val index = spatialIndex ?: return
-    if (!usesViewportPipeline()) {
+    if (!renderState.usesViewportPipeline) {
       return
     }
     if (viewWidthPx <= 0 || viewHeightPx <= 0) {
@@ -182,7 +178,7 @@ class MapOverlayController(
       index = index,
       bounds = bounds,
       latitudeSpan = bounds.northeast.latitude - bounds.southwest.latitude,
-      clustering = clusteringEnabled,
+      clustering = renderState.clusteringEnabled,
       widthPx = viewWidthPx,
       heightPx = viewHeightPx,
       displayedVersions = HashMap(markerVersions),
@@ -194,8 +190,8 @@ class MapOverlayController(
       return
     }
 
-    computeExecutor.execute {
-      val pending = refreshInbox.take() ?: return@execute
+    executeCompute {
+      val pending = refreshInbox.take() ?: return@executeCompute
       val diff = computeViewportDiff(pending)
 
       mainHandler.post {
@@ -208,15 +204,15 @@ class MapOverlayController(
   }
 
   private fun rebuildIndexAndRefresh() {
-    val descriptors = allMarkerDescriptors
+    val descriptors = renderState.descriptors
     val builtForDataset = datasetGeneration
     // Diffs computed against the previous index are stale from here on.
     refreshGeneration += 1
 
-    computeExecutor.execute {
+    executeCompute {
       if (!refreshInbox.isCurrent(builtForDataset)) {
         // A newer dataset superseded this build before it started.
-        return@execute
+        return@executeCompute
       }
 
       val index = MarkerSpatialIndex(descriptors)
@@ -251,6 +247,20 @@ class MapOverlayController(
   private fun advanceDatasetGeneration() {
     datasetGeneration += 1
     refreshInbox.recordDataset(datasetGeneration)
+  }
+
+  /**
+   * An exception escaping a [computeExecutor] task would reach the thread's uncaught exception
+   * handler and kill the app; a failed refresh just leaves the markers on screen as they are.
+   */
+  private fun executeCompute(task: () -> Unit) {
+    computeExecutor.execute {
+      try {
+        task()
+      } catch (error: Exception) {
+        Log.e(NITRO_MAPS_LOG_TAG, "Marker computation failed; the markers on screen were left as they are.", error)
+      }
+    }
   }
 
   private fun applyDiff(
@@ -501,7 +511,7 @@ class MapOverlayController(
   }
 
   fun onCameraIdle() {
-    if (usesViewportPipeline()) {
+    if (renderState.usesViewportPipeline) {
       scheduleIdleRefresh()
     }
   }
@@ -518,7 +528,7 @@ class MapOverlayController(
     val runnable =
       Runnable {
         idleRefreshRunnable = null
-        if (usesViewportPipeline()) {
+        if (renderState.usesViewportPipeline) {
           refreshViewportMarkers()
         }
       }
@@ -527,7 +537,7 @@ class MapOverlayController(
   }
 
   private fun scheduleLiveRefresh() {
-    if (!usesViewportPipeline() || liveRefreshRunnable != null) {
+    if (!renderState.usesViewportPipeline || liveRefreshRunnable != null) {
       return
     }
 
@@ -549,7 +559,7 @@ class MapOverlayController(
 
   private fun runLiveRefresh() {
     lastLiveRefreshMs = SystemClock.uptimeMillis()
-    if (usesViewportPipeline()) {
+    if (renderState.usesViewportPipeline) {
       refreshViewportMarkers(
         animateEntering = true,
         maxAnimatedMarkers = MAX_LIVE_ANIMATED_MARKERS_PER_DIFF,
@@ -592,14 +602,23 @@ class MapOverlayController(
   fun updatePolylines(descriptors: Array<PolylineDescriptor>?) {
     val map = googleMap ?: return
     reconcileShapes(
+      kind = "polyline",
       current = polylines,
       versions = polylineVersions,
-      next = descriptors?.associateBy { it.id } ?: emptyMap(),
+      next =
+        validDescriptorsById(
+          descriptors = descriptors,
+          kind = "polyline",
+          id = { it.id },
+          isValid = { it.isValid() },
+        ),
       version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
-        map.addPolyline(descriptor.toPolylineOptions()).also { polyline ->
-          polyline.tag = descriptor.id
+        addedOrNull(kind = "polyline", id = descriptor.id) {
+          map.addPolyline(descriptor.toPolylineOptions()).also { polyline ->
+            polyline.tag = descriptor.id
+          }
         }
       },
       update = { polyline, descriptor -> descriptor.applyTo(polyline) },
@@ -609,14 +628,23 @@ class MapOverlayController(
   fun updatePolygons(descriptors: Array<PolygonDescriptor>?) {
     val map = googleMap ?: return
     reconcileShapes(
+      kind = "polygon",
       current = polygons,
       versions = polygonVersions,
-      next = descriptors?.associateBy { it.id } ?: emptyMap(),
+      next =
+        validDescriptorsById(
+          descriptors = descriptors,
+          kind = "polygon",
+          id = { it.id },
+          isValid = { it.isValid() },
+        ),
       version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
-        map.addPolygon(descriptor.toPolygonOptions()).also { polygon ->
-          polygon.tag = descriptor.id
+        addedOrNull(kind = "polygon", id = descriptor.id) {
+          map.addPolygon(descriptor.toPolygonOptions()).also { polygon ->
+            polygon.tag = descriptor.id
+          }
         }
       },
       update = { polygon, descriptor -> descriptor.applyTo(polygon) },
@@ -626,14 +654,23 @@ class MapOverlayController(
   fun updateCircles(descriptors: Array<CircleDescriptor>?) {
     val map = googleMap ?: return
     reconcileShapes(
+      kind = "circle",
       current = circles,
       versions = circleVersions,
-      next = descriptors?.associateBy { it.id } ?: emptyMap(),
+      next =
+        validDescriptorsById(
+          descriptors = descriptors,
+          kind = "circle",
+          id = { it.id },
+          isValid = { it.isValid() },
+        ),
       version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
-        map.addCircle(descriptor.toCircleOptions()).also { circle ->
-          circle.tag = descriptor.id
+        addedOrNull(kind = "circle", id = descriptor.id) {
+          map.addCircle(descriptor.toCircleOptions()).also { circle ->
+            circle.tag = descriptor.id
+          }
         }
       },
       update = { circle, descriptor -> descriptor.applyTo(circle) },
@@ -643,9 +680,11 @@ class MapOverlayController(
   /**
    * Like [reconcile], but keeps a render version per id: an unchanged
    * descriptor is skipped and a changed one is updated in place instead of
-   * being removed and re-added.
+   * being removed and re-added. An update the SDK rejects removes the overlay,
+   * which is what a rejected re-add would have left behind.
    */
   private fun <T, Descriptor> reconcileShapes(
+    kind: String,
     current: MutableMap<String, T>,
     versions: MutableMap<String, Long>,
     next: Map<String, Descriptor>,
@@ -668,18 +707,64 @@ class MapOverlayController(
           versions[id] = nextVersion
         }
       } else if (versions[id] != nextVersion) {
-        update(existing, descriptor)
-        versions[id] = nextVersion
+        if (addedOrNull(kind = kind, id = id) { update(existing, descriptor) } != null) {
+          versions[id] = nextVersion
+        } else {
+          current.remove(id)?.let(remove)
+          versions.remove(id)
+        }
       }
     }
   }
+
+  /** Dropping the id also removes what it used to render, since reconciling treats a missing id as a removal. */
+  private fun <Descriptor> validDescriptorsById(
+    descriptors: Array<Descriptor>?,
+    kind: String,
+    id: (Descriptor) -> String,
+    isValid: (Descriptor) -> Boolean,
+  ): Map<String, Descriptor> {
+    if (descriptors == null) {
+      return emptyMap()
+    }
+
+    val valid = LinkedHashMap<String, Descriptor>(descriptors.size)
+    for (descriptor in descriptors) {
+      if (!isValid(descriptor)) {
+        Log.w(NITRO_MAPS_LOG_TAG, "Skipped $kind \"${id(descriptor)}\": it cannot be drawn.")
+        continue
+      }
+
+      valid[id(descriptor)] = descriptor
+    }
+
+    return valid
+  }
+
+  /**
+   * The pre-filter only models what the descriptors declare; `GoogleMap.add*`
+   * - and the setters behind an in-place shape update - can still reject a
+   * value for a reason of their own, and reconciling runs inside a view prop
+   * setter, where an escaping throw aborts the whole mount transaction.
+   */
+  private fun <T> addedOrNull(
+    kind: String,
+    id: String,
+    add: () -> T,
+  ): T? =
+    try {
+      add()
+    } catch (error: IllegalArgumentException) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Skipped $kind \"$id\": the Google Maps SDK rejected it.", error)
+      null
+    }
 
   private fun <T, Descriptor> reconcile(
     current: MutableMap<String, T>,
     next: Map<String, Descriptor>,
     remove: (T) -> Unit,
     add: (Descriptor) -> T?,
-    update: (T, Descriptor) -> T,
+    update: (T, Descriptor) -> T?,
   ) {
     val nextIds = next.keys
     val existingIds = current.keys
@@ -695,7 +780,12 @@ class MapOverlayController(
           current[id] = created
         }
       } else {
-        current[id] = update(existing, descriptor)
+        val updated = update(existing, descriptor)
+        if (updated == null) {
+          current.remove(id)
+        } else {
+          current[id] = updated
+        }
       }
     }
   }
@@ -764,17 +854,21 @@ class MapOverlayController(
       }
     }
 
+    /**
+     * Drops the pending request and frees the slot. Only for when the queued
+     * compute task is dropped too (`shutdownNow`): that task would have freed
+     * the slot in [take], and without it every later [post] would wait on a
+     * task that never runs.
+     */
     fun discardPending() {
       synchronized(lock) {
         pending = null
+        isComputeQueued = false
       }
     }
   }
 
   private companion object {
-    /** Non-clustered datasets at or below this size reconcile synchronously. */
-    const val ASYNC_THRESHOLD = 500
-
     /** Main-thread marker animations are capped so bulk refreshes do not block gestures. */
     const val MAX_ANIMATED_MARKERS_PER_DIFF = 96
 

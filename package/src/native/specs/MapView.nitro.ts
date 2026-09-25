@@ -93,6 +93,14 @@ export type ApplePoiCategory =
   | 'zoo'
   | 'unknown';
 
+/**
+ * Native MapKit presentation for a selected point of interest (iOS 18+).
+ *
+ * Mirrors the `MKSelectionAccessory.mapItemDetail(_:)` presentation styles.
+ */
+export type ApplePoiDetailPresentation =
+  'automatic' | 'callout' | 'sheet' | 'openInMaps';
+
 export interface NativePoiPressEvent {
   provider: MapProvider;
   coordinate: Coordinate;
@@ -150,6 +158,12 @@ export interface MapViewProps extends HybridViewProps {
 
   /** Whether to show the scale control (iOS only). */
   showsScale?: boolean;
+
+  /**
+   * Native MapKit detail presentation for selected points of interest
+   * (Apple MapKit only, iOS 18+). Omit to disable.
+   */
+  applePoiDetailPresentation?: ApplePoiDetailPresentation;
 
   /** Custom map style as a JSON string (full support on Android; curated subset on iOS 16+). */
   customMapStyle?: string;

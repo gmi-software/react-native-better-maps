@@ -162,6 +162,15 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       applySelectablePoiFeatures(to: view)
     }
   }
+
+  /// Native MapKit detail presentation for selected POIs (iOS 18+). On iOS 18+ it enables
+  /// selectable points of interest on its own, independently of `onPoiPress`. On earlier
+  /// versions it is ignored and does not turn selection on.
+  var applePoiDetailPresentation: ApplePoiDetailPresentation? {
+    didSet {
+      applySelectablePoiFeatures(to: view)
+    }
+  }
   var onLongPress: ((Coordinate) -> Void)?
 
   var markers: [MarkerDescriptor]? {
@@ -217,12 +226,13 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     padding: EdgePadding?,
     animated: Bool?
   ) throws {
-    guard !coordinates.isEmpty else {
+    let validCoordinates = coordinates.filter { $0.isValid }
+    guard !validCoordinates.isEmpty else {
       return
     }
 
     var mapRect = MKMapRect.null
-    for coordinate in coordinates {
+    for coordinate in validCoordinates {
       let mapPoint = MKMapPoint(
         CLLocationCoordinate2D(
           latitude: coordinate.latitude,
@@ -243,7 +253,16 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func applyRegion(_ region: Region, animated: Bool = false) {
-    let targetRegion = region.toMKCoordinateRegion()
+    // `setRegion` raises an NSException Swift cannot catch, so there is no
+    // recovery once an invalid region has been handed over. `regionThatFits`
+    // pulls a span whose edges run past a pole back to something MapKit can
+    // show, as `animateToClusterRegion` already does; the guard covers what it
+    // cannot fix - a non-finite or out-of-range center.
+    guard region.isValid else {
+      return
+    }
+
+    let targetRegion = view.regionThatFits(region.toMKCoordinateRegion())
     guard !view.region.approximatelyEquals(targetRegion) else {
       return
     }
@@ -252,6 +271,15 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double = 0) {
+    // `setCamera` raises an Objective-C NSException - `Invalid camera
+    // centerCoordinate` - from `-[MKMapCamera _validate]` for a center MapKit
+    // cannot place, and Swift cannot catch that. The framing values do not
+    // raise, but a non-finite one collapses the altitude or leaves
+    // `view.region` reading back as `NaN`.
+    guard camera.isValid else {
+      return
+    }
+
     let mapCamera = camera.toMKMapCamera()
     guard !view.camera.approximatelyEquals(mapCamera) else {
       return
@@ -411,6 +439,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     onMapReady = nil
     onPress = nil
     onPoiPress = nil
+    applePoiDetailPresentation = nil
     onLongPress = nil
     onMarkerPress = nil
     onMarkerDragEnd = nil
@@ -483,9 +512,21 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   private func applySelectablePoiFeatures(to mapView: MKMapView) {
-    if #available(iOS 16.0, *) {
-      mapView.selectableMapFeatures = onPoiPress == nil ? [] : .pointsOfInterest
+    guard #available(iOS 16.0, *) else {
+      return
     }
+
+    // Presentation accessories exist only on iOS 18+. Counting the prop on 16/17 would
+    // enable selection with nothing to show and can swallow the next background press.
+    let wantsNativeDetails: Bool
+    if #available(iOS 18.0, *) {
+      wantsNativeDetails = applePoiDetailPresentation != nil
+    } else {
+      wantsNativeDetails = false
+    }
+
+    let wantsSelectablePois = onPoiPress != nil || wantsNativeDetails
+    mapView.selectableMapFeatures = wantsSelectablePois ? .pointsOfInterest : []
   }
 
 }

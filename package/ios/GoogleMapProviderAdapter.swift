@@ -34,8 +34,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   lazy var view: GMSMapView = {
-    let camera =
-      self.camera?.toGMSCameraPosition()
+    // The map is created from the stored prop directly, so it is checked here
+    // too: `updateMapCamera` never runs for the camera the map starts with.
+    let initialCamera =
+      self.camera.flatMap { $0.isValid ? $0.toGMSCameraPosition() : nil }
       ?? GMSCameraPosition(latitude: 0, longitude: 0, zoom: 10)
     let mapView: GMSMapView
     if let googleMapId = _googleMapId?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -44,10 +46,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
       mapView = GMSMapView(
         frame: .zero,
         mapID: GMSMapID(identifier: googleMapId),
-        camera: camera
+        camera: initialCamera
       )
     } else {
-      mapView = GMSMapView(frame: .zero, camera: camera)
+      mapView = GMSMapView(frame: .zero, camera: initialCamera)
     }
 
     mapView.delegate = self
@@ -137,6 +139,9 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   var showsScale: Bool?
+
+  /// Apple MapKit only; the Google Maps SDK has no native POI detail surface.
+  var applePoiDetailPresentation: ApplePoiDetailPresentation?
 
   var customMapStyle: String? {
     didSet {
@@ -252,12 +257,13 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     padding: EdgePadding?,
     animated: Bool?
   ) throws {
-    guard !coordinates.isEmpty else {
+    let validCoordinates = coordinates.filter { $0.isValid }
+    guard !validCoordinates.isEmpty else {
       return
     }
 
     var bounds = GMSCoordinateBounds()
-    for coordinate in coordinates {
+    for coordinate in validCoordinates {
       bounds = bounds.includingCoordinate(coordinate.toCLLocationCoordinate2D())
     }
     let edgePadding = padding?.toUIEdgeInsets() ?? .zero
@@ -302,6 +308,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     followsUserLocation = nil
     showsCompass = nil
     showsScale = nil
+    applePoiDetailPresentation = nil
     customMapStyle = nil
     googleMapId = nil
     clusteringEnabled = nil
@@ -311,6 +318,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func applyRegion(_ region: Region, animated: Bool = false) {
+    guard region.isValid else {
+      return
+    }
+
     if let lastAppliedRegion,
        let lastAppliedRegionCamera,
        region.approximatelyEquals(lastAppliedRegion),
@@ -332,6 +343,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
+    guard camera.isValid else {
+      return
+    }
+
     let target = camera.toGMSCameraPosition(current: view.camera)
     guard !view.camera.approximatelyEquals(target) else {
       return

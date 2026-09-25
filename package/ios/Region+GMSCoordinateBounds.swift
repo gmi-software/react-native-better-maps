@@ -4,12 +4,15 @@ import MapKit
 
 extension Region {
   func toGMSCoordinateBounds() -> GMSCoordinateBounds {
+    // Latitude is clamped rather than wrapped: a span wide enough to run past a
+    // pole has no representable edge there, and Google Maps is handed the
+    // closest one that does exist.
     let southWest = CLLocationCoordinate2D(
-      latitude: latitude - latitudeDelta / 2,
+      latitude: max(-90, latitude - latitudeDelta / 2),
       longitude: longitude - longitudeDelta / 2
     )
     let northEast = CLLocationCoordinate2D(
-      latitude: latitude + latitudeDelta / 2,
+      latitude: min(90, latitude + latitudeDelta / 2),
       longitude: longitude + longitudeDelta / 2
     )
     return GMSCoordinateBounds(coordinate: southWest, coordinate: northEast)

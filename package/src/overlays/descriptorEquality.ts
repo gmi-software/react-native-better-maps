@@ -49,6 +49,27 @@ function coordinateListsEqual(
   return true;
 }
 
+function coordinateRingsEqual(
+  left: Coordinate[][] | undefined,
+  right: Coordinate[][] | undefined,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (left == null || right == null || left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (!coordinateListsEqual(left[index], right[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function pointsEqual(
   left: MarkerAnchor | MarkerPoint | undefined,
   right: MarkerAnchor | MarkerPoint | undefined,
@@ -138,6 +159,7 @@ export function polylineDescriptorsEqual(
       left.strokeColor === right.strokeColor &&
       left.strokeWidth === right.strokeWidth &&
       left.tappable === right.tappable &&
+      left.zIndex === right.zIndex &&
       coordinateListsEqual(left.coordinates, right.coordinates))
   );
 }
@@ -153,6 +175,8 @@ export function polygonDescriptorsEqual(
       left.strokeColor === right.strokeColor &&
       left.strokeWidth === right.strokeWidth &&
       left.tappable === right.tappable &&
+      left.zIndex === right.zIndex &&
+      coordinateRingsEqual(left.holes, right.holes) &&
       coordinateListsEqual(left.coordinates, right.coordinates))
   );
 }

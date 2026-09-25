@@ -87,22 +87,49 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `clusterEnteringAnimation` | Native entering animation for newly added marker-cluster render elements. Available only on providers with clustering support. |
 | `customMapStyle` | JSON string. The `google` provider uses Google Maps JSON styles on iOS and Android. The `apple` provider maps a curated subset to `MKMapConfiguration` on iOS 16+. |
 | `onPoiPress` | Reports provider-owned points of interest, not app-owned `Marker` overlays. It is enabled automatically when the callback is present. |
-| `showsUserLocation` / `followsUserLocation` | Toggles the native user-location layer. Host app must request location permission (`NSLocationWhenInUseUsageDescription` on iOS; `ACCESS_FINE_LOCATION` on Android). |
-| `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only (`showsScale` is a no-op on Android). |
+| `showsUserLocation` / `followsUserLocation` | Toggles the native user-location layer. Host app must request location permission (`NSLocationWhenInUseUsageDescription` on iOS; `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION` on Android). On Android the layer reads the fused location provider (`play-services-location`) and picks up a permission granted while the map is mounted, at the accuracy that permission allows. |
+| `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only: Android ignores `showsScale`, and debug builds log a warning. |
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
+
+### Imperative ref readiness
+
+`MapViewRef` hands out a working handle during the commit that mounts the view,
+which is earlier than the native map can exist. Two buffers close that gap, and
+neither uses a timer:
+
+- **JS** — Nitro delivers the `hybridRef` view prop one JS -> UI -> JS round trip
+  after the mount transaction, so `MapViewCommands` (`package/src/native/mapViewCommands.ts`)
+  holds every call made before it arrives and replays them in call order. Calls
+  left waiting when the view unmounts are rejected, and later calls reject
+  without reaching native. `setCamera`/`animateCamera` check the camera before
+  it is queued, so an invalid one rejects at once instead of waiting here.
+- **Android** — `MapView.getMapAsync` answers later still, so
+  `DeferredGoogleMap` holds camera work until the `GoogleMap` exists, and
+  `configureMap` drains it after replaying the `region`/`camera` props. Without
+  it the adapter would accept a camera call and quietly do nothing.
+  `fitToCoordinates` then waits once more, in `DeferredLayout`, for the map
+  view's first layout pass, because `newLatLngBounds` throws on a view without a
+  size. It rejects if the view is released before that pass comes. iOS has no
+  equivalent window: `MKMapView`/`GMSMapView` exist as soon as the adapter is
+  installed.
+
+`onMapReady` is a separate, later signal - the map finished loading tiles - and
+is not a precondition for using the ref.
 
 ### Platform gaps (Phase 8)
 
 - **Provider availability** — `apple` and `google` are implemented on iOS, and `google` is implemented on Android. `openstreetmap` and `mapbox` are planned provider adapters.
 - **Custom styles on Apple MapKit** — no full Google Maps JSON parity; only a curated subset is mapped to MapKit configuration.
-- **Scale control on Google Maps** — Google Maps SDK has no native scale bar; `showsScale` is rejected for the `google` provider.
+- **Scale control on Google Maps** — Google Maps SDK has no native scale bar; `showsScale` is rejected for the `google` provider. With the provider omitted it still type-checks, so Android ignores it and logs a warning in debug builds.
 - **User location** — the library toggles the layer only; permission prompts and manifest/Info.plist entries are the host app's responsibility.
-- **`followsUserLocation` on Android** — enables the location layer when permitted; continuous camera follow is not built into Google Maps and may require host-app camera updates.
+- **`followsUserLocation` on Android** — ignored, because Google Maps has no follow mode; debug builds log a warning. `showsUserLocation` still shows the location layer. To follow the user, call `animateCamera` from a location listener in the host app.
 
 ### Overlay components
 
 `Marker`, `Polyline`, `Polygon`, `Circle`, and `Geojson` are overlay components that compose inside `MapView`. Overlay props are collected on the JS side and serialized into descriptor structs passed to the native `HybridMapView` (data-driven architecture). `Geojson` is converted into marker, polyline, and polygon descriptors before that native pass; invalid GeoJSON is skipped with a development warning.
+
+Each descriptor's `id` is the child's `id` prop, else its React `key`, else its position among the overlays of its kind that have neither (`marker-0`, …). Native adapters diff overlays by that id and report it back through the `MapView`-level press callbacks, so a key keeps an overlay's identity when a sibling before it is added or removed. `id` props are reserved first, and a key or position that collides with another overlay's id gets a `#2`, `#3`, … suffix with a development warning.
 
 Marker and marker-cluster entering animations follow the same descriptor model. The public API accepts `false`, `system`, or a serializable preset config; the React wrapper normalizes that into native descriptors. Native provider adapters execute the animation when a marker render element appears in the render diff. Updating animation config for an already retained marker does not restart the animation; the new config is used the next time that marker is added again.
 

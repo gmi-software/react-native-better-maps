@@ -292,6 +292,67 @@ builds wrapped in React's `<StrictMode>` see this on every mount: React tears
 the effect down and sets it up again, the first call is rejected by that
 teardown, and the second one does the work.
 
+#### Screen points
+
+`pointForCoordinate` and `coordinateForPoint` convert between a coordinate and a
+position on the map view, which is what placing React Native content exactly
+over the map takes - a label, a custom callout, an animated pointer. A `Point`
+is in density-independent pixels from the top-left corner of the map view, the
+units and origin of the map view's own layout on both platforms:
+
+```tsx
+import { useCallback, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import {
+  MapView,
+  Marker,
+  type MapViewRef,
+  type Point,
+} from 'react-native-better-maps';
+
+const warsaw = { latitude: 52.2297, longitude: 21.0122 };
+
+function LabelledMap() {
+  const mapRef = useRef<MapViewRef>(null);
+  const [labelPoint, setLabelPoint] = useState<Point | null>(null);
+
+  const placeLabel = useCallback(() => {
+    mapRef.current
+      ?.pointForCoordinate(warsaw)
+      .then(setLabelPoint)
+      .catch((error: Error) => console.warn(error.message));
+  }, []);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFill}
+        onMapReady={placeLabel}
+        onRegionChangeComplete={placeLabel}
+      >
+        <Marker coordinate={warsaw} />
+      </MapView>
+      {labelPoint != null && (
+        // The map fills this parent, so a point on the map is also a position in it.
+        <Text
+          pointerEvents="none"
+          style={{ position: 'absolute', left: labelPoint.x, top: labelPoint.y }}
+        >
+          Warsaw
+        </Text>
+      )}
+    </View>
+  );
+}
+```
+
+A point describes the camera at the time of the call, so convert again once the
+camera has moved; `onRegionChangeComplete` reports the moves the user makes. A
+coordinate that is off screen converts to a point outside the map view's
+bounds. Both calls reject straight away for input that is not on the map: a
+coordinate outside ±90 / ±180, or a point whose `x` or `y` is not finite.
+
 ## Map providers
 
 `MapView` accepts an optional `provider` prop:
@@ -641,10 +702,11 @@ A coordinate that arrives as `NaN` or out of range is dropped instead of being f
 - An invalid `region` is ignored, and the map keeps the region it already had.
 - An invalid `camera` is ignored the same way, and a pitch past the range the SDKs draw is pulled back to it rather than rejected.
 - `setCamera` and `animateCamera` reject an invalid camera instead of ignoring it, straight away and on both platforms - unlike a prop, they have a promise to report it on. A pitch past the drawable range is pulled back for them too.
+- `pointForCoordinate` and `coordinateForPoint` reject a coordinate outside the world, or a point whose `x` or `y` is not finite, the same way.
 - An overlay whose coordinates, ring length or radius cannot be drawn is skipped; its neighbours still render.
 - Anything supplied through `region`, `camera`, the bulk `markers` prop, or a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
 
-Where the check runs depends on the entry point. `region`, `camera`, `fitToCoordinates` and marker descriptors are guarded natively on both platforms, so a `hybridRef` call - `setCamera` and `animateCamera` included - cannot reach the SDKs either. Polyline, polygon and circle descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down. Native skips are reported to logcat on Android rather than through `console.warn`.
+Where the check runs depends on the entry point. `region`, `camera`, `fitToCoordinates`, the two point conversions and marker descriptors are guarded natively on both platforms, so a `hybridRef` call - `setCamera` and `animateCamera` included - cannot reach the SDKs either. Polyline, polygon and circle descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down. Native skips are reported to logcat on Android rather than through `console.warn`.
 
 One gap is worth knowing about: descriptors passed through the bulk `polylines` / `polygons` / `circles` props are checked only natively on Android - on iOS they reach MapKit and the Google Maps SDK unchecked, and neither platform warns about them in development.
 
@@ -660,6 +722,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Camera animation           | Supported                                                   | Supported                                  | Supported                                  |
 | Visible region             | Supported                                                   | Supported                                  | Supported                                  |
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
+| Screen point conversion    | Supported                                                   | Supported                                  | Supported                                  |
 | Map types                  | Standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain       | Standard, satellite, hybrid, terrain       |
 | Gestures                   | Supported                                                   | Supported                                  | Supported                                  |
 | User location              | Supported; host app owns permission prompt                  | Supported; host app owns permission prompt | Supported; host app owns permission prompt |
@@ -697,6 +760,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Type                         | Description                                           |
 | ---------------------------- | ----------------------------------------------------- |
 | `Coordinate`                 | `{ latitude, longitude }`                             |
+| `Point`                      | `{ x, y }` in dp from the map view's top-left corner  |
 | `Region`                     | Center + span                                         |
 | `Camera`                     | Position, zoom, heading, pitch                        |
 | `MapType`                    | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'`  |
@@ -706,7 +770,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | `GooglePoiPressEvent`        | Google Maps POI payload with place ID                 |
 | `ApplePoiCategory`           | Known MapKit POI categories plus `unknown`            |
 | `ApplePoiDetailPresentation` | `'automatic' \| 'callout' \| 'sheet' \| 'openInMaps'` |
-| `MapViewRef`                 | Imperative handle for camera control                  |
+| `MapViewRef`                 | Imperative handle for the camera and screen points    |
 | `MapViewProps`               | Props for `MapView`                                   |
 | `MapViewPropsForProvider`    | Provider-specific `MapView` props                     |
 | `MarkerDescriptor`           | Bulk marker descriptor                                |

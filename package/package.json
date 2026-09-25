@@ -88,16 +88,16 @@
   },
   "devDependencies": {
     "@expo/config-plugins": "~57.0.0",
-    "@release-it/conventional-changelog": "^12.0.0",
-    "@types/bun": "^1.4.0",
+    "@release-it/conventional-changelog": "^12.0.2",
+    "@types/bun": "^1.4.2",
     "@types/react": "^19.2.15",
     "nitrogen": "^0.35.9",
     "react": "19.2.3",
     "react-native": "0.86.0",
-    "react-native-builder-bob": "^0.43.0",
+    "react-native-builder-bob": "^0.43.1",
     "react-native-nitro-modules": "^0.35.10",
-    "release-it": "^19.0.0",
-    "typescript": "^5.8.3"
+    "release-it": "^21.1.0",
+    "typescript": "^7.0.2"
   },
   "react-native-builder-bob": {
     "source": "src",

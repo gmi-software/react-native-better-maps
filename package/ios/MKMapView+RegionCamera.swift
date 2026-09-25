@@ -30,6 +30,12 @@ extension MKMapView {
     )
   }
 
+  /// Builds the stand-in ahead of the first `camera(framing:)`, which would
+  /// otherwise spend its ~20 ms there and start its animation that much late.
+  static func prepareFramingView() {
+    _ = framingView
+  }
+
   /// Shared, like a sizing cell: it is only used synchronously on the main
   /// thread, and building an `MKMapView` takes around 20 ms.
   private static let framingView: MKMapView = {

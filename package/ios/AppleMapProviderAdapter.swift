@@ -43,6 +43,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       forAnnotationViewWithReuseIdentifier: NitroClusterAnnotationView.reuseIdentifier
     )
     mapViewDelegate.installGestureRecognizers(on: mapView)
+    // A turn of the run loop later, so the mount itself does not wait for it,
+    // yet still before a mount effect's `animateToRegion` - that arrives after
+    // a round trip through JS - needs it.
+    DispatchQueue.main.async {
+      MKMapView.prepareFramingView()
+    }
     return mapView
   }()
 

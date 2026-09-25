@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type Ref,
+  type RefObject,
 } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -88,6 +88,18 @@ const ANIMATION_OPTIONS: AnimationOption[] = [
   },
   { id: 'none', label: 'Off', value: false },
 ];
+
+/**
+ * Identity of the native map view. `MapScene` is keyed on it so its mount
+ * effects run exactly when the map they drive is created.
+ */
+function mapSceneKey(
+  scenario: MapScenario,
+  animationOption: AnimationOption,
+  provider: SupportedExampleProvider,
+): string {
+  return `${scenario.id}:${animationOption.id}:${provider}`;
+}
 
 function getSupportedMapProviders(): SupportedExampleProvider[] {
   switch (Platform.OS) {
@@ -514,14 +526,72 @@ const ScenarioDock = memo(function ScenarioDock({
   );
 });
 
+type MountCameraFitOptions = {
+  scenario: MapScenario;
+  mapRef?: RefObject<MapViewRef | null>;
+  mapPadding?: EdgePadding;
+  onResult: (result: string) => void;
+};
+
+/**
+ * Fits the camera to the scenario markers from a mount effect - the earliest a
+ * consumer can reach the ref, and earlier than the native map can exist. The
+ * promise result is reported verbatim so a silent failure cannot hide.
+ */
+function useMountCameraFit({
+  scenario,
+  mapRef,
+  mapPadding,
+  onResult,
+}: MountCameraFitOptions) {
+  useEffect(() => {
+    if (scenario.advanced?.fitToCoordinatesOnMount !== true) {
+      return;
+    }
+
+    const coordinates = (scenario.markers ?? []).map(
+      (marker) => marker.coordinate,
+    );
+    const handle = mapRef?.current;
+    if (handle == null) {
+      onResult('Mount fit · no handle');
+      return;
+    }
+
+    onResult('Mount fit · pending');
+    // A scene that is swapped out while the call is in flight must not report
+    // its own rejection over the incoming scene's status.
+    let isCurrentScene = true;
+    handle
+      .fitToCoordinates(coordinates, mapPadding, true)
+      .then(() => {
+        if (isCurrentScene) {
+          onResult('Mount fit · resolved');
+        }
+      })
+      .catch((error: Error) => {
+        if (isCurrentScene) {
+          onResult(`Mount fit · rejected: ${error.message}`);
+        }
+      });
+
+    return () => {
+      isCurrentScene = false;
+    };
+    // Mount only: this scene is keyed to the native map view it drives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
 type MapSceneProps = {
-  ref?: Ref<MapViewRef>;
+  ref?: RefObject<MapViewRef | null>;
   scenario: MapScenario;
   provider: SupportedExampleProvider;
   mapType: MapType;
   mapPadding?: EdgePadding;
   animationOption: AnimationOption;
   onMapReady: () => void;
+  onMountFitResult: (result: string) => void;
   onClusterPress: (markerIds: string[], coordinate: Coordinate) => void;
   onMarkerPress: (id: string) => void;
   onMarkerDragEnd: (id: string, coordinate: Coordinate) => void;
@@ -541,6 +611,7 @@ const MapScene = memo(function MapScene({
   mapPadding,
   animationOption,
   onMapReady,
+  onMountFitResult,
   onClusterPress,
   onMarkerPress,
   onMarkerDragEnd,
@@ -551,6 +622,13 @@ const MapScene = memo(function MapScene({
   onRegionChange,
   onRegionChangeComplete,
 }: MapSceneProps) {
+  useMountCameraFit({
+    scenario,
+    mapRef: ref,
+    mapPadding,
+    onResult: onMountFitResult,
+  });
+
   const commonMapProps = {
     style: styles.map,
     mapType,
@@ -584,7 +662,6 @@ const MapScene = memo(function MapScene({
     return (
       <MapView
         ref={ref}
-        key={`${scenario.id}:${animationOption.id}:apple`}
         {...commonMapProps}
         provider="apple"
         showsScale={scenario.advanced?.showsScale}
@@ -595,14 +672,7 @@ const MapScene = memo(function MapScene({
     );
   }
 
-  return (
-    <MapView
-      ref={ref}
-      key={`${scenario.id}:${animationOption.id}:google`}
-      {...commonMapProps}
-      provider="google"
-    />
-  );
+  return <MapView ref={ref} {...commonMapProps} provider="google" />;
 });
 
 type StatusHeaderProps = {
@@ -841,9 +911,16 @@ export default function App() {
     [],
   );
 
+  const handleMountFitResult = useCallback((result: string) => {
+    setStatus(result);
+  }, []);
+
   const handleMapReady = useCallback(() => {
     setMapReady(true);
-    setStatus(scenario.name);
+    // The mount-effect result is the point of that scenario; do not bury it.
+    if (scenario.advanced?.fitToCoordinatesOnMount !== true) {
+      setStatus(scenario.name);
+    }
 
     if (
       scenario.advanced?.fitToCoordinatesOnReady &&
@@ -898,12 +975,14 @@ export default function App() {
     <View style={styles.container}>
       <MapScene
         ref={mapRef}
+        key={mapSceneKey(scenario, animationOption, provider)}
         scenario={scenario}
         provider={provider}
         mapType={MAP_TYPES[mapTypeIndex]}
         mapPadding={mapPadding}
         animationOption={animationOption}
         onMapReady={handleMapReady}
+        onMountFitResult={handleMountFitResult}
         onClusterPress={handleClusterPress}
         onMarkerPress={handleMarkerPress}
         onMarkerDragEnd={handleMarkerDragEnd}

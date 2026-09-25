@@ -252,6 +252,45 @@ function ControlledMap() {
 }
 ```
 
+#### When the ref is usable
+
+The native map is created after React commits, so `mapRef.current` is populated
+before there is anything native behind it. Calls made in that window are held
+and replayed, in the order they were made, as soon as the native map exists:
+
+```tsx
+import { useEffect, useRef } from 'react';
+import {
+  MapView,
+  type Coordinate,
+  type MapViewRef,
+} from 'react-native-better-maps';
+
+function FittedMap({ points }: { points: Coordinate[] }) {
+  const mapRef = useRef<MapViewRef>(null);
+
+  useEffect(() => {
+    // Runs before the native map exists, and still moves the camera.
+    mapRef.current
+      ?.fitToCoordinates(points, undefined, true)
+      .catch((error: Error) => console.warn(error.message));
+  }, [points]);
+
+  return <MapView ref={mapRef} style={{ flex: 1 }} />;
+}
+```
+
+So no call needs `setTimeout`, a retry, or an `onMapReady` handler to be safe.
+`onMapReady` reports something later and different - that the map finished
+loading its tiles - and is the right hook for showing your own UI on top of a
+map that has actually drawn.
+
+A call still waiting when the map view unmounts rejects, as does any call made
+afterwards, so handle the rejection the way the example above does. Development
+builds wrapped in React's `<StrictMode>` see this on every mount: React tears
+the effect down and sets it up again, the first call is rejected by that
+teardown, and the second one does the work.
+
 ## Map providers
 
 `MapView` accepts an optional `provider` prop:
@@ -575,6 +614,7 @@ A coordinate that arrives as `NaN` or out of range is dropped instead of being f
 
 - An invalid `region` is ignored, and the map keeps the region it already had.
 - An invalid `camera` is ignored the same way, and a pitch past the range the SDKs draw is pulled back to it rather than rejected.
+- `setCamera` and `animateCamera` reject an invalid camera instead of ignoring it, straight away and on both platforms - unlike a prop, they have a promise to report it on. A pitch past the drawable range is pulled back for them too.
 - An overlay whose coordinates, ring length or radius cannot be drawn is skipped; its neighbours still render.
 - Anything supplied through `region`, `camera`, the bulk `markers` prop, or a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
 
@@ -705,6 +745,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 | Provider throws before rendering            | Check the [supported platforms](#supported-platforms) table. `openstreetmap` and `mapbox` are reserved for future support but do not render yet.               |
 | Expo Go does not load native maps           | Use a development build after `expo prebuild`; native Nitro modules are not available in Expo Go.                                                              |
 | Marker animations affect gesture smoothness | For very large marker sets, prefer clustering, shorter durations, or disable marker/cluster entering animations.                                               |
+| `MapView is not mounted` from a ref call    | The map view has unmounted. Calls made before the native map exists are held and replayed, so a freshly mounted map is not the cause.                          |
 
 ## Development
 

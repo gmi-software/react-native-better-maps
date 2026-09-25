@@ -92,6 +92,31 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 
+### Imperative ref readiness
+
+`MapViewRef` hands out a working handle during the commit that mounts the view,
+which is earlier than the native map can exist. Two buffers close that gap, and
+neither uses a timer:
+
+- **JS** — Nitro delivers the `hybridRef` view prop one JS -> UI -> JS round trip
+  after the mount transaction, so `MapViewCommands` (`package/src/native/mapViewCommands.ts`)
+  holds every call made before it arrives and replays them in call order. Calls
+  left waiting when the view unmounts are rejected, and later calls reject
+  without reaching native. `setCamera`/`animateCamera` check the camera before
+  it is queued, so an invalid one rejects at once instead of waiting here.
+- **Android** — `MapView.getMapAsync` answers later still, so
+  `DeferredGoogleMap` holds camera work until the `GoogleMap` exists, and
+  `configureMap` drains it after replaying the `region`/`camera` props. Without
+  it the adapter would accept a camera call and quietly do nothing.
+  `fitToCoordinates` then waits once more, in `DeferredLayout`, for the map
+  view's first layout pass, because `newLatLngBounds` throws on a view without a
+  size. It rejects if the view is released before that pass comes. iOS has no
+  equivalent window: `MKMapView`/`GMSMapView` exist as soon as the adapter is
+  installed.
+
+`onMapReady` is a separate, later signal - the map finished loading tiles - and
+is not a precondition for using the ref.
+
 ### Platform gaps (Phase 8)
 
 - **Provider availability** — `apple` and `google` are implemented on iOS, and `google` is implemented on Android. `openstreetmap` and `mapbox` are planned provider adapters.

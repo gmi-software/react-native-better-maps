@@ -2,12 +2,12 @@ import {
   useCallback,
   useImperativeHandle,
   useMemo,
-  useRef,
   type Ref,
-  type RefObject,
 } from 'react';
+import { runWithValidCamera } from '../camera/runWithValidCamera';
 import { useValidCamera } from '../camera/useValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
+import { useMapViewCommands } from '../hooks/useMapViewCommands';
 import { useNitroCallback } from '../hooks/useNitroCallback';
 import { useStableValue } from '../hooks/useStableValue';
 import { NativeMapView } from '../native/MapViewNative';
@@ -36,20 +36,6 @@ import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-
-const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
-
-function withHybridRef<T>(
-  hybridRef: RefObject<NativeMapViewHybrid | null>,
-  run: (hybrid: NativeMapViewHybrid) => T,
-): T {
-  const hybrid = hybridRef.current;
-  if (hybrid == null) {
-    return Promise.reject(new Error(MAP_VIEW_NOT_MOUNTED_ERROR)) as T;
-  }
-
-  return run(hybrid);
-}
 
 export function MapView({
   ref,
@@ -92,7 +78,10 @@ export function MapView({
   onCirclePress: onCirclePressProp,
 }: MapViewProps & { ref?: Ref<MapViewRef> }) {
   const resolvedProvider = resolveMapProvider(provider);
-  const hybridRef = useRef<NativeMapViewHybrid>(null);
+  // Both are creation-time SDK configuration, so changing either remounts the
+  // native view.
+  const nativeViewKey = `${resolvedProvider}:${googleMapId ?? ''}`;
+  const commands = useMapViewCommands(nativeViewKey);
   const {
     markers: collectedMarkers,
     polylines: collectedPolylines,
@@ -173,9 +162,12 @@ export function MapView({
     | ((event: PoiPressEvent) => void)
     | undefined;
 
-  const handleHybridRef = useCallback((nativeRef: NativeMapViewHybrid) => {
-    hybridRef.current = nativeRef;
-  }, []);
+  const handleHybridRef = useCallback(
+    (nativeRef: NativeMapViewHybrid) => {
+      commands.attach(nativeRef);
+    },
+    [commands],
+  );
 
   const handleMarkerPress = useCallback(
     (id: string) => {
@@ -278,18 +270,19 @@ export function MapView({
   useImperativeHandle(
     ref,
     () => ({
-      getCamera: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.fetchCamera()),
+      getCamera: () => commands.run((hybrid) => hybrid.fetchCamera()),
       setCamera: (nextCamera) =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.applyCamera(nextCamera)),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.applyCamera(nextCamera)),
+        ),
       animateCamera: (nextCamera, duration) =>
-        withHybridRef(hybridRef, (hybrid) =>
-          hybrid.animateCamera(nextCamera, duration),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.animateCamera(nextCamera, duration)),
         ),
       getVisibleRegion: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.getVisibleRegion()),
+        commands.run((hybrid) => hybrid.getVisibleRegion()),
       fitToCoordinates: (coordinates, padding, animated) =>
-        withHybridRef(hybridRef, (hybrid) =>
+        commands.run((hybrid) =>
           hybrid.fitToCoordinates(
             resolveFitCoordinates(coordinates),
             padding,
@@ -297,12 +290,12 @@ export function MapView({
           ),
         ),
     }),
-    [],
+    [commands],
   );
 
   return (
     <NativeMapView
-      key={`${resolvedProvider}:${googleMapId ?? ''}`}
+      key={nativeViewKey}
       style={style}
       hybridRef={hybridRefCallback}
       provider={resolvedProvider}

@@ -288,8 +288,7 @@ class HybridMapView(
 
   override fun applyCamera(camera: Camera): Promise<Unit> {
     val mounted = adapter ?: return notMountedRejection()
-    mounted.applyCamera(camera)
-    return Promise.resolved(Unit)
+    return mounted.applyCamera(camera)
   }
 
   override fun animateCamera(
@@ -297,8 +296,7 @@ class HybridMapView(
     duration: Double?,
   ): Promise<Unit> {
     val mounted = adapter ?: return notMountedRejection()
-    mounted.animateCamera(camera, duration)
-    return Promise.resolved(Unit)
+    return mounted.animateCamera(camera, duration)
   }
 
   override fun getVisibleRegion(): Promise<VisibleRegion> {
@@ -312,8 +310,7 @@ class HybridMapView(
     animated: Boolean?,
   ): Promise<Unit> {
     val mounted = adapter ?: return notMountedRejection()
-    mounted.fitToCoordinates(coordinates, padding, animated)
-    return Promise.resolved(Unit)
+    return mounted.fitToCoordinates(coordinates, padding, animated)
   }
 
   override fun onDropView() {

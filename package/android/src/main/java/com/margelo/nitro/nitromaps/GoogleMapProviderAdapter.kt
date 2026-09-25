@@ -1,8 +1,6 @@
 package com.margelo.nitro.nitromaps
 
-import android.Manifest
 import android.content.ComponentCallbacks
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
@@ -10,7 +8,6 @@ import android.util.Log
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.annotation.Keep
-import androidx.core.content.ContextCompat
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.uimanager.ThemedReactContext
@@ -34,6 +31,7 @@ class GoogleMapProviderAdapter(
   private var isUserGesture = false
   private var hasFiredMapReady = false
   private val overlayController = MapOverlayController(context)
+  private val locationSource = FusedLocationSource(context)
   private var pendingMarkers: Array<MarkerDescriptor>? = null
   private var pendingPolylines: Array<PolylineDescriptor>? = null
   private var pendingPolygons: Array<PolygonDescriptor>? = null
@@ -409,9 +407,10 @@ class GoogleMapProviderAdapter(
   override fun onHostResume() {
     isHostResumed = true
     syncLifecycleState()
-    // A location permission granted while the host was paused (the system dialog
-    // pauses it) only reaches the map when the layer is applied again.
+    // Picks up a location permission granted while the host was paused - the system
+    // permission dialog pauses it.
     applyUserLocationSettings()
+    locationSource.refreshPriority()
   }
 
   override fun onHostPause() {
@@ -441,6 +440,7 @@ class GoogleMapProviderAdapter(
   private fun configureMap(map: GoogleMap) {
     map.mapType = _mapType.toGoogleMapType()
     applyUiSettings(map)
+    map.setLocationSource(locationSource)
     applyUserLocationSettings(map)
     applyMapPadding(map)
     applyCustomMapStyle(map)
@@ -576,18 +576,7 @@ class GoogleMapProviderAdapter(
       return
     }
 
-    val hasFineLocationPermission =
-      ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-      ) == PackageManager.PERMISSION_GRANTED
-    val hasCoarseLocationPermission =
-      ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-      ) == PackageManager.PERMISSION_GRANTED
-
-    if (hasFineLocationPermission || hasCoarseLocationPermission) {
+    if (context.hasFineLocationPermission || context.hasCoarseLocationPermission) {
       map?.isMyLocationEnabled = true
       if (_followsUserLocation == true) {
         // Google Maps does not have a direct follow mode; host apps can animate camera separately.

@@ -11,7 +11,7 @@ export const INVALID_POINT_ERROR = 'Point rejected: x and y must be finite';
  * Runs a `pointForCoordinate` call, or rejects it for a coordinate outside the
  * world. The SDKs disagree about one: MapKit answers `NaN`, or a point past
  * the antimeridian, while Android's `LatLng` clamps the latitude and wraps the
- * longitude and answers for somewhere else entirely.
+ * longitude and answers for somewhere else.
  *
  * Checked before the call is queued, as `runWithValidCamera` does, so it
  * rejects straight away - also before the native map exists - and the same way

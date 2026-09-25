@@ -34,8 +34,6 @@ export function isValidRadius(value: number | undefined): boolean {
   return value != null && Number.isFinite(value) && value >= 0;
 }
 
-// Any finite point converts, including one outside the map view - it stands for
-// somewhere just off screen.
 export function isValidPoint(value: Point | undefined): boolean {
   return value != null && Number.isFinite(value.x) && Number.isFinite(value.y);
 }

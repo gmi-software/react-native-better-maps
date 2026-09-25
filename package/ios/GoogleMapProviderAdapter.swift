@@ -19,7 +19,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private weak var followedLocationMapView: GMSMapView?
   private var _googleMapId: String?
   /// Projections waiting for the map's first idle, in call order - see `promiseAfterFirstIdle`.
-  private var projectionsAwaitingFirstIdle: [(Error?) -> Void] = []
+  private var projectionsAwaitingFirstIdle: [(Result<GMSMapView, Error>) -> Void] = []
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -70,7 +70,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   deinit {
     stopFollowingUserLocation()
-    settleProjectionsAwaitingFirstIdle(failingWith: Self.releasedBeforeFirstIdleError())
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
   }
 
   var mapType: MapType = .standard {
@@ -287,7 +287,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
-    settleProjectionsAwaitingFirstIdle(failingWith: Self.releasedBeforeFirstIdleError())
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
     overlayController.reset()
     onRegionChange = nil
     onRegionChangeComplete = nil
@@ -441,7 +441,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   private func notifyMapReadyIfNeeded() {
     isMapReady = true
-    settleProjectionsAwaitingFirstIdle(failingWith: nil)
+    settleProjectionsAwaitingFirstIdle(with: .success(view))
     deliverMapReadyIfPossible()
   }
 
@@ -456,34 +456,27 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     _ work: @escaping (GMSMapView) throws -> T
   ) -> Promise<T> {
     let promise = Promise<T>()
-    // Weak: the adapter holds this closure until the first idle.
-    let settle: (Error?) -> Void = { [weak self] error in
+    let settle: (Result<GMSMapView, Error>) -> Void = { mapView in
       do {
-        if let error {
-          throw error
-        }
-        guard let self else {
-          throw Self.releasedBeforeFirstIdleError()
-        }
-        promise.resolve(withResult: try work(self.view))
+        promise.resolve(withResult: try work(mapView.get()))
       } catch {
         promise.reject(withError: error)
       }
     }
 
     if isMapReady {
-      settle(nil)
+      settle(.success(view))
     } else {
       projectionsAwaitingFirstIdle.append(settle)
     }
     return promise
   }
 
-  private func settleProjectionsAwaitingFirstIdle(failingWith error: Error?) {
+  private func settleProjectionsAwaitingFirstIdle(with mapView: Result<GMSMapView, Error>) {
     let waiting = projectionsAwaitingFirstIdle
     projectionsAwaitingFirstIdle = []
     for settle in waiting {
-      settle(error)
+      settle(mapView)
     }
   }
 

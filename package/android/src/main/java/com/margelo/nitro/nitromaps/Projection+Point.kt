@@ -38,9 +38,9 @@ internal fun Point.isValid(): Boolean = x.isFinite() && y.isFinite()
 /**
  * The whole device pixel nearest to [dp], which has to be finite.
  *
- * A [Point] is in the density-independent pixels React Native lays the map view out in - the unit
- * `CGPoint` has on iOS - while `Projection` counts device pixels. A value past the `Int` range
- * saturates at its edge instead of wrapping.
+ * A [Point] is in the density-independent pixels React Native lays the map view out in, while
+ * `Projection` counts device pixels. A value past the `Int` range saturates at its edge instead of
+ * wrapping.
  */
 internal fun dpToPixels(
   dp: Double,

@@ -36,6 +36,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Google Maps setup](#google-maps-setup)
 - [Marker entering animations](#marker-entering-animations)
 - [Re-renders](#re-renders)
+- [Overlay ids](#overlay-ids)
 - [Invalid input](#invalid-input)
 - [Capability matrix](#capability-matrix)
 - [Public API](#public-api)
@@ -568,6 +569,31 @@ setMarkers((current) =>
   ),
 );
 ```
+
+## Overlay ids
+
+Every overlay child has an id: native code diffs overlays by it, and `onMarkerPress`, `onMarkerDragEnd`, `onClusterPress`, `onPolylinePress`, `onPolygonPress` and `onCirclePress` report it. `MapView` takes the first of:
+
+1. the `id` prop,
+2. the element's React `key`,
+3. the overlay's position among those of its kind that have neither: `marker-0`, `marker-1`, …, `polyline-0`, … (`geojson-0` for a `<Geojson>` layer).
+
+A keyed list therefore needs nothing more, and the callbacks hand back your own ids:
+
+```tsx
+<MapView
+  style={{ flex: 1 }}
+  onMarkerPress={(id) => setSelected(stops.find((stop) => stop.id === id))}
+>
+  {stops.map((stop) => (
+    <Marker key={stop.id} coordinate={stop.coordinate} title={stop.name} />
+  ))}
+</MapView>
+```
+
+Removing a stop removes one marker and leaves the others alone. With positional ids, every marker after it would take over the id of the one before: it is redrawn, reported under another id, and entering animations play on the wrong marker. React does not warn about a list without keys here, because `MapView` never renders its children, so `MapView` warns once in development instead, when the number of overlays without an `id` or `key` changes.
+
+Ids only have to be unique per kind: a marker and a polyline may share one. Keys only have to be unique within one list, so when two lists hand `MapView` the same key, the later overlay gets `#2` appended (`"42#2"`) and a development warning, rather than one of the two silently not being drawn. An `id` prop is used as given - a key or position that collides with it gets the suffix instead - and two overlays of one kind with the same `id` prop are reported in development, since only one of them is drawn.
 
 ## Invalid input
 

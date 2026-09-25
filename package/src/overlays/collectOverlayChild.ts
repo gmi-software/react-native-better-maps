@@ -1,4 +1,5 @@
-import type { ReactElement } from 'react';
+import { Children, isValidElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { GeojsonProps } from '../types/geojson';
 import type {
   CircleProps,
@@ -13,10 +14,15 @@ import { Polygon } from '../components/Polygon';
 import { Polyline } from '../components/Polyline';
 import { collectGeojsonOverlays } from './collectGeojsonOverlays';
 import {
-  resolveOverlayId,
+  createOverlayCollectorState,
   tappableFromPress,
   type OverlayCollectorState,
 } from './overlayCollect';
+import {
+  claimOverlayId,
+  reserveOverlayId,
+  type OverlayIdKind,
+} from './overlayIds';
 import type { OverlayComponentType, OverlayTypeName } from './overlayType';
 import { OverlayType, overlayCallbackKey } from './overlayType';
 import {
@@ -52,8 +58,10 @@ export interface OverlayCollectorDependencies {
 interface OverlayCollector {
   overlayType: OverlayTypeName;
   component: unknown;
+  idKind: OverlayIdKind;
   collect: (
     child: ReactElement,
+    id: string,
     state: OverlayCollectorState,
     dependencies: OverlayCollectorDependencies,
   ) => void;
@@ -63,25 +71,22 @@ const overlayCollectors: OverlayCollector[] = [
   {
     overlayType: OverlayType.Marker,
     component: Marker,
-    collect: (child, state, dependencies) => {
+    idKind: 'marker',
+    collect: (child, id, state, dependencies) => {
       const props = child.props as MarkerProps;
-      const id = resolveOverlayId(props.id, 'marker', state.markerIndex);
       if (!isValidCoordinate(props.coordinate)) {
-        state.markerIndex += 1;
         warnOverlay(`marker "${id}" skipped: invalid coordinate`);
         return;
       }
-      collectMarkerOverlay(props, state, dependencies.resolveMarkerImage);
+      collectMarkerOverlay(id, props, state, dependencies.resolveMarkerImage);
     },
   },
   {
     overlayType: OverlayType.Polyline,
     component: Polyline,
-    collect: (child, state) => {
+    idKind: 'polyline',
+    collect: (child, id, state) => {
       const props = child.props as PolylineProps;
-      const id = resolveOverlayId(props.id, 'polyline', state.polylineIndex);
-      state.polylineIndex += 1;
-
       if (!isValidCoordinateList(props.coordinates, 2)) {
         warnOverlay(`polyline "${id}" skipped: invalid coordinates`);
         return;
@@ -105,11 +110,9 @@ const overlayCollectors: OverlayCollector[] = [
   {
     overlayType: OverlayType.Polygon,
     component: Polygon,
-    collect: (child, state) => {
+    idKind: 'polygon',
+    collect: (child, id, state) => {
       const props = child.props as PolygonProps;
-      const id = resolveOverlayId(props.id, 'polygon', state.polygonIndex);
-      state.polygonIndex += 1;
-
       if (!isValidCoordinateList(props.coordinates, 3)) {
         warnOverlay(`polygon "${id}" skipped: invalid coordinates`);
         return;
@@ -134,11 +137,9 @@ const overlayCollectors: OverlayCollector[] = [
   {
     overlayType: OverlayType.Circle,
     component: Circle,
-    collect: (child, state) => {
+    idKind: 'circle',
+    collect: (child, id, state) => {
       const props = child.props as CircleProps;
-      const id = resolveOverlayId(props.id, 'circle', state.circleIndex);
-      state.circleIndex += 1;
-
       if (!isValidCoordinate(props.center)) {
         warnOverlay(`circle "${id}" skipped: invalid center coordinate`);
         return;
@@ -170,23 +171,56 @@ const overlayCollectors: OverlayCollector[] = [
   {
     overlayType: OverlayType.Geojson,
     component: Geojson,
-    collect: (child, state) => {
-      collectGeojsonOverlays(child.props as GeojsonProps, state);
+    idKind: 'geojson',
+    collect: (child, id, state) => {
+      collectGeojsonOverlays(id, child.props as GeojsonProps, state);
     },
   },
 ];
 
-export function collectOverlayChild(
+function findOverlayCollector(
   child: ReactElement,
-  state: OverlayCollectorState,
+): OverlayCollector | undefined {
+  return overlayCollectors.find((collector) =>
+    isOverlayChild(child, collector.overlayType, collector.component),
+  );
+}
+
+function idProp(child: ReactElement): string | undefined {
+  return (child.props as { id?: string }).id;
+}
+
+export function collectOverlayChildren(
+  children: ReactNode,
   dependencies: OverlayCollectorDependencies,
-): void {
-  for (const collector of overlayCollectors) {
-    if (!isOverlayChild(child, collector.overlayType, collector.component)) {
-      continue;
+): OverlayCollectorState {
+  const overlays: [ReactElement, OverlayCollector][] = [];
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) {
+      return;
     }
 
-    collector.collect(child, state, dependencies);
-    return;
+    const collector = findOverlayCollector(child);
+    if (collector != null) {
+      overlays.push([child, collector]);
+    }
+  });
+
+  const state = createOverlayCollectorState();
+  // Every `id` prop first, so that a key or a position cannot take one given
+  // to an overlay further on.
+  for (const [child, collector] of overlays) {
+    reserveOverlayId(state.ids, collector.idKind, idProp(child));
   }
+  for (const [child, collector] of overlays) {
+    const id = claimOverlayId(
+      state.ids,
+      collector.idKind,
+      idProp(child),
+      child.key,
+    );
+    collector.collect(child, id, state, dependencies);
+  }
+
+  return state;
 }

@@ -5,6 +5,7 @@ import type {
   PolylineDescriptor,
 } from '../native/specs/overlays';
 import type { MarkerProps } from '../types/overlays';
+import { createOverlayIdState, type OverlayIdState } from './overlayIds';
 
 export interface OverlayCallbacks {
   onPress?: () => void;
@@ -17,11 +18,7 @@ export interface OverlayCollectorState {
   polylines: PolylineDescriptor[];
   polygons: PolygonDescriptor[];
   circles: CircleDescriptor[];
-  markerIndex: number;
-  polylineIndex: number;
-  polygonIndex: number;
-  circleIndex: number;
-  geojsonIndex: number;
+  ids: OverlayIdState;
   hasMarkerPress: boolean;
   hasMarkerDragEnd: boolean;
   hasPolylinePress: boolean;
@@ -29,16 +26,20 @@ export interface OverlayCollectorState {
   hasCirclePress: boolean;
 }
 
-export function resolveOverlayId(
-  providedId: string | undefined,
-  type: string,
-  index: number,
-): string {
-  if (providedId != null && providedId.length > 0) {
-    return providedId;
-  }
-
-  return `${type}-${index}`;
+export function createOverlayCollectorState(): OverlayCollectorState {
+  return {
+    registry: new Map(),
+    markers: [],
+    polylines: [],
+    polygons: [],
+    circles: [],
+    ids: createOverlayIdState(),
+    hasMarkerPress: false,
+    hasMarkerDragEnd: false,
+    hasPolylinePress: false,
+    hasPolygonPress: false,
+    hasCirclePress: false,
+  };
 }
 
 export function tappableFromPress(

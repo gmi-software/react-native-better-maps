@@ -1,4 +1,4 @@
-import { Children, isValidElement, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import type { MutableRefObject, ReactNode } from 'react';
 import type {
   CircleDescriptor,
@@ -6,12 +6,13 @@ import type {
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../native/specs/overlays';
-import { collectOverlayChild } from '../overlays/collectOverlayChild';
+import { collectOverlayChildren } from '../overlays/collectOverlayChild';
+import {
+  createPositionalIdTracker,
+  trackPositionalIds,
+} from '../overlays/overlayIds';
 import { resolveMarkerImage } from '../overlays/resolveMarkerImage';
-import type {
-  OverlayCallbacks,
-  OverlayCollectorState,
-} from '../overlays/overlayCollect';
+import type { OverlayCallbacks } from '../overlays/overlayCollect';
 
 export interface CollectedOverlays {
   markers: MarkerDescriptor[];
@@ -28,35 +29,13 @@ export interface CollectedOverlays {
 
 export function useCollectedOverlays(children: ReactNode): CollectedOverlays {
   const callbackRegistry = useRef(new Map<string, OverlayCallbacks>());
+  const positionalIds = useRef(createPositionalIdTracker());
 
   const overlays = useMemo(() => {
-    const state: OverlayCollectorState = {
-      registry: new Map<string, OverlayCallbacks>(),
-      markers: [],
-      polylines: [],
-      polygons: [],
-      circles: [],
-      markerIndex: 0,
-      polylineIndex: 0,
-      polygonIndex: 0,
-      circleIndex: 0,
-      geojsonIndex: 0,
-      hasMarkerPress: false,
-      hasMarkerDragEnd: false,
-      hasPolylinePress: false,
-      hasPolygonPress: false,
-      hasCirclePress: false,
-    };
-
-    Children.forEach(children, (child) => {
-      if (!isValidElement(child)) {
-        return;
-      }
-
-      collectOverlayChild(child, state, { resolveMarkerImage });
-    });
+    const state = collectOverlayChildren(children, { resolveMarkerImage });
 
     callbackRegistry.current = state.registry;
+    trackPositionalIds(positionalIds.current, state.ids.anonymous);
 
     return {
       markers: state.markers,

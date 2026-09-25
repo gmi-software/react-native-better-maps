@@ -72,7 +72,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `onPoiPress`                                | `PoiPressEvent`          | Provider-owned base-map POIs only. Apple Maps emits category data; Google Maps emits place ID. POI taps do not also fire map `onPress`.                                                            |
 | `onMapReady`                                | none                     | Fires once after the map finishes loading tiles.                                                                                                                                                   |
 | `Marker.onPress` / `onDragEnd`              | none / `Coordinate`      | Dispatched by overlay `id` from native to JS registry.                                                                                                                                             |
-| Overlay `onPress`                           | none                     | Polyline/polygon/circle with `onPress` default to `tappable` on native.                                                                                                                            |
+| Overlay `onPress`                           | none                     | Polyline/polygon/circle children with `onPress` are sent as `tappable`; any other shape, bulk descriptors included, is untappable on every provider unless `tappable: true` is set.                |
 | `onClusterPress`                            | `string[]`, `Coordinate` | Fires when a marker cluster is tapped; IDs are member marker overlay ids.                                                                                                                          |
 
 ### Advanced MapView props
@@ -89,7 +89,7 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `onPoiPress` | Reports provider-owned points of interest, not app-owned `Marker` overlays. It is enabled automatically when the callback is present. |
 | `showsUserLocation` / `followsUserLocation` | Toggles the native user-location layer. Host app must request location permission (`NSLocationWhenInUseUsageDescription` on iOS; `ACCESS_FINE_LOCATION` or `ACCESS_COARSE_LOCATION` on Android). On Android the layer reads the fused location provider (`play-services-location`) and picks up a permission granted while the map is mounted, at the accuracy that permission allows. |
 | `showsCompass` / `showsScale` | Compass on both platforms. Scale is iOS-only: Android ignores `showsScale`, and debug builds log a warning. |
-| `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (iOS) or `setPadding` (Android). |
+| `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (`apple`), `GMSMapView.padding` (`google` on iOS) or `setPadding` (Android). The `region` prop is fitted inside the padded area, and `fitToCoordinates` padding is added on top of it. |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 | `animateToRegion(region, duration?)` | Imperative ref method; frames a `Region` as the `region` prop does, over `duration` milliseconds. Apple MapKit turns the region into the camera `setRegion` would pick, on an off-screen `MKMapView`, and animates that camera: `setRegion` takes no duration and jumps rather than animates when the target is far away. |
 

@@ -73,6 +73,8 @@ export interface MapViewRef {
    * Fits the camera to show all given coordinates with optional edge padding.
    * An empty {@linkcode coordinates} list is a no-op.
    *
+   * {@linkcode padding} is added on top of {@linkcode MapViewProps.mapPadding}.
+   *
    * @param animated Pass it explicitly: omitted, iOS animates and Android jumps.
    */
   fitToCoordinates(

@@ -115,7 +115,7 @@ export interface PolylineDescriptor {
   /** Drawing order relative to other map overlays. */
   zIndex?: number;
 
-  /** Whether the polyline is tappable. */
+  /** Whether taps on the polyline reach `onPolylinePress`. Defaults to `false`. */
   tappable?: boolean;
 }
 
@@ -144,7 +144,7 @@ export interface PolygonDescriptor {
   /** Drawing order relative to other map overlays. */
   zIndex?: number;
 
-  /** Whether the polygon is tappable. */
+  /** Whether taps on the polygon reach `onPolygonPress`. Defaults to `false`. */
   tappable?: boolean;
 }
 
@@ -170,6 +170,6 @@ export interface CircleDescriptor {
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
 
-  /** Whether the circle is tappable. */
+  /** Whether taps on the circle reach `onCirclePress`. Defaults to `false`. */
   tappable?: boolean;
 }

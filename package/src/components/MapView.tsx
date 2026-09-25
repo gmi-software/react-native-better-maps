@@ -29,6 +29,10 @@ import {
   normalizePolygonDescriptors,
   normalizePolylineDescriptors,
 } from '../overlays/normalizeShapeDescriptors';
+import {
+  runWithValidCoordinate,
+  runWithValidPoint,
+} from '../projection/runWithValidInput';
 import { resolveMapProvider } from '../providers';
 import { resolveFitCoordinates } from '../region/resolveFitCoordinates';
 import { useValidRegion } from '../region/useValidRegion';
@@ -288,6 +292,14 @@ export function MapView({
             padding,
             animated,
           ),
+        ),
+      pointForCoordinate: (coordinate) =>
+        runWithValidCoordinate(coordinate, () =>
+          commands.run((hybrid) => hybrid.pointForCoordinate(coordinate)),
+        ),
+      coordinateForPoint: (point) =>
+        runWithValidPoint(point, () =>
+          commands.run((hybrid) => hybrid.coordinateForPoint(point)),
         ),
     }),
     [commands],

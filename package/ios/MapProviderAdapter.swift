@@ -47,6 +47,8 @@ protocol MapProviderAdapter: AnyObject {
   func animateCamera(camera: Camera, duration: Double?) throws
   func getVisibleRegion() throws -> Promise<VisibleRegion>
   func fitToCoordinates(coordinates: [Coordinate], padding: EdgePadding?, animated: Bool?) throws
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point>
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate>
   func prepareForRecycle()
 }
 
@@ -138,6 +140,14 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     animated: Bool?
   ) throws {
     throw error
+  }
+
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    Promise.rejected(withError: error)
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    Promise.rejected(withError: error)
   }
 
   func prepareForRecycle() {}

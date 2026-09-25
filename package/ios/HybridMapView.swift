@@ -289,6 +289,14 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    promiseOnMain { try $0.pointForCoordinate(coordinate: coordinate) }
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    promiseOnMain { try $0.coordinateForPoint(point: point) }
+  }
+
   func afterUpdate() {
     runOnMain { [weak self] in
       self?.activateLifecycle()

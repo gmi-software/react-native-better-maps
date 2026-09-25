@@ -44,8 +44,9 @@ protocol MapProviderAdapter: AnyObject {
 
   func fetchCamera() throws -> Promise<Camera>
   func applyCamera(camera: Camera) throws
-  func animateCamera(camera: Camera, duration: Double?) throws
-  /// `duration` is in seconds: `HybridMapView` converts the milliseconds JS passes.
+  /// `duration` is in seconds, here and in `animateToRegion`: `HybridMapView`
+  /// converts the milliseconds JS passes.
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws
   func animateToRegion(region: Region, duration: TimeInterval?) throws
   func getVisibleRegion() throws -> Promise<VisibleRegion>
   func fitToCoordinates(coordinates: [Coordinate], padding: EdgePadding?, animated: Bool?) throws
@@ -126,7 +127,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     throw error
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws {
     throw error
   }
 

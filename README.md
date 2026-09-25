@@ -291,9 +291,10 @@ The region is framed as the `region` prop frames it: all of it in view, inside
 `mapPadding`, north up and flat. Its proportions rarely match the map's, so one
 axis shows more than the region asks for.
 
-The duration is in milliseconds, as in react-native-maps, and defaults to
-`250`; `0` moves the camera without animating. `animateCamera` still takes
-seconds.
+Durations are in milliseconds, for `animateCamera` and `animateToRegion`
+alike, as in react-native-maps. Both default to `250`, and `0` moves the camera
+without animating. Up to 1.2.1 `animateCamera` took seconds, so multiply a
+duration passed to it by 1000 when upgrading.
 
 #### When the ref is usable
 

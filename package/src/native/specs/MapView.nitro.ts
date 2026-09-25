@@ -252,7 +252,10 @@ export interface MapViewMethods extends HybridViewMethods {
    */
   applyCamera(camera: Camera): Promise<void>;
 
-  /** Animates the camera to the given position. */
+  /**
+   * Animates the camera to the given position, over `duration` milliseconds -
+   * 250 when omitted, a jump for 0.
+   */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
 
   /**

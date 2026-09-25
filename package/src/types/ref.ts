@@ -43,7 +43,8 @@ export interface MapViewRef {
    * been handed to the native map, not when it finishes, and rejects for a
    * camera the map cannot use, as {@linkcode MapViewRef.setCamera} does.
    *
-   * @param duration Animation duration in seconds. Defaults to `0.25`.
+   * @param duration Animation duration in milliseconds. Defaults to `250`;
+   * `0` moves the camera without animating.
    */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
 

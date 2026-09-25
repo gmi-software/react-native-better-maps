@@ -214,7 +214,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     updateMapCamera(camera, animated: false)
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws {
     let animationDuration = duration ?? Self.defaultAnimationDuration
     updateMapCamera(camera, animated: true, duration: animationDuration)
   }

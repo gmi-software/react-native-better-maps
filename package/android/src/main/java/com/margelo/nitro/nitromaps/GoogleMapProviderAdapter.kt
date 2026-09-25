@@ -334,9 +334,9 @@ class GoogleMapProviderAdapter(
     camera: Camera,
     duration: Double?,
   ): Promise<Unit> {
-    val animationDuration = duration ?: 0.25
+    val durationMs = cameraAnimationDurationMs(duration)
     return deferredMap.promise { map ->
-      updateMapCamera(map, camera, animated = true, durationMs = (animationDuration * 1000).toInt())
+      updateMapCamera(map, camera, animated = true, durationMs = durationMs)
     }
   }
 
@@ -679,12 +679,10 @@ class GoogleMapProviderAdapter(
     }
 
     val update = CameraUpdateFactory.newCameraPosition(target)
-    if (animated) {
-      if (durationMs > 0) {
-        map.animateCamera(update, durationMs, null)
-      } else {
-        map.animateCamera(update)
-      }
+    // A duration under a millisecond jumps, as it does on iOS: the timed `animateCamera` throws
+    // for it, and the untimed one would animate for the SDK's own default duration.
+    if (animated && durationMs > 0) {
+      map.animateCamera(update, durationMs, null)
     } else {
       map.moveCamera(update)
     }

@@ -25,13 +25,12 @@ import type {
   PolygonProps,
   PolylineProps,
 } from '../../types/overlays';
-import { collectOverlayChild } from '../collectOverlayChild';
+import { collectOverlayChildren } from '../collectOverlayChild';
 import {
   normalizeCircleDescriptors,
   normalizePolygonDescriptors,
   normalizePolylineDescriptors,
 } from '../normalizeShapeDescriptors';
-import type { OverlayCollectorState } from '../overlayCollect';
 
 mock.module('../assetSourceResolver', () => ({
   resolveAssetSource: () => null,
@@ -68,24 +67,7 @@ beforeEach(() => {
 
 /** Every descriptor an overlay child produces, whatever its kind. */
 function collectChild(child: ReactElement): unknown[] {
-  const state: OverlayCollectorState = {
-    registry: new Map(),
-    markers: [],
-    polylines: [],
-    polygons: [],
-    circles: [],
-    markerIndex: 0,
-    polylineIndex: 0,
-    polygonIndex: 0,
-    circleIndex: 0,
-    geojsonIndex: 0,
-    hasMarkerPress: false,
-    hasMarkerDragEnd: false,
-    hasPolylinePress: false,
-    hasPolygonPress: false,
-    hasCirclePress: false,
-  };
-  collectOverlayChild(child, state, { resolveMarkerImage });
+  const state = collectOverlayChildren(child, { resolveMarkerImage });
 
   return [
     ...state.markers,

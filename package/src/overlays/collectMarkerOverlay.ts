@@ -8,7 +8,7 @@ import type {
   MarkerDescriptor as PublicMarkerDescriptor,
 } from '../types/overlays';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-import { resolveOverlayId, type OverlayCollectorState } from './overlayCollect';
+import type { OverlayCollectorState } from './overlayCollect';
 import { OverlayType, overlayCallbackKey } from './overlayType';
 
 export type MarkerImageResolver = (
@@ -49,13 +49,11 @@ export function buildMarkerDescriptor(
 }
 
 export function collectMarkerOverlay(
+  id: string,
   props: MarkerProps,
   state: OverlayCollectorState,
   resolveMarkerImage: MarkerImageResolver,
 ): void {
-  const id = resolveOverlayId(props.id, 'marker', state.markerIndex);
-  state.markerIndex += 1;
-
   state.markers.push(buildMarkerDescriptor(id, props, resolveMarkerImage));
   state.registry.set(overlayCallbackKey(OverlayType.Marker, id), {
     onPress: props.onPress,

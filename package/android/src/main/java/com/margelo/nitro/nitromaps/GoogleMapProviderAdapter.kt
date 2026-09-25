@@ -12,6 +12,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.MapView
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MapStyleOptions
@@ -38,6 +39,8 @@ class GoogleMapProviderAdapter(
   private var pendingCircles: Array<CircleDescriptor>? = null
   private val density: Float = context.resources.displayMetrics.density
   private val deferredMap = DeferredGoogleMap()
+  private var lastAppliedRegion: Region? = null
+  private var lastAppliedRegionCamera: CameraPosition? = null
 
   private val googleMapIdAtCreation: String? = normalizeGoogleMapId(initialGoogleMapId)
 
@@ -230,6 +233,12 @@ class GoogleMapProviderAdapter(
   override var mapPadding: EdgePadding?
     get() = _mapPadding
     set(value) {
+      // Padding changes the camera that a region fit produces, so drop the
+      // skip-cache and let the next same-region apply recompute.
+      if (value != _mapPadding) {
+        lastAppliedRegion = null
+        lastAppliedRegionCamera = null
+      }
       _mapPadding = value
       applyMapPadding()
     }
@@ -612,21 +621,38 @@ class GoogleMapProviderAdapter(
       return
     }
 
-    val map = googleMap ?: return
-    val bounds = region.toLatLngBounds()
+    runOnMain {
+      val map = googleMap ?: return@runOnMain
+      runWhenMapViewLaidOut { fitCamera(map, region, animated) }
+    }
+  }
 
-    val runUpdate = {
-      // No padding argument: Google Maps already fits bounds inside the region `setPadding`
-      // leaves over, so passing `mapPadding` here as well would inset the region twice.
-      val update = CameraUpdateFactory.newLatLngBounds(bounds, 0)
-      if (animated) {
-        map.animateCamera(update)
-      } else {
-        map.moveCamera(update)
-      }
+  private fun fitCamera(map: GoogleMap, region: Region, animated: Boolean) {
+    val lastRegion = lastAppliedRegion
+    val lastCamera = lastAppliedRegionCamera
+    if (
+      lastRegion != null &&
+      lastCamera != null &&
+      region.approximatelyEquals(lastRegion) &&
+      map.cameraPosition.approximatelyEquals(lastCamera)
+    ) {
+      // Same region as last time and the camera has not moved since, so the
+      // fit would land on the camera the map already shows.
+      return
     }
 
-    runWhenMapViewLaidOut(block = runUpdate)
+    // No padding argument: Google Maps already fits bounds inside the region `setPadding`
+    // leaves over, so passing `mapPadding` here as well would inset the region twice.
+    val update = CameraUpdateFactory.newLatLngBounds(region.toLatLngBounds(), 0)
+    if (animated) {
+      map.animateCamera(update)
+      // The camera settles later; there is nothing reliable to remember yet.
+      lastAppliedRegionCamera = null
+    } else {
+      map.moveCamera(update)
+      lastAppliedRegionCamera = map.cameraPosition
+    }
+    lastAppliedRegion = region
   }
 
   private fun updateMapCamera(

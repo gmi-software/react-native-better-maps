@@ -12,6 +12,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.Circle
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polygon
@@ -32,6 +33,9 @@ internal class MapOverlayController(
   private val polylines = LinkedHashMap<String, Polyline>()
   private val polygons = LinkedHashMap<String, Polygon>()
   private val circles = LinkedHashMap<String, Circle>()
+  private val polylineVersions = HashMap<String, Long>()
+  private val polygonVersions = HashMap<String, Long>()
+  private val circleVersions = HashMap<String, Long>()
   private val markerEnterAnimators = HashMap<String, Animator>()
   private val renderState =
     MarkerRenderState { descriptor ->
@@ -40,7 +44,16 @@ internal class MapOverlayController(
   private var onMarkerPress: ((String) -> Unit)? = null
   private var onClusterPress: ((List<String>, Coordinate) -> Unit)? = null
   private var spatialIndex: MarkerSpatialIndex? = null
+  /** Invalidates in-flight refresh results (viewport diffs). */
   private var refreshGeneration: Int = 0
+
+  /**
+   * Invalidates in-flight index builds. Kept apart from [refreshGeneration] so
+   * a burst of refreshes during a gesture cannot keep discarding the index
+   * build for a dataset that has not changed.
+   */
+  private var datasetGeneration: Int = 0
+  private val refreshInbox = RefreshInbox()
   private var viewWidthPx: Int = 0
   private var viewHeightPx: Int = 0
   private var idleRefreshRunnable: Runnable? = null
@@ -112,10 +125,16 @@ internal class MapOverlayController(
     polylines.clear()
     polygons.clear()
     circles.clear()
+    polylineVersions.clear()
+    polygonVersions.clear()
+    circleVersions.clear()
     renderState.reset()
     spatialIndex = null
     refreshGeneration += 1
-    // Queued work would only be discarded by the generation check, so drop it.
+    advanceDatasetGeneration()
+    // Queued work would only be discarded by the generation checks, so drop it -
+    // and with it the inbox slot a dropped refresh task would have released.
+    refreshInbox.discardPending()
     computeExecutor.shutdownNow()
     computeExecutor = Executors.newSingleThreadExecutor()
   }
@@ -126,6 +145,7 @@ internal class MapOverlayController(
     }
 
     spatialIndex = null
+    advanceDatasetGeneration()
     reapplyMarkers()
   }
 
@@ -152,51 +172,81 @@ internal class MapOverlayController(
     }
 
     val bounds = map.projection.visibleRegion.latLngBounds
-    val latitudeSpan = bounds.northeast.latitude - bounds.southwest.latitude
-    val clustering = renderState.clusteringEnabled
-    val widthPx = viewWidthPx
-    val heightPx = viewHeightPx
-    val displayedVersions = HashMap(markerVersions)
     refreshGeneration += 1
-    val generation = refreshGeneration
+    val request = ViewportRefreshRequest(
+      generation = refreshGeneration,
+      index = index,
+      bounds = bounds,
+      latitudeSpan = bounds.northeast.latitude - bounds.southwest.latitude,
+      clustering = renderState.clusteringEnabled,
+      widthPx = viewWidthPx,
+      heightPx = viewHeightPx,
+      displayedVersions = HashMap(markerVersions),
+      animateEntering = animateEntering,
+      maxAnimatedMarkers = maxAnimatedMarkers,
+    )
+    if (!refreshInbox.post(request)) {
+      // A compute task is already queued and will pick this request up.
+      return
+    }
 
     executeCompute {
-      val candidates = index.candidates(bounds)
-      val elements: List<ClusterElement> =
-        if (clustering) {
-          MarkerClusterEngine.clusters(candidates, bounds, widthPx, heightPx, density)
-        } else {
-          MarkerViewportFilter
-            .displaySubset(candidates, bounds, latitudeSpan)
-            .map { ClusterElement.Single(it) }
-        }
-
-      val diff = computeMarkerRenderDiff(elements, displayedVersions)
+      val pending = refreshInbox.take() ?: return@executeCompute
+      val diff = computeViewportDiff(pending)
 
       mainHandler.post {
-        if (generation != refreshGeneration) {
+        if (pending.generation != refreshGeneration) {
           return@post
         }
-        applyDiff(diff, animateEntering, maxAnimatedMarkers)
+        applyDiff(diff, pending.animateEntering, pending.maxAnimatedMarkers)
       }
     }
   }
 
   private fun rebuildIndexAndRefresh() {
     val descriptors = renderState.descriptors
+    val builtForDataset = datasetGeneration
+    // Diffs computed against the previous index are stale from here on.
     refreshGeneration += 1
-    val generation = refreshGeneration
 
     executeCompute {
+      if (!refreshInbox.isCurrent(builtForDataset)) {
+        // A newer dataset superseded this build before it started.
+        return@executeCompute
+      }
+
       val index = MarkerSpatialIndex(descriptors)
       mainHandler.post {
-        if (generation != refreshGeneration) {
+        if (builtForDataset != datasetGeneration) {
           return@post
         }
         spatialIndex = index
         refreshViewportMarkers()
       }
     }
+  }
+
+  private fun computeViewportDiff(request: ViewportRefreshRequest): MarkerRenderDiff {
+    val candidates = request.index.candidates(request.bounds)
+    val elements: List<ClusterElement> = if (request.clustering) {
+      MarkerClusterEngine.clusters(
+        candidates,
+        request.bounds,
+        request.widthPx,
+        request.heightPx,
+        density,
+      )
+    } else {
+      MarkerViewportFilter.displaySubset(candidates, request.bounds, request.latitudeSpan)
+        .map { ClusterElement.Single(it) }
+    }
+
+    return computeMarkerRenderDiff(elements, request.displayedVersions)
+  }
+
+  private fun advanceDatasetGeneration() {
+    datasetGeneration += 1
+    refreshInbox.recordDataset(datasetGeneration)
   }
 
   /**
@@ -551,8 +601,10 @@ internal class MapOverlayController(
 
   fun updatePolylines(descriptors: Array<PolylineDescriptor>?) {
     val map = googleMap ?: return
-    reconcile(
+    reconcileShapes(
+      kind = "polyline",
       current = polylines,
+      versions = polylineVersions,
       next =
         validDescriptorsById(
           descriptors = descriptors,
@@ -560,6 +612,7 @@ internal class MapOverlayController(
           id = { it.id },
           isValid = { it.isValid() },
         ),
+      version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
         addedOrNull(kind = "polyline", id = descriptor.id) {
@@ -568,21 +621,16 @@ internal class MapOverlayController(
           }
         }
       },
-      update = { polyline, descriptor ->
-        polyline.remove()
-        addedOrNull(kind = "polyline", id = descriptor.id) {
-          map.addPolyline(descriptor.toPolylineOptions()).also { replacement ->
-            replacement.tag = descriptor.id
-          }
-        }
-      },
+      update = { polyline, descriptor -> descriptor.applyTo(polyline) },
     )
   }
 
   fun updatePolygons(descriptors: Array<PolygonDescriptor>?) {
     val map = googleMap ?: return
-    reconcile(
+    reconcileShapes(
+      kind = "polygon",
       current = polygons,
+      versions = polygonVersions,
       next =
         validDescriptorsById(
           descriptors = descriptors,
@@ -590,6 +638,7 @@ internal class MapOverlayController(
           id = { it.id },
           isValid = { it.isValid() },
         ),
+      version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
         addedOrNull(kind = "polygon", id = descriptor.id) {
@@ -598,21 +647,16 @@ internal class MapOverlayController(
           }
         }
       },
-      update = { polygon, descriptor ->
-        polygon.remove()
-        addedOrNull(kind = "polygon", id = descriptor.id) {
-          map.addPolygon(descriptor.toPolygonOptions()).also { replacement ->
-            replacement.tag = descriptor.id
-          }
-        }
-      },
+      update = { polygon, descriptor -> descriptor.applyTo(polygon) },
     )
   }
 
   fun updateCircles(descriptors: Array<CircleDescriptor>?) {
     val map = googleMap ?: return
-    reconcile(
+    reconcileShapes(
+      kind = "circle",
       current = circles,
+      versions = circleVersions,
       next =
         validDescriptorsById(
           descriptors = descriptors,
@@ -620,6 +664,7 @@ internal class MapOverlayController(
           id = { it.id },
           isValid = { it.isValid() },
         ),
+      version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
         addedOrNull(kind = "circle", id = descriptor.id) {
@@ -628,18 +673,51 @@ internal class MapOverlayController(
           }
         }
       },
-      update = { circle, descriptor ->
-        circle.remove()
-        addedOrNull(kind = "circle", id = descriptor.id) {
-          map.addCircle(descriptor.toCircleOptions()).also { replacement ->
-            replacement.tag = descriptor.id
-          }
-        }
-      },
+      update = { circle, descriptor -> descriptor.applyTo(circle) },
     )
   }
 
-  /** Dropping the id also removes what it used to render, since `reconcile` treats a missing id as a removal. */
+  /**
+   * Like [reconcile], but keeps a render version per id: an unchanged
+   * descriptor is skipped and a changed one is updated in place instead of
+   * being removed and re-added. An update the SDK rejects removes the overlay,
+   * which is what a rejected re-add would have left behind.
+   */
+  private fun <T, Descriptor> reconcileShapes(
+    kind: String,
+    current: MutableMap<String, T>,
+    versions: MutableMap<String, Long>,
+    next: Map<String, Descriptor>,
+    version: (Descriptor) -> Long,
+    remove: (T) -> Unit,
+    add: (Descriptor) -> T?,
+    update: (T, Descriptor) -> Unit,
+  ) {
+    for (removedId in current.keys - next.keys) {
+      current.remove(removedId)?.let(remove)
+      versions.remove(removedId)
+    }
+
+    for ((id, descriptor) in next) {
+      val nextVersion = version(descriptor)
+      val existing = current[id]
+      if (existing == null) {
+        add(descriptor)?.let { created ->
+          current[id] = created
+          versions[id] = nextVersion
+        }
+      } else if (versions[id] != nextVersion) {
+        if (addedOrNull(kind = kind, id = id) { update(existing, descriptor) } != null) {
+          versions[id] = nextVersion
+        } else {
+          current.remove(id)?.let(remove)
+          versions.remove(id)
+        }
+      }
+    }
+  }
+
+  /** Dropping the id also removes what it used to render, since reconciling treats a missing id as a removal. */
   private fun <Descriptor> validDescriptorsById(
     descriptors: Array<Descriptor>?,
     kind: String,
@@ -665,9 +743,9 @@ internal class MapOverlayController(
 
   /**
    * The pre-filter only models what the descriptors declare; `GoogleMap.add*`
-   * can still reject a value for a reason of its own, and `reconcile` runs
-   * inside a view prop setter, where an escaping throw aborts the whole mount
-   * transaction.
+   * - and the setters behind an in-place shape update - can still reject a
+   * value for a reason of their own, and reconciling runs inside a view prop
+   * setter, where an escaping throw aborts the whole mount transaction.
    */
   private fun <T> addedOrNull(
     kind: String,
@@ -708,6 +786,84 @@ internal class MapOverlayController(
         } else {
           current[id] = updated
         }
+      }
+    }
+  }
+
+  /**
+   * One viewport query, cluster or filter pass, and diff, computed off the UI
+   * thread against an immutable spatial index.
+   */
+  private data class ViewportRefreshRequest(
+    val generation: Int,
+    val index: MarkerSpatialIndex,
+    val bounds: LatLngBounds,
+    val latitudeSpan: Double,
+    val clustering: Boolean,
+    val widthPx: Int,
+    val heightPx: Int,
+    val displayedVersions: Map<String, Long>,
+    val animateEntering: Boolean,
+    val maxAnimatedMarkers: Int,
+  )
+
+  /**
+   * Coalesces refresh requests between the UI thread (producer) and the
+   * compute executor (consumer). At most one compute task is queued at a time;
+   * a request posted while one is queued replaces the pending request instead
+   * of adding another task, so a long gesture cannot build a backlog of stale
+   * work. The latest dataset generation is mirrored here so a queued index
+   * build can bail out before computing.
+   */
+  private class RefreshInbox {
+    private val lock = Any()
+    private var pending: ViewportRefreshRequest? = null
+    private var isComputeQueued = false
+    private var latestDatasetGeneration = 0
+
+    fun recordDataset(generation: Int) {
+      synchronized(lock) {
+        latestDatasetGeneration = generation
+      }
+    }
+
+    fun isCurrent(datasetGeneration: Int): Boolean {
+      return synchronized(lock) { datasetGeneration == latestDatasetGeneration }
+    }
+
+    /** Returns true when the caller must enqueue a compute task. */
+    fun post(request: ViewportRefreshRequest): Boolean {
+      return synchronized(lock) {
+        pending = request
+        if (isComputeQueued) {
+          false
+        } else {
+          isComputeQueued = true
+          true
+        }
+      }
+    }
+
+    /** Hands the latest request to the compute task and frees the slot. */
+    fun take(): ViewportRefreshRequest? {
+      return synchronized(lock) {
+        isComputeQueued = false
+        val request = pending
+        pending = null
+        request
+      }
+    }
+
+    /**
+     * Drops the pending request and frees the slot. Only for when the queued
+     * compute task is dropped too (`shutdownNow`): that task would have freed
+     * the slot in [take], and without it every later [post] would wait on a
+     * task that never runs.
+     */
+    fun discardPending() {
+      synchronized(lock) {
+        pending = null
+        isComputeQueued = false
       }
     }
   }

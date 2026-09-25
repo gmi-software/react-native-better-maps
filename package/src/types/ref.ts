@@ -85,8 +85,7 @@ export interface MapViewRef {
    * same density-independent pixels from the top-left corner of the map view.
    *
    * Rejects straight away for a point whose `x` or `y` is `NaN` or infinite,
-   * and rejects when there is no ground under the point, which Google Maps on
-   * Android reports above the horizon of a steeply tilted map.
+   * and rejects when the map reports no ground under the point.
    */
   coordinateForPoint(point: Point): Promise<Coordinate>;
 }

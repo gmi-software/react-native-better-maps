@@ -9,10 +9,22 @@ import UIKit
 final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private static let liveGestureRefreshInterval: CFTimeInterval = 0.18
   private static let liveGestureAnimationBudget = 24
+  private static let defaultAnimationDuration: TimeInterval = 0.25
+
+  private let cameraMoves = CameraMoveTracker()
+  private lazy var regionChanges = RegionChangeTracker<CameraPlacement, Region>(
+    position: { [unowned self] in view.camera.placement },
+    region: { [unowned self] in view.currentNitroRegion() },
+    onBegin: { [unowned self] region, isGesture in
+      onRegionChange?(region, RegionChangeDetails(isGesture: isGesture))
+    },
+    onComplete: { [unowned self] region, isGesture in
+      onRegionChangeComplete?(region, RegionChangeDetails(isGesture: isGesture))
+    }
+  )
 
   private var isMapReady = false
   private var hasDeliveredMapReady = false
-  private var isUserRegionChange = false
   private var isUserGestureMoving = false
   private var lastLiveMarkerRefreshTime: CFTimeInterval = 0
   private var myLocationObservation: NSKeyValueObservation?
@@ -176,8 +188,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
-  var onRegionChange: ((Region) -> Void)?
-  var onRegionChangeComplete: ((Region) -> Void)?
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)? {
     didSet {
       deliverMapReadyIfPossible()
@@ -234,12 +246,18 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     Promise.resolved(withResult: view.camera.toCamera())
   }
 
-  func applyCamera(camera: Camera) throws {
+  func applyCamera(camera: Camera) throws -> Promise<Void> {
     updateMapCamera(camera, animated: false)
+    return Promise.resolved()
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
-    updateMapCamera(camera, animated: true, duration: duration ?? 0.25)
+  func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    guard updateMapCamera(camera, animated: true, duration: animationDuration) else {
+      return Promise.resolved()
+    }
+
+    return trackCameraMove(duration: animationDuration)
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
@@ -250,10 +268,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     coordinates: [Coordinate],
     padding: EdgePadding?,
     animated: Bool?
-  ) throws {
+  ) throws -> Promise<Void> {
     let validCoordinates = coordinates.filter { $0.isValid }
     guard !validCoordinates.isEmpty else {
-      return
+      return Promise.resolved()
     }
 
     var bounds = GMSCoordinateBounds()
@@ -262,11 +280,19 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
     let edgePadding = padding?.toUIEdgeInsets() ?? .zero
     let update = GMSCameraUpdate.fit(bounds, with: edgePadding)
-    applyCameraUpdate(update, animated: animated ?? true, duration: nil)
+    let shouldAnimate = animated ?? true
+    applyCameraUpdate(update, animated: shouldAnimate, duration: nil)
+
+    guard shouldAnimate else {
+      return Promise.resolved()
+    }
+
+    return trackCameraMove(duration: Self.defaultAnimationDuration)
   }
 
   func prepareForRecycle() {
-    isUserRegionChange = false
+    cameraMoves.settleAll()
+    regionChanges.reset()
     isUserGestureMoving = false
     lastLiveMarkerRefreshTime = 0
     isMapReady = false
@@ -314,6 +340,16 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
       return
     }
 
+    // What the map already shows is exactly what an `onRegionChangeComplete` consumer
+    // hands back as the next `region` prop. Fitting it again moves the camera - with
+    // `mapPadding`, a little further out each round - and the echo answers every move.
+    guard
+      !view.currentNitroRegion().toMKCoordinateRegion()
+        .approximatelyEquals(region.toMKCoordinateRegion())
+    else {
+      return
+    }
+
     applyCameraUpdate(
       GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: mapPadding?.toUIEdgeInsets() ?? .zero),
       animated: animated,
@@ -321,18 +357,35 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     )
   }
 
-  private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
+  /// Moves the camera, and reports whether anything was handed to the Google SDK:
+  /// nothing is for an invalid camera, or for the one the map is already at.
+  @discardableResult
+  private func updateMapCamera(
+    _ camera: Camera,
+    animated: Bool,
+    duration: Double? = nil
+  ) -> Bool {
     guard camera.isValid else {
-      return
+      return false
     }
 
     let target = camera.toGMSCameraPosition(current: view.camera)
     guard !view.camera.approximatelyEquals(target) else {
-      return
+      return false
     }
 
     let update = GMSCameraUpdate.setCamera(target)
     applyCameraUpdate(update, animated: animated, duration: duration)
+    return true
+  }
+
+  /// `GMSMapView.animate(with:)` takes no completion handler, so an animated move is
+  /// settled by `mapView(_:idleAt:)`. Called after the hand-over, as
+  /// `CameraMoveTracker` requires.
+  private func trackCameraMove(duration: TimeInterval) -> Promise<Void> {
+    let promise = Promise<Void>()
+    cameraMoves.track(promise, duration: duration)
+    return promise
   }
 
   private func applyCameraUpdate(
@@ -351,31 +404,6 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
       }
     } else {
       view.moveCamera(update)
-    }
-  }
-
-  private func handleRegionWillChange(userInteracting: Bool) {
-    guard userInteracting, !isUserRegionChange else {
-      return
-    }
-    isUserRegionChange = true
-    emitRegionChange(complete: false)
-  }
-
-  private func handleRegionDidChange() {
-    guard isUserRegionChange else {
-      return
-    }
-    emitRegionChange(complete: true)
-    isUserRegionChange = false
-  }
-
-  private func emitRegionChange(complete: Bool) {
-    let region = view.currentNitroRegion()
-    if complete {
-      onRegionChangeComplete?(region)
-    } else {
-      onRegionChange?(region)
     }
   }
 
@@ -521,7 +549,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
 extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   func mapView(_ mapView: GMSMapView, willMove gesture: Bool) {
-    handleRegionWillChange(userInteracting: gesture)
+    regionChanges.moveStarted(isGesture: gesture)
     if gesture {
       startGestureMarkerRefresh()
     }
@@ -529,12 +557,16 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
 
   func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
     refreshGestureMarkersIfNeeded()
+    regionChanges.cameraMoved()
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
-    handleRegionDidChange()
+    // The camera has stopped, so every move still under way is over - finished,
+    // superseded, or cut short.
+    cameraMoves.settleAll()
+    regionChanges.cameraStopped()
     notifyMapReadyIfNeeded()
   }
 

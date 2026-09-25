@@ -20,8 +20,8 @@ struct MapViewState {
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
-  var onRegionChange: ((Region) -> Void)?
-  var onRegionChangeComplete: ((Region) -> Void)?
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)?
   var onPress: ((Coordinate) -> Void)?
   var onPoiPress: ((NativePoiPressEvent) -> Void)?

@@ -3,8 +3,27 @@ import NitroModules
 import UIKit
 
 final class AppleMapProviderAdapter: MapProviderAdapter {
+  /// MapKit animates `setVisibleMapRect` over a duration it does not publish. This is
+  /// only the watchdog's guess at it, not a duration handed to MapKit.
+  private static let fitAnimationDuration: TimeInterval = 0.3
+  private static let defaultAnimationDuration: TimeInterval = 0.25
+
   private let mapViewDelegate = HybridMapViewDelegate()
-  private var isUserRegionChange = false
+  private let cameraMoves = CameraMoveTracker()
+  private lazy var regionChanges = RegionChangeTracker<CameraPlacement, Region>(
+    position: { [unowned self] in view.camera.placement },
+    region: { [unowned self] in currentRegion() },
+    onBegin: { [unowned self] region, isGesture in
+      onRegionChange?(region, RegionChangeDetails(isGesture: isGesture))
+    },
+    onComplete: { [unowned self] region, isGesture in
+      onRegionChangeComplete?(region, RegionChangeDetails(isGesture: isGesture))
+    }
+  )
+  /// Whether MapKit is between a `regionWillChange` and its `regionDidChange`.
+  private var isRegionChanging = false
+  /// The end of a move, held back for a turn of the run loop - see `handleRegionDidChange()`.
+  private var pendingRegionChangeEnd: DispatchWorkItem?
   private var isMapReady = false
   private var hasDeliveredMapReady = false
   private var liveClusterTimer: Timer?
@@ -149,8 +168,8 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
-  var onRegionChange: ((Region) -> Void)?
-  var onRegionChangeComplete: ((Region) -> Void)?
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)? {
     didSet {
       deliverMapReadyIfPossible()
@@ -208,13 +227,35 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     Promise.resolved(withResult: view.camera.toCamera())
   }
 
-  func applyCamera(camera: Camera) throws {
+  func applyCamera(camera: Camera) throws -> Promise<Void> {
     updateMapCamera(camera, animated: false)
+    return Promise.resolved()
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
-    let animationDuration = duration ?? 0.25
-    updateMapCamera(camera, animated: true, duration: animationDuration)
+  func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    let promise = Promise<Void>()
+    let move = CameraMoveCompletion(promise: promise)
+
+    // UIKit calls the completion when the animation runs out, and straight away when a
+    // later camera animation replaces it.
+    let didMove = updateMapCamera(camera, animated: true, duration: animationDuration) {
+      move.settle()
+    }
+
+    // Nothing handed over - an invalid camera, or the one the map is already at - or a
+    // camera MapKit applied without animating, as it does for a map that is not on
+    // screen yet: either way there is nothing left to wait for.
+    guard didMove, isRegionChanging else {
+      move.settle()
+      return promise
+    }
+
+    // Also settled when MapKit reports the camera at rest: a fit or a `region` update
+    // that cuts this animation short does not end it for UIKit, whose completion then
+    // waits out the full duration.
+    cameraMoves.track(move, duration: animationDuration)
+    return promise
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
@@ -225,10 +266,10 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     coordinates: [Coordinate],
     padding: EdgePadding?,
     animated: Bool?
-  ) throws {
+  ) throws -> Promise<Void> {
     let validCoordinates = coordinates.filter { $0.isValid }
     guard !validCoordinates.isEmpty else {
-      return
+      return Promise.resolved()
     }
 
     var mapRect = MKMapRect.null
@@ -244,12 +285,22 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
 
     let edgePadding = padding?.toUIEdgeInsets() ?? .zero
-    let shouldAnimate = animated ?? true
-    view.setVisibleMapRect(
-      mapRect,
-      edgePadding: edgePadding,
-      animated: shouldAnimate
-    )
+    view.setVisibleMapRect(mapRect, edgePadding: edgePadding, animated: animated ?? true)
+
+    // MapKit reports from inside that call: the end of any move this one cut short, the
+    // start of this one, and its end too when it jumps rather than animates - which it
+    // does for a rect far from the one on screen, `animated` or not. A rect it already
+    // shows it ignores without a word. Only a fit still under way has anything left to
+    // wait for.
+    guard isRegionChanging else {
+      return Promise.resolved()
+    }
+
+    // `setVisibleMapRect` takes no completion handler: the `regionDidChange` that ends
+    // the move settles it.
+    let promise = Promise<Void>()
+    cameraMoves.track(promise, duration: Self.fitAnimationDuration)
+    return promise
   }
 
   func applyRegion(_ region: Region, animated: Bool = false) {
@@ -270,19 +321,27 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     view.setRegion(targetRegion, animated: animated)
   }
 
-  func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double = 0) {
+  /// Moves the camera, and reports whether anything was handed to MapKit: nothing is for
+  /// an invalid camera, or for the one the map is already at.
+  @discardableResult
+  func updateMapCamera(
+    _ camera: Camera,
+    animated: Bool,
+    duration: Double = 0,
+    completion: (() -> Void)? = nil
+  ) -> Bool {
     // `setCamera` raises an Objective-C NSException - `Invalid camera
     // centerCoordinate` - from `-[MKMapCamera _validate]` for a center MapKit
     // cannot place, and Swift cannot catch that. The framing values do not
     // raise, but a non-finite one collapses the altitude or leaves
     // `view.region` reading back as `NaN`.
     guard camera.isValid else {
-      return
+      return false
     }
 
     let mapCamera = camera.toMKMapCamera()
     guard !view.camera.approximatelyEquals(mapCamera) else {
-      return
+      return false
     }
 
     if animated {
@@ -290,11 +349,16 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
         withDuration: duration,
         animations: {
           self.view.camera = mapCamera
+        },
+        completion: { _ in
+          completion?()
         }
       )
     } else {
       view.camera = mapCamera
     }
+
+    return true
   }
 
   // Derived from MKCoordinateRegion (center + span). May differ from Android
@@ -313,35 +377,40 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   func handleRegionWillChange(userInteracting: Bool) {
     startLiveClustering()
-    guard userInteracting, !isUserRegionChange else {
-      return
-    }
-    isUserRegionChange = true
-    emitRegionChange(complete: false)
+    isRegionChanging = true
+    pendingRegionChangeEnd?.cancel()
+    pendingRegionChangeEnd = nil
+    regionChanges.moveStarted(isGesture: userInteracting)
+  }
+
+  func handleVisibleRegionChange() {
+    regionChanges.cameraMoved()
   }
 
   func handleRegionDidChange() {
     stopLiveClustering()
+    isRegionChanging = false
 
-    guard isUserRegionChange else {
-      return
-    }
+    // The camera has stopped, so every move still under way is over - finished,
+    // superseded, or cut short.
+    cameraMoves.settleAll()
 
+    // MapKit reports the end of each leg of a gesture, including the ones the
+    // finger is still driving. The move is only over once it lets go.
     guard !view.isUserInteracting else {
       return
     }
 
-    emitRegionChange(complete: true)
-    isUserRegionChange = false
-  }
-
-  private func emitRegionChange(complete: Bool) {
-    let region = currentRegion()
-    if complete {
-      onRegionChangeComplete?(region)
-    } else {
-      onRegionChange?(region)
+    // A camera command that cuts an animation short makes MapKit end that move and
+    // start the next back to back, from inside the command. Google Maps reports the
+    // same thing as one move, so the end waits a turn of the run loop, and a move that
+    // starts in the meantime carries on the one before.
+    let end = DispatchWorkItem { [weak self] in
+      self?.pendingRegionChangeEnd = nil
+      self?.regionChanges.cameraStopped()
     }
+    pendingRegionChangeEnd = end
+    DispatchQueue.main.async(execute: end)
   }
 
   func startLiveClustering() {
@@ -431,7 +500,11 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   func prepareForRecycle() {
     liveClusterTimer?.invalidate()
     liveClusterTimer = nil
-    isUserRegionChange = false
+    cameraMoves.settleAll()
+    pendingRegionChangeEnd?.cancel()
+    pendingRegionChangeEnd = nil
+    isRegionChanging = false
+    regionChanges.reset()
     isMapReady = false
     hasDeliveredMapReady = false
     onRegionChange = nil

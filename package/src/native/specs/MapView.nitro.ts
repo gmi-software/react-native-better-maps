@@ -6,7 +6,12 @@ import type {
 import type { Camera } from '../../types/camera';
 import type { Coordinate } from '../../types/coordinate';
 import type { MapProvider, MapType } from '../../types/map';
-import type { EdgePadding, Region, VisibleRegion } from '../../types/region';
+import type {
+  EdgePadding,
+  Region,
+  RegionChangeDetails,
+  VisibleRegion,
+} from '../../types/region';
 import type {
   CircleDescriptor,
   MarkerDescriptor,
@@ -180,11 +185,14 @@ export interface MapViewProps extends HybridViewProps {
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimationDescriptor;
 
-  /** Called once when a user-initiated region change begins. */
-  onRegionChange?: (region: Region) => void;
+  /** Called once when a region change begins, whoever started it. */
+  onRegionChange?: (region: Region, details: RegionChangeDetails) => void;
 
-  /** Called once when a user-initiated region change ends. */
-  onRegionChangeComplete?: (region: Region) => void;
+  /** Called once when a region change ends, whoever started it. */
+  onRegionChangeComplete?: (
+    region: Region,
+    details: RegionChangeDetails,
+  ) => void;
 
   /** Called when the map is ready to use. */
   onMapReady?: () => void;
@@ -245,20 +253,27 @@ export interface MapViewMethods extends HybridViewMethods {
   fetchCamera(): Promise<Camera>;
 
   /**
-   * Sets the camera position immediately.
+   * Sets the camera position immediately. Resolves once the move is done, which
+   * for a non-animated move is right away.
    *
    * Named `applyCamera` in the Nitro spec to avoid colliding with the `camera`
    * prop accessor (`getCamera`/`setCamera`) in generated C++ bindings.
    */
   applyCamera(camera: Camera): Promise<void>;
 
-  /** Animates the camera to the given position. */
+  /**
+   * Animates the camera to the given position. Resolves once the camera has
+   * arrived, or once the animation is cut short.
+   */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */
   getVisibleRegion(): Promise<VisibleRegion>;
 
-  /** Fits the camera to show all given coordinates with optional edge padding. */
+  /**
+   * Fits the camera to show all given coordinates with optional edge padding.
+   * Resolves once the camera has arrived, or once the animation is cut short.
+   */
   fitToCoordinates(
     coordinates: Coordinate[],
     padding?: EdgePadding,

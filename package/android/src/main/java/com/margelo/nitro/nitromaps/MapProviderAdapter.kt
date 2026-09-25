@@ -24,8 +24,8 @@ interface MapProviderAdapter {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
 
-  var onRegionChange: ((region: Region) -> Unit)?
-  var onRegionChangeComplete: ((region: Region) -> Unit)?
+  var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)?
+  var onRegionChangeComplete: ((region: Region, details: RegionChangeDetails) -> Unit)?
   var onMapReady: (() -> Unit)?
   var onPress: ((coordinate: Coordinate) -> Unit)?
   var onPoiPress: ((event: NativePoiPressEvent) -> Unit)?
@@ -45,8 +45,14 @@ interface MapProviderAdapter {
 
   fun fetchCamera(): Promise<Camera>
 
+  /**
+   * Resolves once the camera has arrived: a non-animated move right away, an animated
+   * one when it finishes or when a gesture, a later command or [release] cuts it short.
+   * A call made before the map exists waits for it, and rejects if [release] comes first.
+   */
   fun applyCamera(camera: Camera): Promise<Unit>
 
+  /** @see applyCamera for when the promise settles. */
   fun animateCamera(
     camera: Camera,
     duration: Double?,
@@ -54,6 +60,7 @@ interface MapProviderAdapter {
 
   fun getVisibleRegion(): Promise<VisibleRegion>
 
+  /** @see applyCamera for when the promise settles. */
   fun fitToCoordinates(
     coordinates: Array<Coordinate>,
     padding: EdgePadding?,

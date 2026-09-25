@@ -185,13 +185,13 @@ class HybridMapView(
       adapter?.clusterEnteringAnimation = value
     }
 
-  override var onRegionChange: ((region: Region) -> Unit)? = null
+  override var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
     set(value) {
       field = value
       adapter?.onRegionChange = value
     }
 
-  override var onRegionChangeComplete: ((region: Region) -> Unit)? = null
+  override var onRegionChangeComplete: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
     set(value) {
       field = value
       adapter?.onRegionChangeComplete = value

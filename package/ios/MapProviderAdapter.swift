@@ -23,8 +23,8 @@ protocol MapProviderAdapter: AnyObject {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
 
-  var onRegionChange: ((Region) -> Void)? { get set }
-  var onRegionChangeComplete: ((Region) -> Void)? { get set }
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)? { get set }
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)? { get set }
   var onMapReady: (() -> Void)? { get set }
   var onPress: ((Coordinate) -> Void)? { get set }
   var onPoiPress: ((NativePoiPressEvent) -> Void)? { get set }
@@ -43,10 +43,24 @@ protocol MapProviderAdapter: AnyObject {
   var onClusterPress: (([String], Coordinate) -> Void)? { get set }
 
   func fetchCamera() throws -> Promise<Camera>
-  func applyCamera(camera: Camera) throws
-  func animateCamera(camera: Camera, duration: Double?) throws
+
+  /// Resolves once the camera has arrived: a non-animated move right away, an animated
+  /// one when it finishes or when a gesture, a later command or ``prepareForRecycle()``
+  /// cuts it short.
+  func applyCamera(camera: Camera) throws -> Promise<Void>
+
+  /// - SeeAlso: ``applyCamera(camera:)`` for when the Promise settles.
+  func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void>
+
   func getVisibleRegion() throws -> Promise<VisibleRegion>
-  func fitToCoordinates(coordinates: [Coordinate], padding: EdgePadding?, animated: Bool?) throws
+
+  /// - SeeAlso: ``applyCamera(camera:)`` for when the Promise settles.
+  func fitToCoordinates(
+    coordinates: [Coordinate],
+    padding: EdgePadding?,
+    animated: Bool?
+  ) throws -> Promise<Void>
+
   func prepareForRecycle()
 }
 
@@ -73,8 +87,8 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
 
-  var onRegionChange: ((Region) -> Void)?
-  var onRegionChangeComplete: ((Region) -> Void)?
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)?
   var onPress: ((Coordinate) -> Void)?
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
@@ -120,11 +134,11 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     Promise.rejected(withError: error)
   }
 
-  func applyCamera(camera: Camera) throws {
+  func applyCamera(camera: Camera) throws -> Promise<Void> {
     throw error
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
+  func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
     throw error
   }
 
@@ -136,7 +150,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     coordinates: [Coordinate],
     padding: EdgePadding?,
     animated: Bool?
-  ) throws {
+  ) throws -> Promise<Void> {
     throw error
   }
 

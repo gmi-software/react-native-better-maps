@@ -29,3 +29,11 @@ export interface VisibleRegion {
   farLeft: Coordinate;
   farRight: Coordinate;
 }
+
+/**
+ * Context delivered alongside a region change.
+ */
+export interface RegionChangeDetails {
+  /** Whether the change was started by a user gesture rather than by the app. */
+  isGesture: boolean;
+}

@@ -87,6 +87,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     parent?.handleRegionDidChange()
   }
 
+  func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+    parent?.handleVisibleRegionChange()
+  }
+
   func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
     parent?.notifyMapReadyIfNeeded()
   }

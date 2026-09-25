@@ -12,7 +12,7 @@ import type {
   ApplePoiDetailPresentation,
 } from '../native/specs/MapView.nitro';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
-import type { EdgePadding, Region } from './region';
+import type { EdgePadding, Region, RegionChangeDetails } from './region';
 
 /**
  * Available map display styles.
@@ -111,11 +111,28 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Called when any circle is pressed. */
   onCirclePress?: (id: string) => void;
 
-  /** Called once when a user-initiated region change begins. */
-  onRegionChange?: (region: Region) => void;
+  /**
+   * Called once when the camera starts to move, with the region it is leaving -
+   * not on every frame while it moves.
+   *
+   * Fires for gestures and for programmatic moves alike - `setCamera`,
+   * `animateCamera`, `fitToCoordinates` and the `region` / `camera` props.
+   * Use `details.isGesture` to tell the two apart. An update that leaves the
+   * camera where it is fires nothing, and neither does the map settling into
+   * its first position as it appears.
+   */
+  onRegionChange?: (region: Region, details: RegionChangeDetails) => void;
 
-  /** Called once when a user-initiated region change ends. */
-  onRegionChangeComplete?: (region: Region) => void;
+  /**
+   * Called once when the camera comes to rest, with the region it arrived at
+   * and the same `details` as the `onRegionChange` that began the move.
+   *
+   * @see {@linkcode BaseMapViewProps.onRegionChange}
+   */
+  onRegionChangeComplete?: (
+    region: Region,
+    details: RegionChangeDetails,
+  ) => void;
 
   /** Called when the map is ready to use. */
   onMapReady?: () => void;

@@ -11,6 +11,7 @@ export { geojsonToOverlayDescriptors } from './geojson/geojsonToDescriptors';
 export type {
   Coordinate,
   Region,
+  RegionChangeDetails,
   Camera,
   EdgePadding,
   VisibleRegion,

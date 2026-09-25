@@ -246,7 +246,7 @@ final class MapOverlayController {
           fillColor: descriptor.fillColor?.toUIColor(fallback: UIColor.systemBlue.withAlphaComponent(0.2))
             ?? UIColor.systemBlue.withAlphaComponent(0.2),
           strokeWidth: CGFloat(descriptor.strokeWidth ?? 2),
-          tappable: descriptor.tappable ?? true
+          tappable: descriptor.tappable ?? false
         )
       },
       renderVersion: { $0.renderVersion() }

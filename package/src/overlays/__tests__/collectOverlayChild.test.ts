@@ -245,3 +245,32 @@ describe('overlay ids', () => {
     }
   });
 });
+
+describe('circle tappable', () => {
+  const zone = { center: ROUTE[0]!, radius: 100 };
+  const onPress = () => {};
+
+  test('a circle with onPress is sent as tappable', () => {
+    const state = collect(createElement(Circle, { ...zone, onPress }));
+
+    expect(state.circles[0]?.tappable).toBe(true);
+  });
+
+  test('a circle without onPress leaves tappable unset', () => {
+    const state = collect(createElement(Circle, zone));
+
+    expect(state.circles[0]?.tappable).toBeUndefined();
+  });
+
+  test('an explicit tappable is kept with or without onPress', () => {
+    const state = collect([
+      createElement(Circle, { ...zone, id: 'off', onPress, tappable: false }),
+      createElement(Circle, { ...zone, id: 'on', tappable: true }),
+    ]);
+
+    expect(state.circles.map((circle) => circle.tappable)).toEqual([
+      false,
+      true,
+    ]);
+  });
+});

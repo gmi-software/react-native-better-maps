@@ -64,6 +64,8 @@ export interface MapViewRef {
    * Resolves once the camera has arrived, which for an un-animated fit is
    * right away. An empty {@linkcode coordinates} list is a no-op.
    *
+   * {@linkcode padding} is added on top of {@linkcode MapViewProps.mapPadding}.
+   *
    * @param animated Pass it explicitly: omitted, iOS animates and Android jumps.
    */
   fitToCoordinates(

@@ -30,6 +30,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private var myLocationObservation: NSKeyValueObservation?
   private weak var followedLocationMapView: GMSMapView?
   private var _googleMapId: String?
+  private var lastAppliedRegion: Region?
+  private var lastAppliedRegionCamera: GMSCameraPosition?
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -172,6 +174,10 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var mapPadding: EdgePadding? {
     didSet {
+      // Padding changes the camera that a region fit produces, so drop the
+      // skip-cache and let the next same-region apply recompute.
+      lastAppliedRegion = nil
+      lastAppliedRegionCamera = nil
       applyMapPadding(to: view)
     }
   }
@@ -295,6 +301,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     regionChanges.reset()
     isUserGestureMoving = false
     lastLiveMarkerRefreshTime = 0
+    lastAppliedRegion = nil
+    lastAppliedRegionCamera = nil
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
@@ -340,21 +348,34 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
       return
     }
 
-    // What the map already shows is exactly what an `onRegionChangeComplete` consumer
-    // hands back as the next `region` prop. Fitting it again must not move the camera,
-    // or the echo would answer every move with another one.
-    guard
-      !view.currentNitroRegion().toMKCoordinateRegion()
-        .approximatelyEquals(region.toMKCoordinateRegion())
-    else {
+    if let lastAppliedRegion,
+       let lastAppliedRegionCamera,
+       region.approximatelyEquals(lastAppliedRegion),
+       view.camera.approximatelyEquals(lastAppliedRegionCamera) {
+      // Same region as last time and the camera has not moved since, so the
+      // fit would land on the camera the map already shows.
       return
     }
 
+    // What the map already shows is exactly what an `onRegionChangeComplete` consumer
+    // hands back as the next `region` prop. Fitting it again must not move the camera,
+    // or the echo would answer every move with another one.
+    guard !view.currentNitroRegion().approximatelyEquals(region) else {
+      return
+    }
+
+    // No insets of its own: Google Maps already fits bounds inside the area
+    // `GMSMapView.padding` leaves over, so passing `mapPadding` here as well would
+    // inset the region twice. `.zero` rather than `fit(_:)`, which pads by 64 pt.
     applyCameraUpdate(
-      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: mapPadding?.toUIEdgeInsets() ?? .zero),
+      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
       animated: animated,
       duration: nil
     )
+    self.lastAppliedRegion = region
+    // `moveCamera` updates `camera` synchronously; an animation does not, so
+    // there is nothing reliable to remember until it settles.
+    lastAppliedRegionCamera = animated ? nil : view.camera
   }
 
   /// Moves the camera, and reports whether anything was handed to the Google SDK:

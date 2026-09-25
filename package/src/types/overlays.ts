@@ -163,7 +163,12 @@ export interface PolylineProps {
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
 
-  /** Whether the polyline is tappable. */
+  /**
+   * Whether taps on the polyline fire its `onPress` and `MapView`'s
+   * `onPolylinePress`. Taps on a polyline that is not tappable pass through to
+   * `MapView`'s `onPress`. Defaults to `true` when `onPress` is set, `false`
+   * otherwise.
+   */
   tappable?: boolean;
 
   /** Called when the polyline is pressed. */
@@ -194,7 +199,12 @@ export interface PolygonProps {
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
 
-  /** Whether the polygon is tappable. */
+  /**
+   * Whether taps on the polygon fire its `onPress` and `MapView`'s
+   * `onPolygonPress`. Taps on a polygon that is not tappable pass through to
+   * `MapView`'s `onPress`. Defaults to `true` when `onPress` is set, `false`
+   * otherwise.
+   */
   tappable?: boolean;
 
   /** Called when the polygon is pressed. */
@@ -228,7 +238,12 @@ export interface CircleProps {
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
 
-  /** Whether the circle is tappable. */
+  /**
+   * Whether taps on the circle fire its `onPress` and `MapView`'s
+   * `onCirclePress`. Taps on a circle that is not tappable pass through to
+   * `MapView`'s `onPress`. Defaults to `true` when `onPress` is set, `false`
+   * otherwise.
+   */
   tappable?: boolean;
 
   /** Called when the circle is pressed. */

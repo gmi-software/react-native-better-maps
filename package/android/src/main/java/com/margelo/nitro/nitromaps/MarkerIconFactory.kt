@@ -28,7 +28,9 @@ internal class MarkerIconFactory(
   private val density: Float,
   private val markerRegistry: () -> Map<String, Marker>,
 ) {
-  private val cache = object : LruCache<String, BitmapDescriptor>(64) {}
+  private val cache = object : LruCache<String, CachedIcon>(iconCacheBytes()) {
+    override fun sizeOf(key: String, value: CachedIcon): Int = value.byteCount
+  }
   private val sizeCache = object : LruCache<String, Pair<Float, Float>>(64) {}
   private val mainHandler = Handler(Looper.getMainLooper())
   private val appliedIconKeys = WeakHashMap<Marker, String>()
@@ -39,6 +41,8 @@ internal class MarkerIconFactory(
     val iconKey: String,
     var onIconApplied: () -> Unit,
   )
+
+  private class CachedIcon(val descriptor: BitmapDescriptor, val byteCount: Int)
 
   fun applyVisualProps(
     descriptor: MarkerDescriptor,
@@ -118,7 +122,7 @@ internal class MarkerIconFactory(
     }
 
     cache.get(iconKey)?.let { cached ->
-      marker.setIcon(cached)
+      marker.setIcon(cached.descriptor)
       setApplied(marker, iconKey)
       onIconApplied()
       return
@@ -179,8 +183,8 @@ internal class MarkerIconFactory(
     onLoaded: (BitmapDescriptor?) -> Unit,
   ) {
     val key = cacheKey(image)
-    cache.get(key)?.let {
-      deliverOnMainThread { onLoaded(it) }
+    cache.get(key)?.let { cached ->
+      deliverOnMainThread { onLoaded(cached.descriptor) }
       return
     }
 
@@ -399,7 +403,7 @@ internal class MarkerIconFactory(
     bitmap: Bitmap,
   ): BitmapDescriptor {
     val descriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
-    cache.put(key, descriptor)
+    cache.put(key, CachedIcon(descriptor, bitmap.allocationByteCount.coerceAtLeast(1)))
     sizeCache.put(key, bitmap.width.toFloat() to bitmap.height.toFloat())
     return descriptor
   }
@@ -528,6 +532,16 @@ internal class MarkerIconFactory(
     private const val DEFAULT_MARKER_HEIGHT_DP = 52f
     private const val MAX_DECODE_DIMENSION = 2048
     private const val MAX_DECODE_PIXELS = 2048L * 2048L
+    private const val MIN_ICON_CACHE_BYTES = 1024 * 1024
+    private const val MAX_ICON_CACHE_BYTES = 32 * 1024 * 1024
+
+    /** Icon cache budget in decoded bytes: a slice of the heap, capped well below it. */
+    private fun iconCacheBytes(): Int {
+      val budget = Runtime.getRuntime().maxMemory() / 16
+      return budget
+        .coerceIn(MIN_ICON_CACHE_BYTES.toLong(), MAX_ICON_CACHE_BYTES.toLong())
+        .toInt()
+    }
 
     private val loadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 

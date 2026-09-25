@@ -3,6 +3,7 @@ package com.margelo.nitro.nitromaps
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Looper
+import android.util.Log
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
@@ -43,8 +44,9 @@ internal class FusedLocationSource(
   }
 
   /**
-   * Asks again if the location permission changed since the running request was made. The
-   * Google Maps SDK never reactivates its source on resume, so nothing else would.
+   * Asks again if the location permission changed since the running request was made, or if
+   * that request failed. The Google Maps SDK never reactivates its source on resume, so nothing
+   * else would.
    */
   fun refreshPriority() {
     if (listener != null && currentPriority() != requestedPriority) {
@@ -56,7 +58,15 @@ internal class FusedLocationSource(
   private fun requestUpdates() {
     val priority = currentPriority() ?: return
     // A request made with the same callback replaces the previous one.
-    client.requestLocationUpdates(userLocationRequest(priority), callback, Looper.getMainLooper())
+    client
+      .requestLocationUpdates(userLocationRequest(priority), callback, Looper.getMainLooper())
+      .addOnFailureListener { error ->
+        Log.w(NITRO_MAPS_LOG_TAG, "Failed to request location updates.", error)
+        // Unless a newer request replaced it, let the next refreshPriority() ask again.
+        if (requestedPriority == priority) {
+          requestedPriority = null
+        }
+      }
     requestedPriority = priority
   }
 

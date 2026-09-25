@@ -107,7 +107,10 @@ neither uses a timer:
 - **Android** — `MapView.getMapAsync` answers later still, so
   `DeferredGoogleMap` holds camera work until the `GoogleMap` exists, and
   `configureMap` drains it after replaying the `region`/`camera` props. Without
-  it the adapter would accept a camera call and quietly do nothing. iOS has no
+  it the adapter would accept a camera call and quietly do nothing.
+  `fitToCoordinates` then waits once more, in `DeferredLayout`, for the map
+  view's first layout pass, because `newLatLngBounds` throws on a view without a
+  size. It rejects if the view is released before that pass comes. iOS has no
   equivalent window: `MKMapView`/`GMSMapView` exist as soon as the adapter is
   installed.
 

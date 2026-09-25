@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.util.Log
 import android.view.View
-import android.view.ViewTreeObserver
 import androidx.annotation.Keep
 import androidx.core.content.ContextCompat
 import com.facebook.proguard.annotations.DoNotStrip
@@ -20,6 +19,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.margelo.nitro.core.Promise
+
+private const val MAP_RELEASED_BEFORE_LAYOUT_MESSAGE = "MapView was released before it was laid out"
 
 @Keep
 @DoNotStrip
@@ -52,6 +53,7 @@ class GoogleMapProviderAdapter(
     )
 
   private val lifecycle = MapViewLifecycleOwner(view)
+  private val deferredLayout = DeferredLayout(view)
 
   private var isAttachedToWindow = false
 
@@ -360,8 +362,13 @@ class GoogleMapProviderAdapter(
       val bounds = builder.build()
 
       // `newLatLngBounds` throws on a map that has no size yet, so the camera
-      // update waits for the first layout pass -- and so does the promise.
-      runWhenMapViewLaidOut {
+      // update waits for the first layout pass -- and so does the promise, which
+      // rejects if the view is released before that pass comes.
+      runWhenMapViewLaidOut(
+        onCancel = {
+          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
+        },
+      ) {
         complete(
           runCatching {
             // Inside the callback: converting the insets needs the size the map was laid out with.
@@ -624,7 +631,7 @@ class GoogleMapProviderAdapter(
       }
     }
 
-    runWhenMapViewLaidOut(runUpdate)
+    runWhenMapViewLaidOut(block = runUpdate)
   }
 
   private fun updateMapCamera(
@@ -671,36 +678,21 @@ class GoogleMapProviderAdapter(
     mapView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
       syncViewportSize()
     }
-    runWhenViewLaidOut(mapView, syncViewportSize)
+    runWhenMapViewLaidOut(block = syncViewportSize)
   }
 
-  private fun runWhenMapViewLaidOut(block: () -> Unit) {
-    runWhenViewLaidOut(view, block)
-  }
-
-  private fun runWhenViewLaidOut(
-    target: View,
+  /**
+   * Runs [block] once the map view has a size - see [DeferredLayout]. [onCancel] runs
+   * instead if the map is destroyed before that.
+   */
+  private fun runWhenMapViewLaidOut(
+    onCancel: () -> Unit = {},
     block: () -> Unit,
   ) {
-    if (target.width > 0 && target.height > 0) {
+    deferredLayout.run(onCancel) {
       updateOverlayViewportSize()
       block()
-      return
     }
-
-    target.viewTreeObserver.addOnGlobalLayoutListener(
-      object : ViewTreeObserver.OnGlobalLayoutListener {
-        override fun onGlobalLayout() {
-          if (target.width <= 0 || target.height <= 0) {
-            return
-          }
-
-          target.viewTreeObserver.removeOnGlobalLayoutListener(this)
-          updateOverlayViewportSize()
-          block()
-        }
-      },
-    )
   }
 
   private fun updateOverlayViewportSize() {
@@ -779,6 +771,7 @@ class GoogleMapProviderAdapter(
    */
   private fun destroyMapView() {
     deferredMap.release()
+    deferredLayout.release()
 
     if (lifecycle.isDestroyed) {
       return

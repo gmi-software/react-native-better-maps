@@ -20,6 +20,14 @@ import com.margelo.nitro.core.Promise
 
 private const val MAP_RELEASED_BEFORE_LAYOUT_MESSAGE = "MapView was released before it was laid out"
 
+private const val INVALID_COORDINATE_MESSAGE =
+  "Coordinate rejected: latitude and longitude must be finite and within ±90 / ±180"
+
+private const val INVALID_POINT_MESSAGE = "Point rejected: x and y must be finite"
+
+private const val NO_COORDINATE_AT_POINT_MESSAGE =
+  "No coordinate at that point: the map shows no ground there, such as above the horizon of a steeply tilted map"
+
 @Keep
 @DoNotStrip
 class GoogleMapProviderAdapter(
@@ -367,40 +375,50 @@ class GoogleMapProviderAdapter(
       return Promise.resolved(Unit)
     }
 
-    return deferredMap.promiseCompletion { map, complete ->
+    // `newLatLngBounds` throws on a map that has no size yet, so the camera update
+    // waits for the first layout pass -- and so does the promise.
+    return promiseWhenLaidOut { map ->
       val builder = LatLngBounds.Builder()
       for (coordinate in validCoordinates) {
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
       }
       val bounds = builder.build()
 
-      // `newLatLngBounds` throws on a map that has no size yet, so the camera
-      // update waits for the first layout pass -- and so does the promise, which
-      // rejects if the view is released before that pass comes.
-      runWhenMapViewLaidOut(
-        onCancel = {
-          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
-        },
-      ) {
-        complete(
-          runCatching {
-            // Inside the callback: converting the insets needs the size the map was laid out with.
-            val target =
-              bounds.expandedForEdgePadding(
-                padding?.toPixels(density),
-                _mapPadding?.toPixels(density),
-                view.width,
-                view.height,
-              ) ?: bounds
-            val update = CameraUpdateFactory.newLatLngBounds(target, 0)
-            if (animated == true) {
-              map.animateCamera(update)
-            } else {
-              map.moveCamera(update)
-            }
-          },
-        )
+      // Converting the insets needs the size the map was laid out with.
+      val target =
+        bounds.expandedForEdgePadding(
+          padding?.toPixels(density),
+          _mapPadding?.toPixels(density),
+          view.width,
+          view.height,
+        ) ?: bounds
+      val update = CameraUpdateFactory.newLatLngBounds(target, 0)
+      if (animated == true) {
+        map.animateCamera(update)
+      } else {
+        map.moveCamera(update)
       }
+    }
+  }
+
+  override fun pointForCoordinate(coordinate: Coordinate): Promise<Point> {
+    // `LatLng` would clamp the latitude and wrap the longitude, and answer for somewhere
+    // else. The JS side rejects the same coordinate before a call is queued; this is the
+    // backstop for a `hybridRef` call.
+    if (!coordinate.isValid()) {
+      return Promise.rejected(IllegalArgumentException(INVALID_COORDINATE_MESSAGE))
+    }
+
+    return promiseWhenLaidOut { map -> map.projection.pointFor(coordinate, density) }
+  }
+
+  override fun coordinateForPoint(point: Point): Promise<Coordinate> {
+    if (!point.isValid()) {
+      return Promise.rejected(IllegalArgumentException(INVALID_POINT_MESSAGE))
+    }
+
+    return promiseWhenLaidOut { map ->
+      map.projection.coordinateAt(point, density) ?: throw IllegalStateException(NO_COORDINATE_AT_POINT_MESSAGE)
     }
   }
 
@@ -701,6 +719,25 @@ class GoogleMapProviderAdapter(
     }
     runWhenMapViewLaidOut(block = syncViewportSize)
   }
+
+  /**
+   * Resolves with what [block] returns once the map exists and its view has been laid
+   * out, and rejects if the view is released before that layout pass comes.
+   *
+   * Before the pass the map has no size, and the `region` prop - applied in that same
+   * pass - has not moved the camera yet, so neither a camera fit nor a projection taken
+   * earlier would match the map that ends up on screen.
+   */
+  private fun <T> promiseWhenLaidOut(block: (GoogleMap) -> T): Promise<T> =
+    deferredMap.promiseCompletion { map, complete ->
+      runWhenMapViewLaidOut(
+        onCancel = {
+          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
+        },
+      ) {
+        complete(runCatching { block(map) })
+      }
+    }
 
   /**
    * Runs [block] once the map view has a size - see [DeferredLayout]. [onCancel] runs

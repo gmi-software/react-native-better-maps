@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   isValidCoordinate,
   isValidCoordinateList,
+  isValidPoint,
   isValidRadius,
 } from '../validateGeometry';
 
@@ -46,5 +47,13 @@ describe('geometry validation', () => {
     expect(isValidRadius(-1)).toBe(false);
     expect(isValidRadius(Number.NaN)).toBe(false);
     expect(isValidRadius(Number.POSITIVE_INFINITY)).toBe(false);
+  });
+
+  test('accepts any finite point, including one off the map view', () => {
+    expect(isValidPoint({ x: 0, y: 0 })).toBe(true);
+    expect(isValidPoint({ x: -250.5, y: 1e9 })).toBe(true);
+    expect(isValidPoint({ x: Number.NaN, y: 0 })).toBe(false);
+    expect(isValidPoint({ x: 0, y: Number.NEGATIVE_INFINITY })).toBe(false);
+    expect(isValidPoint(undefined)).toBe(false);
   });
 });

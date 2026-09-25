@@ -6,6 +6,7 @@ import type {
 import type { Camera } from '../../types/camera';
 import type { Coordinate } from '../../types/coordinate';
 import type { MapProvider, MapType } from '../../types/map';
+import type { Point } from '../../types/point';
 import type { EdgePadding, Region, VisibleRegion } from '../../types/region';
 import type {
   CircleDescriptor,
@@ -264,6 +265,18 @@ export interface MapViewMethods extends HybridViewMethods {
     padding?: EdgePadding,
     animated?: boolean,
   ): Promise<void>;
+
+  /**
+   * Returns where the map draws a coordinate, in density-independent pixels
+   * from the top-left corner of the map view.
+   */
+  pointForCoordinate(coordinate: Coordinate): Promise<Point>;
+
+  /**
+   * Returns the coordinate under a point given in density-independent pixels
+   * from the top-left corner of the map view.
+   */
+  coordinateForPoint(point: Point): Promise<Coordinate>;
 }
 
 /**

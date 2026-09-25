@@ -313,6 +313,16 @@ class HybridMapView(
     return mounted.fitToCoordinates(coordinates, padding, animated)
   }
 
+  override fun pointForCoordinate(coordinate: Coordinate): Promise<Point> {
+    val mounted = adapter ?: return notMountedRejection()
+    return mounted.pointForCoordinate(coordinate)
+  }
+
+  override fun coordinateForPoint(point: Point): Promise<Coordinate> {
+    val mounted = adapter ?: return notMountedRejection()
+    return mounted.coordinateForPoint(point)
+  }
+
   override fun onDropView() {
     releaseAdapter()
   }

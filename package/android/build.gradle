@@ -29,6 +29,12 @@ apply plugin: 'org.jetbrains.kotlin.android'
 apply from: '../nitrogen/generated/android/NitroMaps+autolinking.gradle'
 apply plugin: 'com.facebook.react'
 
+react {
+    // Limit Codegen to our sources; scanning the package root can include
+    // installed dependencies and generate duplicate React Native core specs.
+    jsRootDir = file('../src')
+}
+
 android {
     namespace 'com.margelo.nitro.nitromaps'
 

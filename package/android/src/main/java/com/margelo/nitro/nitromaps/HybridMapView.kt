@@ -374,11 +374,13 @@ class HybridMapView(
     adapter?.let { return command(it) }
 
     val promise = Promise<T>()
-    runOnMain {
+    // Posted even from the main thread: inline, a call made there mid-transaction would find
+    // no adapter before `afterUpdate()` has built it.
+    postOnMain {
       val mounted = adapter
       if (mounted == null) {
         promise.reject(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
-        return@runOnMain
+        return@postOnMain
       }
 
       // Caught: on the main thread a throw would take the app down instead of rejecting.

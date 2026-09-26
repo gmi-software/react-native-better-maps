@@ -18,9 +18,13 @@ fun PolylineDescriptor.toPolylineOptions(): PolylineOptions {
   return options
 }
 
-/** Updates an existing polyline in place, with the same defaults as [toPolylineOptions]. */
-fun PolylineDescriptor.applyTo(polyline: Polyline) {
+/** Moves an existing polyline onto this descriptor's points. */
+fun PolylineDescriptor.applyGeometryTo(polyline: Polyline) {
   polyline.points = coordinates.map { LatLng(it.latitude, it.longitude) }
+}
+
+/** Restyles an existing polyline in place, with the same defaults as [toPolylineOptions]. */
+fun PolylineDescriptor.applyStyleTo(polyline: Polyline) {
   polyline.color = strokeColor?.toColorInt() ?: Color.BLACK
   polyline.width = (strokeWidth ?: 4.0).toFloat()
   polyline.zIndex = (zIndex ?: 0.0).toFloat()

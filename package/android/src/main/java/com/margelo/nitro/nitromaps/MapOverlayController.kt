@@ -33,9 +33,9 @@ internal class MapOverlayController(
   private val polylines = LinkedHashMap<String, Polyline>()
   private val polygons = LinkedHashMap<String, Polygon>()
   private val circles = LinkedHashMap<String, Circle>()
-  private val polylineVersions = HashMap<String, Long>()
-  private val polygonVersions = HashMap<String, Long>()
-  private val circleVersions = HashMap<String, Long>()
+  private val polylineVersions = HashMap<String, ShapeRenderVersion>()
+  private val polygonVersions = HashMap<String, ShapeRenderVersion>()
+  private val circleVersions = HashMap<String, ShapeRenderVersion>()
   private val markerEnterAnimators = HashMap<String, Animator>()
   private val renderState =
     MarkerRenderState { descriptor ->
@@ -615,13 +615,12 @@ internal class MapOverlayController(
       version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
-        addedOrNull(kind = "polyline", id = descriptor.id) {
-          map.addPolyline(descriptor.toPolylineOptions()).also { polyline ->
-            polyline.tag = descriptor.id
-          }
+        map.addPolyline(descriptor.toPolylineOptions()).also { polyline ->
+          polyline.tag = descriptor.id
         }
       },
-      update = { polyline, descriptor -> descriptor.applyTo(polyline) },
+      applyGeometry = { polyline, descriptor -> descriptor.applyGeometryTo(polyline) },
+      applyStyle = { polyline, descriptor -> descriptor.applyStyleTo(polyline) },
     )
   }
 
@@ -641,13 +640,12 @@ internal class MapOverlayController(
       version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
-        addedOrNull(kind = "polygon", id = descriptor.id) {
-          map.addPolygon(descriptor.toPolygonOptions()).also { polygon ->
-            polygon.tag = descriptor.id
-          }
+        map.addPolygon(descriptor.toPolygonOptions()).also { polygon ->
+          polygon.tag = descriptor.id
         }
       },
-      update = { polygon, descriptor -> descriptor.applyTo(polygon) },
+      applyGeometry = { polygon, descriptor -> descriptor.applyGeometryTo(polygon) },
+      applyStyle = { polygon, descriptor -> descriptor.applyStyleTo(polygon) },
     )
   }
 
@@ -667,52 +665,63 @@ internal class MapOverlayController(
       version = { it.renderVersion() },
       remove = { it.remove() },
       add = { descriptor ->
-        addedOrNull(kind = "circle", id = descriptor.id) {
-          map.addCircle(descriptor.toCircleOptions()).also { circle ->
-            circle.tag = descriptor.id
-          }
+        map.addCircle(descriptor.toCircleOptions()).also { circle ->
+          circle.tag = descriptor.id
         }
       },
-      update = { circle, descriptor -> descriptor.applyTo(circle) },
+      applyGeometry = { circle, descriptor -> descriptor.applyGeometryTo(circle) },
+      applyStyle = { circle, descriptor -> descriptor.applyStyleTo(circle) },
     )
   }
 
   /**
-   * Like [reconcile], but keeps a render version per id: an unchanged
-   * descriptor is skipped and a changed one is updated in place instead of
-   * being removed and re-added. An update the SDK rejects removes the overlay,
-   * which is what a rejected re-add would have left behind.
+   * Applies [computeShapeRenderDiff] to one shape kind: an unchanged shape
+   * costs no SDK call, and a changed one is updated in place - its points only
+   * when they changed, its style only when that did - so it keeps its place in
+   * the draw order. An update the SDK rejects removes the overlay, which is
+   * what a rejected re-add would have left behind.
    */
   private fun <T, Descriptor> reconcileShapes(
     kind: String,
     current: MutableMap<String, T>,
-    versions: MutableMap<String, Long>,
+    versions: MutableMap<String, ShapeRenderVersion>,
     next: Map<String, Descriptor>,
-    version: (Descriptor) -> Long,
+    version: (Descriptor) -> ShapeRenderVersion,
     remove: (T) -> Unit,
-    add: (Descriptor) -> T?,
-    update: (T, Descriptor) -> Unit,
+    add: (Descriptor) -> T,
+    applyGeometry: (T, Descriptor) -> Unit,
+    applyStyle: (T, Descriptor) -> Unit,
   ) {
-    for (removedId in current.keys - next.keys) {
+    val diff = computeShapeRenderDiff(next, versions, version)
+
+    for (removedId in diff.removedIds) {
       current.remove(removedId)?.let(remove)
       versions.remove(removedId)
     }
 
-    for ((id, descriptor) in next) {
-      val nextVersion = version(descriptor)
-      val existing = current[id]
-      if (existing == null) {
-        add(descriptor)?.let { created ->
-          current[id] = created
-          versions[id] = nextVersion
+    for (change in diff.added) {
+      addedOrNull(kind = kind, id = change.id) { add(change.descriptor) }?.let { created ->
+        current[change.id] = created
+        versions[change.id] = change.version
+      }
+    }
+
+    for (change in diff.updated) {
+      val shape = current[change.id] ?: continue
+      val applied =
+        addedOrNull(kind = kind, id = change.id) {
+          if (change.geometryChanged) {
+            applyGeometry(shape, change.descriptor)
+          }
+          if (change.styleChanged) {
+            applyStyle(shape, change.descriptor)
+          }
         }
-      } else if (versions[id] != nextVersion) {
-        if (addedOrNull(kind = kind, id = id) { update(existing, descriptor) } != null) {
-          versions[id] = nextVersion
-        } else {
-          current.remove(id)?.let(remove)
-          versions.remove(id)
-        }
+      if (applied != null) {
+        versions[change.id] = change.version
+      } else {
+        current.remove(change.id)?.let(remove)
+        versions.remove(change.id)
       }
     }
   }

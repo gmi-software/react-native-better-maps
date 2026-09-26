@@ -66,6 +66,10 @@ interface MapProviderAdapter {
     animated: Boolean?,
   ): Promise<Unit>
 
+  fun pointForCoordinate(coordinate: Coordinate): Promise<Point>
+
+  fun coordinateForPoint(point: Point): Promise<Coordinate>
+
   /**
    * Destroys the underlying native map and unregisters everything the adapter owns.
    * Every caller discards the adapter afterwards, so this is a one-way transition --

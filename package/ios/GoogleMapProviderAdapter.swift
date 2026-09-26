@@ -21,6 +21,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private var _googleMapId: String?
   private var lastAppliedRegion: Region?
   private var lastAppliedRegionCamera: GMSCameraPosition?
+  /// Projections waiting for the map's first idle, in call order - see `promiseAfterFirstIdle`.
+  private var projectionsAwaitingFirstIdle: [(Result<GMSMapView, Error>) -> Void] = []
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -71,6 +73,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   deinit {
     stopFollowingUserLocation()
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
   }
 
   var mapType: MapType = .standard {
@@ -278,6 +281,18 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     applyCameraUpdate(update, animated: animated ?? true, duration: nil)
   }
 
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    promiseAfterFirstIdle { mapView in
+      try MapProjection.point(for: coordinate) { mapView.projection.point(for: $0) }
+    }
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    promiseAfterFirstIdle { mapView in
+      try MapProjection.coordinate(at: point) { mapView.projection.coordinate(for: $0) }
+    }
+  }
+
   func prepareForRecycle() {
     isUserRegionChange = false
     isUserGestureMoving = false
@@ -287,6 +302,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
     overlayController.reset()
     onRegionChange = nil
     onRegionChangeComplete = nil
@@ -460,7 +476,47 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   private func notifyMapReadyIfNeeded() {
     isMapReady = true
+    settleProjectionsAwaitingFirstIdle(with: .success(view))
     deliverMapReadyIfPossible()
+  }
+
+  /// Resolves with what `work` returns once the map has been idle once, and rejects if the
+  /// adapter is released before that.
+  ///
+  /// Until then the SDK can still be showing the camera the map was created with: the `region`
+  /// prop's fit and the safe-area padding that shifts the camera both land later, a few hundred
+  /// milliseconds after mount. A projection taken in between describes a map that never appears
+  /// on screen. MapKit applies both at once, so the Apple adapter converts straight away.
+  private func promiseAfterFirstIdle<T>(
+    _ work: @escaping (GMSMapView) throws -> T
+  ) -> Promise<T> {
+    let promise = Promise<T>()
+    let settle: (Result<GMSMapView, Error>) -> Void = { mapView in
+      do {
+        promise.resolve(withResult: try work(mapView.get()))
+      } catch {
+        promise.reject(withError: error)
+      }
+    }
+
+    if isMapReady {
+      settle(.success(view))
+    } else {
+      projectionsAwaitingFirstIdle.append(settle)
+    }
+    return promise
+  }
+
+  private func settleProjectionsAwaitingFirstIdle(with mapView: Result<GMSMapView, Error>) {
+    let waiting = projectionsAwaitingFirstIdle
+    projectionsAwaitingFirstIdle = []
+    for settle in waiting {
+      settle(mapView)
+    }
+  }
+
+  private static func releasedBeforeFirstIdleError() -> Error {
+    RuntimeError.error(withMessage: "MapView was released before the map was first idle")
   }
 
   private func deliverMapReadyIfPossible() {

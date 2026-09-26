@@ -284,6 +284,18 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     )
   }
 
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    let point = try MapProjection.point(for: coordinate) { view.convert($0, toPointTo: view) }
+    return Promise.resolved(withResult: point)
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    let coordinate = try MapProjection.coordinate(at: point) {
+      view.convert($0, toCoordinateFrom: view)
+    }
+    return Promise.resolved(withResult: coordinate)
+  }
+
   func applyRegion(_ region: Region, animated: Bool = false) {
     // `setRegion` raises an NSException Swift cannot catch, so there is no
     // recovery once an invalid region has been handed over. `regionThatFits`

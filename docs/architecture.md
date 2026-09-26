@@ -92,12 +92,13 @@ Map and overlay callbacks are wired through Nitro listeners on the HybridView. C
 | `mapPadding` | Edge insets in density-independent pixels. Applied via `layoutMargins` (`apple`), `GMSMapView.padding` (`google` on iOS) or `setPadding` (Android). The `region` prop is fitted inside the padded area, and `fitToCoordinates` padding is added on top of it. |
 | `fitToCoordinates(coords, padding?, animated?)` | Imperative ref method; fits camera to a set of coordinates with optional padding. |
 | `animateToRegion(region, duration?)` | Imperative ref method; frames a `Region` as the `region` prop does, over `duration` milliseconds. Apple MapKit turns the region into the camera `setRegion` would pick, on an off-screen `MKMapView`, and animates that camera: `setRegion` takes no duration and jumps rather than animates when the target is far away. |
+| `pointForCoordinate(coord)` / `coordinateForPoint(point)` | Imperative ref methods; convert between a coordinate and a `Point` in density-independent pixels from the map view's top-left corner. iOS converts in the map view's own points; Android scales the device pixels of the Google Maps `Projection` by the screen density. |
 
 ### Imperative ref readiness
 
 `MapViewRef` hands out a working handle during the commit that mounts the view,
-which is earlier than the native map can exist. Two buffers close that gap, and
-neither uses a timer:
+which is earlier than the native map can exist. Buffers close that gap, and
+none of them uses a timer:
 
 - **JS** — Nitro delivers the `hybridRef` view prop one JS -> UI -> JS round trip
   after the mount transaction, so `MapViewCommands` (`package/src/native/mapViewCommands.ts`)
@@ -112,10 +113,16 @@ neither uses a timer:
   it the adapter would accept a camera call and quietly do nothing.
   `fitToCoordinates` and `animateToRegion` then wait once more, in
   `DeferredLayout`, for the map view's first layout pass, because
-  `newLatLngBounds` throws on a view without a size. They reject if the view is
-  released before that pass comes. iOS has no
-  equivalent window: `MKMapView`/`GMSMapView` exist as soon as the adapter is
-  installed.
+  `newLatLngBounds` throws on a view without a size. `pointForCoordinate` and
+  `coordinateForPoint` wait for the same pass: the `region` prop is applied in
+  it, so a projection taken earlier would describe a camera the map never
+  shows. Each rejects if the view is released before that pass comes.
+- **iOS** — `MKMapView`/`GMSMapView` exist as soon as the adapter is
+  installed, so nothing waits for the map itself. The Google Maps SDK does
+  apply the `region` fit and the safe-area padding a few hundred milliseconds
+  after mount, though, so on that provider `pointForCoordinate` and
+  `coordinateForPoint` wait for the map's first idle. MapKit applies both at
+  once and converts straight away.
 
 `onMapReady` is a separate, later signal - the map finished loading tiles - and
 is not a precondition for using the ref.

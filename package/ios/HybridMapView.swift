@@ -1,14 +1,38 @@
 import NitroModules
 import UIKit
 
+/// What a provider adapter is built from; the SDK takes both only when it
+/// creates its map.
+private struct AdapterConfiguration: Equatable {
+  let provider: MapProvider
+  /// Nil unless `provider` is Google: no other provider reads a map ID, so
+  /// setting one there rebuilds nothing.
+  let googleMapId: String?
+
+  init(_ state: MapViewState) {
+    provider = state.provider
+    googleMapId = state.provider == .google ? state.googleMapId : nil
+  }
+}
+
 final class HybridMapView: HybridMapViewSpec {
   private let containerView = UIView()
   private let lifecycleLock = NSLock()
   private let stateLock = NSLock()
-  private var adapter: MapProviderAdapter?
+  private let adapterSlot = ProviderAdapterSlot<AdapterConfiguration, MapProviderAdapter>(
+    build: HybridMapView.makeAdapter(for:),
+    destroy: { adapter in
+      adapter.prepareForRecycle()
+      adapter.contentView.removeFromSuperview()
+    }
+  )
   private var lifecycleGeneration: UInt64 = 0
   private var isRecycled = false
   private var _state = MapViewState()
+
+  private var adapter: MapProviderAdapter? {
+    adapterSlot.adapter
+  }
 
   lazy var view: UIView = {
     containerView
@@ -16,29 +40,7 @@ final class HybridMapView: HybridMapViewSpec {
 
   var provider: MapProvider? {
     get { getBacked(\.provider) }
-    set {
-      let nextProvider = newValue ?? .apple
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        let shouldInstall = withStateLock { () -> Bool in
-          guard nextProvider != self._state.provider || self.adapter == nil else {
-            return false
-          }
-
-          self._state.provider = nextProvider
-          return true
-        }
-
-        guard shouldInstall else {
-          return
-        }
-
-        installAdapter(for: nextProvider)
-      }
-    }
+    set { withStateLock { self._state.provider = newValue ?? .apple } }
   }
 
   var mapType: MapType {
@@ -116,29 +118,7 @@ final class HybridMapView: HybridMapViewSpec {
 
   var googleMapId: String? {
     get { getBacked(\.googleMapId) }
-    set {
-      let nextGoogleMapId = newValue
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        let shouldReinstall = withStateLock { () -> Bool in
-          guard self._state.googleMapId != nextGoogleMapId else {
-            return false
-          }
-
-          self._state.googleMapId = nextGoogleMapId
-          return self._state.provider == .google && self.adapter != nil
-        }
-
-        guard shouldReinstall else {
-          return
-        }
-
-        installAdapter(for: withStateLock { self._state.provider })
-      }
-    }
+    set { withStateLock { self._state.googleMapId = newValue } }
   }
 
   var clusteringEnabled: Bool? {
@@ -306,9 +286,17 @@ final class HybridMapView: HybridMapViewSpec {
     promiseOnMain { try $0.coordinateForPoint(point: point) }
   }
 
+  /// Builds the adapter once per prop transaction. The generated component sets
+  /// `provider` before `googleMapId`, and Google takes a map ID only when it
+  /// creates its map, so a setter that built it would build it without one.
   func afterUpdate() {
     runOnMain { [weak self] in
-      self?.activateLifecycle()
+      guard let self else {
+        return
+      }
+
+      activateLifecycle()
+      installAdapterIfNeeded()
     }
   }
 
@@ -319,9 +307,7 @@ final class HybridMapView: HybridMapViewSpec {
       }
 
       recycleLifecycle()
-      adapter?.prepareForRecycle()
-      adapter?.contentView.removeFromSuperview()
-      adapter = nil
+      adapterSlot.release()
       withStateLock {
         self._state = MapViewState()
       }
@@ -332,12 +318,7 @@ final class HybridMapView: HybridMapViewSpec {
     matching lifecycle: (generation: UInt64, isRecycled: Bool)? = nil
   ) throws -> MapProviderAdapter {
     try validateActiveLifecycle(matching: lifecycle)
-
-    if let adapter {
-      return adapter
-    }
-
-    installAdapter(for: withStateLock { self._state.provider })
+    installAdapterIfNeeded()
     return adapter!
   }
 
@@ -386,26 +367,26 @@ final class HybridMapView: HybridMapViewSpec {
     RuntimeError.error(withMessage: "MapView is not mounted")
   }
 
-  private func installAdapter(for provider: MapProvider) {
+  private func installAdapterIfNeeded() {
     precondition(Thread.isMainThread)
 
-    adapter?.prepareForRecycle()
-    adapter?.contentView.removeFromSuperview()
+    let configuration = withStateLock { AdapterConfiguration(self._state) }
+    guard let nextAdapter = adapterSlot.commit(configuration) else {
+      return
+    }
 
-    let nextAdapter = makeAdapter(for: provider)
-    adapter = nextAdapter
     attach(contentView: nextAdapter.contentView)
     syncState(to: nextAdapter)
   }
 
-  private func makeAdapter(for provider: MapProvider) -> MapProviderAdapter {
-    switch provider {
+  private static func makeAdapter(for configuration: AdapterConfiguration) -> MapProviderAdapter {
+    switch configuration.provider {
     case .apple:
       return AppleMapProviderAdapter()
     case .google:
       #if canImport(GoogleMaps)
       do {
-        return try GoogleMapProviderAdapter(googleMapId: withStateLock { self._state.googleMapId })
+        return try GoogleMapProviderAdapter(googleMapId: configuration.googleMapId)
       } catch {
         return UnavailableMapProviderAdapter(error: error)
       }
@@ -416,7 +397,7 @@ final class HybridMapView: HybridMapViewSpec {
       #endif
     case .openstreetmap, .mapbox:
       return UnavailableMapProviderAdapter(
-        error: MapProviderConfigurationError.unsupportedIOSProvider(provider)
+        error: MapProviderConfigurationError.unsupportedIOSProvider(configuration.provider)
       )
     }
   }

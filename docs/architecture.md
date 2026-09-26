@@ -59,7 +59,7 @@ The iOS host also supports the explicit `google` provider through `GoogleMapProv
 
 ### Provider adapters
 
-Provider adapters own SDK-specific view creation, destruction, lifecycle, camera operations, visible-region calculations, map type, gestures, controls, user location, overlays, press events, clustering, and custom styles. `HybridMapView` stores Nitro props and callbacks, installs the selected adapter, and replays the current state into that adapter.
+Provider adapters own SDK-specific view creation, destruction, lifecycle, camera operations, visible-region calculations, map type, gestures, controls, user location, overlays, press events, clustering, and custom styles. `HybridMapView` stores Nitro props and callbacks, installs the selected adapter, and replays the current state into that adapter. It builds the adapter once per prop transaction, in `afterUpdate()`: `provider` and `googleMapId` both configure the SDK map at creation, and Nitro applies them one setter at a time. A replaced adapter is destroyed before the next one is built.
 
 ### Events
 

@@ -10,15 +10,26 @@ import com.margelo.nitro.views.RecyclableView
 
 private const val MAP_VIEW_NOT_MOUNTED_MESSAGE = "MapView is not mounted"
 
+/** What a provider adapter is built from; the SDK takes both only when it creates its map. */
+private data class AdapterConfiguration(
+  val provider: MapProvider,
+  val googleMapId: String?,
+)
+
 @Keep
 @DoNotStrip
 class HybridMapView(
   private val context: ThemedReactContext,
 ) : HybridMapViewSpec(),
   RecyclableView {
-  /** Written on the UI thread, read from the JS thread by the imperative methods. */
-  @Volatile
-  private var adapter: MapProviderAdapter? = null
+  private val adapterSlot =
+    ProviderAdapterSlot<AdapterConfiguration, MapProviderAdapter>(
+      build = ::makeAdapter,
+      destroy = ::destroyAdapter,
+    )
+
+  private val adapter: MapProviderAdapter?
+    get() = adapterSlot.adapter
 
   private var _provider = MapProvider.GOOGLE
   private var _mapType = MapType.STANDARD
@@ -46,11 +57,10 @@ class HybridMapView(
     get() = _provider
     set(value) {
       val nextProvider = value ?: MapProvider.GOOGLE
-      if (nextProvider == _provider && adapter != null) {
-        return
+      // Rejected before it is recorded, so the map on screen stays as it is.
+      check(nextProvider == MapProvider.GOOGLE) {
+        "Map provider \"$nextProvider\" is not supported on Android."
       }
-
-      installAdapter(nextProvider)
       _provider = nextProvider
     }
 
@@ -148,13 +158,7 @@ class HybridMapView(
   override var googleMapId: String?
     get() = _googleMapId
     set(value) {
-      if (_googleMapId == value) {
-        return
-      }
       _googleMapId = value
-      if (_provider == MapProvider.GOOGLE && adapter != null) {
-        installAdapter(_provider)
-      }
     }
 
   override var clusteringEnabled: Boolean?
@@ -281,62 +285,49 @@ class HybridMapView(
       adapter?.onClusterPress = value
     }
 
-  override fun fetchCamera(): Promise<Camera> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.fetchCamera()
-  }
+  override fun fetchCamera(): Promise<Camera> = withAdapter { it.fetchCamera() }
 
-  override fun applyCamera(camera: Camera): Promise<Unit> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.applyCamera(camera)
-  }
+  override fun applyCamera(camera: Camera): Promise<Unit> = withAdapter { it.applyCamera(camera) }
 
   override fun animateCamera(
     camera: Camera,
     duration: Double?,
-  ): Promise<Unit> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.animateCamera(camera, duration)
-  }
+  ): Promise<Unit> = withAdapter { it.animateCamera(camera, duration) }
 
   override fun animateToRegion(
     region: Region,
     duration: Double?,
-  ): Promise<Unit> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.animateToRegion(region, duration)
-  }
+  ): Promise<Unit> = withAdapter { it.animateToRegion(region, duration) }
 
-  override fun getVisibleRegion(): Promise<VisibleRegion> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.getVisibleRegion()
-  }
+  override fun getVisibleRegion(): Promise<VisibleRegion> = withAdapter { it.getVisibleRegion() }
 
   override fun fitToCoordinates(
     coordinates: Array<Coordinate>,
     padding: EdgePadding?,
     animated: Boolean?,
-  ): Promise<Unit> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.fitToCoordinates(coordinates, padding, animated)
-  }
+  ): Promise<Unit> = withAdapter { it.fitToCoordinates(coordinates, padding, animated) }
 
-  override fun pointForCoordinate(coordinate: Coordinate): Promise<Point> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.pointForCoordinate(coordinate)
-  }
+  override fun pointForCoordinate(coordinate: Coordinate): Promise<Point> = withAdapter { it.pointForCoordinate(coordinate) }
 
-  override fun coordinateForPoint(point: Point): Promise<Coordinate> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.coordinateForPoint(point)
+  override fun coordinateForPoint(point: Point): Promise<Coordinate> = withAdapter { it.coordinateForPoint(point) }
+
+  /**
+   * Builds the adapter once per prop transaction. The generated updater sets [provider] before
+   * [googleMapId], and Google takes a map ID only when it creates its map, so a setter that
+   * built it would build it without one.
+   */
+  override fun afterUpdate() {
+    val nextAdapter = adapterSlot.commit(AdapterConfiguration(_provider, _googleMapId)) ?: return
+    attach(nextAdapter.view)
+    syncState(nextAdapter)
   }
 
   override fun onDropView() {
-    releaseAdapter()
+    adapterSlot.release()
   }
 
   override fun prepareForRecycle() {
-    releaseAdapter()
+    adapterSlot.release()
     _provider = MapProvider.GOOGLE
     _mapType = MapType.STANDARD
     _region = null
@@ -374,39 +365,48 @@ class HybridMapView(
     onClusterPress = null
   }
 
-  private fun <T> notMountedRejection(): Promise<T> = Promise.rejected(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
+  /**
+   * Runs [command] against the adapter. A view that is still mounting has none yet: the
+   * generated updater hands JS the `hybridRef` before [afterUpdate] builds the first adapter, so
+   * such a call waits for that build on the main thread and is rejected only if it left none.
+   */
+  private fun <T> withAdapter(command: (MapProviderAdapter) -> Promise<T>): Promise<T> {
+    adapter?.let { return command(it) }
+
+    val promise = Promise<T>()
+    // Posted even from the main thread: inline, a call made there mid-transaction would find
+    // no adapter before `afterUpdate()` has built it.
+    postOnMain {
+      val mounted = adapter
+      if (mounted == null) {
+        promise.reject(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
+        return@postOnMain
+      }
+
+      // Caught: on the main thread a throw would take the app down instead of rejecting.
+      runCatching { command(mounted) }
+        .onSuccess { result ->
+          result
+            .then { value -> promise.resolve(value) }
+            .catch { error -> promise.reject(error) }
+        }.onFailure { error -> promise.reject(error) }
+    }
+    return promise
+  }
 
   /**
-   * Detaches and destroys the installed adapter. Both teardown paths land here:
-   * [onDropView] fires on every unmount, while [prepareForRecycle] only fires when
-   * React Native has view recycling enabled.
+   * Detaches and destroys [outgoing]. Every teardown lands here: a rebuild in [afterUpdate],
+   * [onDropView] on every unmount, and [prepareForRecycle], which only fires when React
+   * Native has view recycling enabled.
    */
-  private fun releaseAdapter() {
-    adapter?.release()
-    adapter?.view?.let(view::removeView)
-    adapter = null
+  private fun destroyAdapter(outgoing: MapProviderAdapter) {
+    outgoing.release()
+    view.removeView(outgoing.view)
   }
 
-  private fun installAdapter(provider: MapProvider) {
-    // Built before the teardown so an unsupported provider leaves the current map intact.
-    val nextAdapter = makeAdapter(provider)
-
-    releaseAdapter()
-    adapter = nextAdapter
-    attach(nextAdapter.view)
-    syncState(nextAdapter)
-  }
-
-  private fun makeAdapter(provider: MapProvider): MapProviderAdapter {
-    return when (provider) {
-      MapProvider.GOOGLE -> GoogleMapProviderAdapter(context, _googleMapId)
-
-      MapProvider.APPLE,
-      MapProvider.OPENSTREETMAP,
-      MapProvider.MAPBOX,
-      -> error("Map provider \"$provider\" is not supported on Android.")
-    }
-  }
+  /** Only ever sees [MapProvider.GOOGLE]: the [provider] setter rejects every other one. */
+  private fun makeAdapter(configuration: AdapterConfiguration): MapProviderAdapter =
+    GoogleMapProviderAdapter(context, configuration.googleMapId)
 
   private fun attach(contentView: View) {
     view.addView(

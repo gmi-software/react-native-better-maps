@@ -14,3 +14,11 @@ internal fun runOnMain(block: () -> Unit) {
 
   mainHandler.post(block)
 }
+
+/**
+ * Runs [block] on the main thread as a new message, even when the caller is already there, so
+ * it lands behind whatever the main thread is running now.
+ */
+internal fun postOnMain(block: () -> Unit) {
+  mainHandler.post(block)
+}

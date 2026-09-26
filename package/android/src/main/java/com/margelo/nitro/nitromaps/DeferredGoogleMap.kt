@@ -73,18 +73,18 @@ internal class DeferredGoogleMap {
    * long after the call that scheduled it, and resolving before it ran would
    * report success for a camera that has not moved.
    */
-  fun promiseCompletion(block: (GoogleMap, complete: (Result<Unit>) -> Unit) -> Unit): Promise<Unit> {
-    val promise = Promise<Unit>()
+  fun <T> promiseCompletion(block: (GoogleMap, complete: (Result<T>) -> Unit) -> Unit): Promise<T> {
+    val promise = Promise<T>()
 
     whenAvailable { result ->
       // Everything funnels through `complete`, so the promise settles exactly
       // once whether the work finished, failed, or never started.
       var isSettled = false
-      val complete: (Result<Unit>) -> Unit = { outcome ->
+      val complete: (Result<T>) -> Unit = { outcome ->
         if (!isSettled) {
           isSettled = true
           outcome
-            .onSuccess { promise.resolve(Unit) }
+            .onSuccess { value -> promise.resolve(value) }
             .onFailure { error -> promise.reject(error) }
         }
       }

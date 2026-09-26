@@ -32,6 +32,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private var _googleMapId: String?
   private var lastAppliedRegion: Region?
   private var lastAppliedRegionCamera: GMSCameraPosition?
+  /// Projections waiting for the map's first idle, in call order - see `promiseAfterFirstIdle`.
+  private var projectionsAwaitingFirstIdle: [(Result<GMSMapView, Error>) -> Void] = []
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -82,6 +84,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   deinit {
     stopFollowingUserLocation()
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
   }
 
   var mapType: MapType = .standard {
@@ -257,9 +260,20 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     return Promise.resolved()
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void> {
     let animationDuration = duration ?? Self.defaultAnimationDuration
-    guard updateMapCamera(camera, animated: true, duration: animationDuration) else {
+    let animated = animationDuration > 0
+    guard updateMapCamera(camera, animated: animated, duration: animationDuration), animated else {
+      return Promise.resolved()
+    }
+
+    return trackCameraMove(duration: animationDuration)
+  }
+
+  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    let animated = animationDuration > 0
+    guard applyRegion(region, animated: animated, duration: animationDuration), animated else {
       return Promise.resolved()
     }
 
@@ -296,6 +310,18 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     return trackCameraMove(duration: Self.defaultAnimationDuration)
   }
 
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    promiseAfterFirstIdle { mapView in
+      try MapProjection.point(for: coordinate) { mapView.projection.point(for: $0) }
+    }
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    promiseAfterFirstIdle { mapView in
+      try MapProjection.coordinate(at: point) { mapView.projection.coordinate(for: $0) }
+    }
+  }
+
   func prepareForRecycle() {
     cameraMoves.settleAll()
     regionChanges.reset()
@@ -306,6 +332,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
     overlayController.reset()
     onRegionChange = nil
     onRegionChangeComplete = nil
@@ -343,9 +370,16 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     clusterEnteringAnimation = nil
   }
 
-  private func applyRegion(_ region: Region, animated: Bool = false) {
+  /// Frames `region`, and reports whether anything was handed to the Google SDK: nothing
+  /// is for an invalid region, or for one the map already shows.
+  @discardableResult
+  private func applyRegion(
+    _ region: Region,
+    animated: Bool = false,
+    duration: TimeInterval? = nil
+  ) -> Bool {
     guard region.isValid else {
-      return
+      return false
     }
 
     if let lastAppliedRegion,
@@ -354,14 +388,14 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
        view.camera.approximatelyEquals(lastAppliedRegionCamera) {
       // Same region as last time and the camera has not moved since, so the
       // fit would land on the camera the map already shows.
-      return
+      return false
     }
 
     // What the map already shows is exactly what an `onRegionChangeComplete` consumer
     // hands back as the next `region` prop. Fitting it again must not move the camera,
     // or the echo would answer every move with another one.
     guard !view.currentNitroRegion().approximatelyEquals(region) else {
-      return
+      return false
     }
 
     // No insets of its own: Google Maps already fits bounds inside the area
@@ -370,12 +404,13 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     applyCameraUpdate(
       GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
       animated: animated,
-      duration: nil
+      duration: duration
     )
     self.lastAppliedRegion = region
     // `moveCamera` updates `camera` synchronously; an animation does not, so
     // there is nothing reliable to remember until it settles.
     lastAppliedRegionCamera = animated ? nil : view.camera
+    return true
   }
 
   /// Moves the camera, and reports whether anything was handed to the Google SDK:
@@ -474,7 +509,47 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   private func notifyMapReadyIfNeeded() {
     isMapReady = true
+    settleProjectionsAwaitingFirstIdle(with: .success(view))
     deliverMapReadyIfPossible()
+  }
+
+  /// Resolves with what `work` returns once the map has been idle once, and rejects if the
+  /// adapter is released before that.
+  ///
+  /// Until then the SDK can still be showing the camera the map was created with: the `region`
+  /// prop's fit and the safe-area padding that shifts the camera both land later, a few hundred
+  /// milliseconds after mount. A projection taken in between describes a map that never appears
+  /// on screen. MapKit applies both at once, so the Apple adapter converts straight away.
+  private func promiseAfterFirstIdle<T>(
+    _ work: @escaping (GMSMapView) throws -> T
+  ) -> Promise<T> {
+    let promise = Promise<T>()
+    let settle: (Result<GMSMapView, Error>) -> Void = { mapView in
+      do {
+        promise.resolve(withResult: try work(mapView.get()))
+      } catch {
+        promise.reject(withError: error)
+      }
+    }
+
+    if isMapReady {
+      settle(.success(view))
+    } else {
+      projectionsAwaitingFirstIdle.append(settle)
+    }
+    return promise
+  }
+
+  private func settleProjectionsAwaitingFirstIdle(with mapView: Result<GMSMapView, Error>) {
+    let waiting = projectionsAwaitingFirstIdle
+    projectionsAwaitingFirstIdle = []
+    for settle in waiting {
+      settle(mapView)
+    }
+  }
+
+  private static func releasedBeforeFirstIdleError() -> Error {
+    RuntimeError.error(withMessage: "MapView was released before the map was first idle")
   }
 
   private func deliverMapReadyIfPossible() {

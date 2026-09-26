@@ -806,7 +806,7 @@ export default function App() {
           heading: 0,
           pitch: 0,
         },
-        1,
+        1000,
       )
       ?.catch(() => {});
   }, [scenario]);

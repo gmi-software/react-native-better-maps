@@ -28,9 +28,15 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   private var hasDeliveredMapReady = false
   private var liveClusterTimer: Timer?
   fileprivate lazy var overlayController = MapOverlayController(mapView: view)
+  /// Work waiting for the map view's first size, in call order - see `whenLaidOut`.
+  private var workAwaitingLayout: [(Result<Void, Error>) -> Void] = []
 
   var contentView: UIView {
     view
+  }
+
+  deinit {
+    settleWorkAwaitingLayout(with: .failure(Self.releasedBeforeLayoutError()))
   }
 
   lazy var view: MKMapView = {
@@ -60,6 +66,14 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       forAnnotationViewWithReuseIdentifier: NitroClusterAnnotationView.reuseIdentifier
     )
     mapViewDelegate.installGestureRecognizers(on: mapView)
+    mapView.onLayout = { [weak self] in
+      self?.runWorkAwaitingLayout()
+    }
+    // After the mount, but before a mount effect's `animateToRegion` is back
+    // from its round trip through JS.
+    DispatchQueue.main.async {
+      MKMapView.prepareFramingView()
+    }
     return mapView
   }()
 
@@ -232,29 +246,42 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     return Promise.resolved()
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void> {
     let animationDuration = duration ?? Self.defaultAnimationDuration
     let promise = Promise<Void>()
-    let move = CameraMoveCompletion(promise: promise)
+    trackAnimation(settling: promise, duration: animationDuration) { completion in
+      updateMapCamera(camera, animated: true, duration: animationDuration, completion: completion)
+    }
+    return promise
+  }
 
-    // UIKit calls the completion when the animation runs out, and straight away when a
-    // later camera animation replaces it.
-    let didMove = updateMapCamera(camera, animated: true, duration: animationDuration) {
-      move.settle()
+  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
+    // `setRegion` raises an NSException Swift cannot catch - see `applyRegion`.
+    guard region.isValid else {
+      return Promise.resolved()
     }
 
-    // Nothing handed over - an invalid camera, or the one the map is already at - or a
-    // camera MapKit applied without animating, as it does for a map that is not on
-    // screen yet: either way there is nothing left to wait for.
-    guard didMove, isRegionChanging else {
-      move.settle()
-      return promise
+    // `setRegion(_:animated:)` takes no duration, and wrapping it in
+    // `UIView.animate` does not give it one: MapKit still jumps whenever it
+    // judges the region far from the one on screen. An assignment to `camera`
+    // honours the animation's duration at any distance, so the region goes in
+    // as the camera `setRegion` would pick for it - which takes a map with a
+    // size.
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    let promise = Promise<Void>()
+    whenLaidOut(rejecting: promise) { [weak self] in
+      guard let self else {
+        return
+      }
+      self.trackAnimation(settling: promise, duration: animationDuration) { completion in
+        self.moveMapCamera(
+          to: self.view.camera(framing: region.toMKCoordinateRegion()),
+          animated: true,
+          duration: animationDuration,
+          completion: completion
+        )
+      }
     }
-
-    // Also settled when MapKit reports the camera at rest: a fit or a `region` update
-    // that cuts this animation short does not end it for UIKit, whose completion then
-    // waits out the full duration.
-    cameraMoves.track(move, duration: animationDuration)
     return promise
   }
 
@@ -303,6 +330,18 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     return promise
   }
 
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    let point = try MapProjection.point(for: coordinate) { view.convert($0, toPointTo: view) }
+    return Promise.resolved(withResult: point)
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    let coordinate = try MapProjection.coordinate(at: point) {
+      view.convert($0, toCoordinateFrom: view)
+    }
+    return Promise.resolved(withResult: coordinate)
+  }
+
   func applyRegion(_ region: Region, animated: Bool = false) {
     // `setRegion` raises an NSException Swift cannot catch, so there is no
     // recovery once an invalid region has been handed over. `regionThatFits`
@@ -339,7 +378,21 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       return false
     }
 
-    let mapCamera = camera.toMKMapCamera()
+    return moveMapCamera(
+      to: camera.toMKMapCamera(),
+      animated: animated,
+      duration: duration,
+      completion: completion
+    )
+  }
+
+  @discardableResult
+  private func moveMapCamera(
+    to mapCamera: MKMapCamera,
+    animated: Bool,
+    duration: Double,
+    completion: (() -> Void)? = nil
+  ) -> Bool {
     guard !view.camera.approximatelyEquals(mapCamera) else {
       return false
     }
@@ -359,6 +412,73 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
 
     return true
+  }
+
+  /// Runs `work` once the map view has a size - now, or in the first layout pass that
+  /// gives it one, as Android does for the fits that need a size. `promise` rejects
+  /// instead if the adapter is released before that pass.
+  private func whenLaidOut(rejecting promise: Promise<Void>, _ work: @escaping () -> Void) {
+    guard view.bounds.isEmpty else {
+      work()
+      return
+    }
+
+    workAwaitingLayout.append { result in
+      switch result {
+      case .success:
+        work()
+      case .failure(let error):
+        promise.reject(withError: error)
+      }
+    }
+  }
+
+  /// Settles `promise` once the camera animation `handOver` starts has stopped.
+  /// `handOver` passes the completion it is given on to `UIView.animate`, and reports
+  /// whether it handed anything to MapKit.
+  private func trackAnimation(
+    settling promise: Promise<Void>,
+    duration: TimeInterval,
+    handOver: (_ completion: @escaping () -> Void) -> Bool
+  ) {
+    let move = CameraMoveCompletion(promise: promise)
+
+    // UIKit calls the completion when the animation runs out, and straight away when a
+    // later camera animation replaces it.
+    let didMove = handOver { move.settle() }
+
+    // Nothing handed over - an invalid camera, or the one the map is already at - or a
+    // camera MapKit applied without animating, as it does for a map that is not on
+    // screen yet: either way there is nothing left to wait for.
+    guard didMove, isRegionChanging else {
+      move.settle()
+      return
+    }
+
+    // Also settled when MapKit reports the camera at rest: a fit or a `region` update
+    // that cuts this animation short does not end it for UIKit, whose completion then
+    // waits out the full duration.
+    cameraMoves.track(move, duration: duration)
+  }
+
+  private func runWorkAwaitingLayout() {
+    guard !workAwaitingLayout.isEmpty, !view.bounds.isEmpty else {
+      return
+    }
+
+    settleWorkAwaitingLayout(with: .success(()))
+  }
+
+  private func settleWorkAwaitingLayout(with result: Result<Void, Error>) {
+    let waiting = workAwaitingLayout
+    workAwaitingLayout = []
+    for settle in waiting {
+      settle(result)
+    }
+  }
+
+  private static func releasedBeforeLayoutError() -> Error {
+    RuntimeError.error(withMessage: "MapView was released before it was laid out")
   }
 
   // Derived from MKCoordinateRegion (center + span). May differ from Android
@@ -495,6 +615,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func prepareForRecycle() {
+    settleWorkAwaitingLayout(with: .failure(Self.releasedBeforeLayoutError()))
     liveClusterTimer?.invalidate()
     liveClusterTimer = nil
     cameraMoves.settleAll()

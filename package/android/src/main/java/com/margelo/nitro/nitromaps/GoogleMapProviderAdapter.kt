@@ -20,7 +20,13 @@ import com.margelo.nitro.core.Promise
 
 private const val MAP_RELEASED_BEFORE_LAYOUT_MESSAGE = "MapView was released before it was laid out"
 
-private const val DEFAULT_ANIMATION_DURATION_SECONDS = 0.25
+private const val INVALID_COORDINATE_MESSAGE =
+  "Coordinate rejected: latitude and longitude must be finite and within ±90 / ±180"
+
+private const val INVALID_POINT_MESSAGE = "Point rejected: x and y must be finite"
+
+private const val NO_COORDINATE_AT_POINT_MESSAGE =
+  "No coordinate at that point: the map shows no ground there, such as above the horizon of a steeply tilted map"
 
 @Keep
 @DoNotStrip
@@ -352,12 +358,27 @@ class GoogleMapProviderAdapter(
     camera: Camera,
     duration: Double?,
   ): Promise<Unit> {
-    val durationMs = ((duration ?: DEFAULT_ANIMATION_DURATION_SECONDS) * 1000).toInt()
+    val durationMs = cameraAnimationDurationMs(duration)
     return deferredMap.promiseCompletion { map, complete ->
       updateMapCamera(map, camera, animated = true, durationMs = durationMs) {
         complete(Result.success(Unit))
       }
     }
+  }
+
+  override fun animateToRegion(
+    region: Region,
+    duration: Double?,
+  ): Promise<Unit> {
+    // Skipped like an invalid `region` prop: `LatLngBounds` throws for a span that is not positive.
+    if (!region.isValid()) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid region: $region.")
+      return Promise.resolved(Unit)
+    }
+
+    val durationMs = cameraAnimationDurationMs(duration)
+    // Waits for the first layout pass, as `fitToCoordinates` does, and so does the promise.
+    return promiseMoveWhenLaidOut { map, onEnd -> fitCamera(map, region, durationMs, onEnd) }
   }
 
   override fun getVisibleRegion(): Promise<VisibleRegion> = deferredMap.promise { map -> map.projection.toNitroVisibleRegion() }
@@ -378,39 +399,51 @@ class GoogleMapProviderAdapter(
       return Promise.resolved(Unit)
     }
 
-    return deferredMap.promiseCompletion { map, complete ->
+    // `newLatLngBounds` throws on a map that has no size yet, so the camera update
+    // waits for the first layout pass -- and so does the promise.
+    return promiseMoveWhenLaidOut { map, onEnd ->
       val builder = LatLngBounds.Builder()
       for (coordinate in validCoordinates) {
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
       }
       val bounds = builder.build()
 
-      // `newLatLngBounds` throws on a map that has no size yet, so the camera
-      // update waits for the first layout pass -- and so does the promise, which
-      // rejects if the view is released before that pass comes.
-      runWhenMapViewLaidOut(
-        onCancel = {
-          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
-        },
-      ) {
-        runCatching {
-          // Inside the callback: converting the insets needs the size the map was laid out with.
-          val target =
-            bounds.expandedForEdgePadding(
-              padding?.toPixels(density),
-              _mapPadding?.toPixels(density),
-              view.width,
-              view.height,
-            ) ?: bounds
-          val update = CameraUpdateFactory.newLatLngBounds(target, 0)
-          if (animated == true) {
-            map.animateCamera(update, cameraAnimations.callback { complete(Result.success(Unit)) })
-          } else {
-            map.moveCamera(update)
-            complete(Result.success(Unit))
-          }
-        }.onFailure { error -> complete(Result.failure(error)) }
+      // Converting the insets needs the size the map was laid out with.
+      val target =
+        bounds.expandedForEdgePadding(
+          padding?.toPixels(density),
+          _mapPadding?.toPixels(density),
+          view.width,
+          view.height,
+        ) ?: bounds
+      val update = CameraUpdateFactory.newLatLngBounds(target, 0)
+      if (animated == true) {
+        map.animateCamera(update, cameraAnimations.callback(onEnd))
+      } else {
+        map.moveCamera(update)
+        onEnd()
       }
+    }
+  }
+
+  override fun pointForCoordinate(coordinate: Coordinate): Promise<Point> {
+    // `LatLng` would clamp the latitude and wrap the longitude, and answer for somewhere
+    // else. The JS side rejects the same coordinate before a call is queued; this is the
+    // backstop for a `hybridRef` call.
+    if (!coordinate.isValid()) {
+      return Promise.rejected(IllegalArgumentException(INVALID_COORDINATE_MESSAGE))
+    }
+
+    return promiseWhenLaidOut { map -> map.projection.pointFor(coordinate, density) }
+  }
+
+  override fun coordinateForPoint(point: Point): Promise<Coordinate> {
+    if (!point.isValid()) {
+      return Promise.rejected(IllegalArgumentException(INVALID_POINT_MESSAGE))
+    }
+
+    return promiseWhenLaidOut { map ->
+      map.projection.coordinateAt(point, density) ?: throw IllegalStateException(NO_COORDINATE_AT_POINT_MESSAGE)
     }
   }
 
@@ -623,10 +656,7 @@ class GoogleMapProviderAdapter(
     map?.setMapStyle(MapStyleOptions(styleJson))
   }
 
-  private fun applyRegion(
-    region: Region,
-    animated: Boolean = false,
-  ) {
+  private fun applyRegion(region: Region) {
     if (!region.isValid()) {
       Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid region: $region.")
       return
@@ -634,11 +664,22 @@ class GoogleMapProviderAdapter(
 
     runOnMain {
       val map = googleMap ?: return@runOnMain
-      runWhenMapViewLaidOut { fitCamera(map, region, animated) }
+      runWhenMapViewLaidOut { fitCamera(map, region, durationMs = 0) }
     }
   }
 
-  private fun fitCamera(map: GoogleMap, region: Region, animated: Boolean) {
+  /**
+   * Frames [region], animating over [durationMs] when it is positive and jumping there
+   * otherwise: `animateCamera` throws for a duration that is not. Calls [onEnd] once the
+   * camera has stopped - straight away when nothing had to move. Needs a laid-out map
+   * view, since `newLatLngBounds` throws on one without a size.
+   */
+  private fun fitCamera(
+    map: GoogleMap,
+    region: Region,
+    durationMs: Int,
+    onEnd: () -> Unit = {},
+  ) {
     val lastRegion = lastAppliedRegion
     val lastCamera = lastAppliedRegionCamera
     if (
@@ -649,6 +690,7 @@ class GoogleMapProviderAdapter(
     ) {
       // Same region as last time and the camera has not moved since, so the
       // fit would land on the camera the map already shows.
+      onEnd()
       return
     }
 
@@ -656,19 +698,21 @@ class GoogleMapProviderAdapter(
     // hands back as the next `region` prop. Fitting it again must not move the camera,
     // or the echo would answer every move with another one.
     if (currentRegion().approximatelyEquals(region)) {
+      onEnd()
       return
     }
 
     // No padding argument: Google Maps already fits bounds inside the region `setPadding`
     // leaves over, so passing `mapPadding` here as well would inset the region twice.
     val update = CameraUpdateFactory.newLatLngBounds(region.toLatLngBounds(), 0)
-    if (animated) {
-      map.animateCamera(update)
+    if (durationMs > 0) {
+      map.animateCamera(update, durationMs, cameraAnimations.callback(onEnd))
       // The camera settles later; there is nothing reliable to remember yet.
       lastAppliedRegionCamera = null
     } else {
       map.moveCamera(update)
       lastAppliedRegionCamera = map.cameraPosition
+      onEnd()
     }
     lastAppliedRegion = region
   }
@@ -704,18 +748,15 @@ class GoogleMapProviderAdapter(
     }
 
     val update = CameraUpdateFactory.newCameraPosition(target)
-    if (!animated) {
+    // A duration under a millisecond jumps, as it does on iOS: the timed `animateCamera` throws
+    // for it, and the untimed one would animate for the SDK's own default duration.
+    if (!animated || durationMs <= 0) {
       map.moveCamera(update)
       onEnd()
       return
     }
 
-    val callback = cameraAnimations.callback(onEnd)
-    if (durationMs > 0) {
-      map.animateCamera(update, durationMs, callback)
-    } else {
-      map.animateCamera(update, callback)
-    }
+    map.animateCamera(update, durationMs, cameraAnimations.callback(onEnd))
   }
 
   private fun installViewportSizeListener(mapView: MapView) {
@@ -730,6 +771,41 @@ class GoogleMapProviderAdapter(
     }
     runWhenMapViewLaidOut(block = syncViewportSize)
   }
+
+  /**
+   * Resolves with what [block] returns once the map exists and its view has been laid
+   * out, and rejects if the view is released before that layout pass comes.
+   *
+   * Before the pass the map has no size, and the `region` prop - applied in that same
+   * pass - has not moved the camera yet, so neither a camera fit nor a projection taken
+   * earlier would match the map that ends up on screen.
+   */
+  private fun <T> promiseWhenLaidOut(block: (GoogleMap) -> T): Promise<T> =
+    deferredMap.promiseCompletion { map, complete ->
+      runWhenMapViewLaidOut(
+        onCancel = {
+          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
+        },
+      ) {
+        complete(runCatching { block(map) })
+      }
+    }
+
+  /**
+   * Like [promiseWhenLaidOut], for a camera move that ends in a later SDK callback: the
+   * promise settles when [block] calls the `onEnd` it is handed, not when it returns.
+   */
+  private fun promiseMoveWhenLaidOut(block: (GoogleMap, onEnd: () -> Unit) -> Unit): Promise<Unit> =
+    deferredMap.promiseCompletion { map, complete ->
+      runWhenMapViewLaidOut(
+        onCancel = {
+          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
+        },
+      ) {
+        runCatching { block(map) { complete(Result.success(Unit)) } }
+          .onFailure { error -> complete(Result.failure(error)) }
+      }
+    }
 
   /**
    * Runs [block] once the map view has a size - see [DeferredLayout]. [onCancel] runs

@@ -52,9 +52,19 @@ interface MapProviderAdapter {
    */
   fun applyCamera(camera: Camera): Promise<Unit>
 
-  /** @see applyCamera for when the promise settles. */
+  /**
+   * [duration] is in milliseconds, here and in [animateToRegion], as JS passes it.
+   *
+   * @see applyCamera for when the promise settles.
+   */
   fun animateCamera(
     camera: Camera,
+    duration: Double?,
+  ): Promise<Unit>
+
+  /** @see applyCamera for when the promise settles. */
+  fun animateToRegion(
+    region: Region,
     duration: Double?,
   ): Promise<Unit>
 
@@ -66,6 +76,10 @@ interface MapProviderAdapter {
     padding: EdgePadding?,
     animated: Boolean?,
   ): Promise<Unit>
+
+  fun pointForCoordinate(coordinate: Coordinate): Promise<Point>
+
+  fun coordinateForPoint(point: Point): Promise<Coordinate>
 
   /**
    * Destroys the underlying native map and unregisters everything the adapter owns.

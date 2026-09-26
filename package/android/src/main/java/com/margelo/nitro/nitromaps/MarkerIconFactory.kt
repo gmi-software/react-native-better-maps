@@ -11,7 +11,6 @@ import android.util.LruCache
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.Marker
-import java.net.URL
 import java.util.WeakHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -30,6 +29,7 @@ internal class MarkerIconFactory(
   private val appliedIconKeys = WeakHashMap<Marker, String>()
   private val pendingIconLoads = WeakHashMap<Marker, PendingIconLoad>()
   private val iconLoadGeneration = WeakHashMap<Marker, Int>()
+  private val remoteImageFetcher = RemoteMarkerImageFetcher()
 
   private data class PendingIconLoad(
     val iconKey: String,
@@ -244,19 +244,10 @@ internal class MarkerIconFactory(
     image: MarkerImage,
     key: String,
   ): BitmapDescriptor? {
-    RemoteMarkerUriPolicy.rejectReason(image, resolveHostAddress = true)?.let { reason ->
-      logRejectedRemoteMarkerUri(image.uri, reason)
-      return null
-    }
-
     return try {
-      val connection = URL(image.uri).openConnection()
-      connection.connectTimeout = 10_000
-      connection.readTimeout = 10_000
-      connection.getInputStream().use { stream ->
-        val bitmap = decodeByteArray(stream.readBytes(), image) ?: return null
-        cacheBitmap(key, resizeBitmap(bitmap, image))
-      }
+      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
+      val bitmap = decodeByteArray(bytes, image) ?: return null
+      cacheBitmap(key, resizeBitmap(bitmap, image))
     } catch (error: Exception) {
       Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image: ${image.uri}", error)
       null

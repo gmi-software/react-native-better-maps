@@ -29,7 +29,6 @@ internal class MarkerIconFactory(
   private val appliedIconKeys = WeakHashMap<Marker, String>()
   private val pendingIconLoads = WeakHashMap<Marker, PendingIconLoad>()
   private val iconLoadGeneration = WeakHashMap<Marker, Int>()
-  private val remoteImageFetcher = RemoteMarkerImageFetcher()
 
   private data class PendingIconLoad(
     val iconKey: String,
@@ -436,5 +435,9 @@ internal class MarkerIconFactory(
     }
 
     private val loadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    // Shared by every map, and first built on the load executor: an HTTP client loads the system
+    // trust store when it is created.
+    private val remoteImageFetcher by lazy { RemoteMarkerImageFetcher() }
   }
 }

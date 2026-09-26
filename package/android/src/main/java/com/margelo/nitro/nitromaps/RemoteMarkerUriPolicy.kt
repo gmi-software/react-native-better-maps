@@ -140,7 +140,8 @@ internal object RemoteMarkerUriPolicy {
       }
   }
 
-  private fun isAllowlistedAddress(address: InetAddress): Boolean {
+  /** Whether a connection to [address] may carry a request for a user-supplied image. */
+  fun isAllowlistedAddress(address: InetAddress): Boolean {
     if (
       address.isLoopbackAddress ||
       address.isAnyLocalAddress ||

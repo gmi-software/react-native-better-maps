@@ -521,8 +521,9 @@ Supported image sources:
 A remote URL you pass yourself — `image={{ uri: someUrl }}` — is checked before Android fetches
 it. The URL must use `http`/`https`, must not carry `user:password@`, and its host must not
 resolve to a private address: loopback, link-local, site-local, multicast, IPv6 unique-local, a
-`.local`/`.localhost` name, or a cloud metadata endpoint. Every redirect target is checked the
-same way, and a redirect from `https` to `http` is not followed. This guards the common case of a
+`.local`/`.localhost` name, or a cloud metadata endpoint. The address the connection is actually
+made to is checked again before the request is sent, every redirect target is checked the same
+way, and a redirect from `https` to `http` is not followed. This guards the common case of a
 marker icon URL arriving as data from an API. A rejected URL falls back to the default pin and
 logs `Rejected remote marker image URI` under the `NitroMaps` tag.
 

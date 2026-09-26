@@ -6,6 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetAddress
+import java.net.URL
 
 class RemoteMarkerUriPolicyTest {
   @Test
@@ -101,6 +102,25 @@ class RemoteMarkerUriPolicyTest {
     // The connection would move on to the private address if the public one did not answer.
     assertEquals("host not allowlisted", reasonFor(publicAddress, privateAddress))
     assertEquals("host not allowlisted", reasonFor())
+  }
+
+  @Test
+  fun followsARedirectOnlyOnHttpAndNeverDownToIt() {
+    fun reasonFor(
+      from: String,
+      to: String,
+    ) = RemoteMarkerUriPolicy.redirectRejectReason(URL(from), URL(to))
+
+    assertNull(reasonFor("http://cdn.example.com/pin.png", "https://cdn.example.com/pin.png"))
+    assertNull(reasonFor("https://cdn.example.com/pin.png", "https://img.example.com/pin.png"))
+    assertEquals(
+      "redirect from https to http",
+      reasonFor("https://cdn.example.com/pin.png", "http://cdn.example.com/pin.png"),
+    )
+    assertEquals(
+      "redirect to an unsupported scheme",
+      reasonFor("http://cdn.example.com/pin.png", "file:///sdcard/pin.png"),
+    )
   }
 
   /**

@@ -49,17 +49,15 @@ export interface MapViewRef {
   animateCamera(camera: Camera, duration?: number): Promise<void>;
 
   /**
-   * Animates the camera to frame the given region, north up and flat: the
-   * whole region is in view, and the axis where its proportions differ from
-   * the view's shows more than it asks for, as with the `region` prop. A
-   * region from {@linkcode MapViewProps.onRegionChangeComplete} passed back
-   * returns the map to that view.
+   * Animates the camera to frame the given region as the `region` prop does:
+   * all of it in view, north up and flat. A region from
+   * {@linkcode MapViewProps.onRegionChangeComplete} passed back returns the map
+   * to that view.
    *
    * Resolves once the animation has been handed to the native map, not when
-   * it finishes. Rejects straight away, and leaves the map where it is, for a
-   * region the map cannot use: a center outside the world, or a
-   * `latitudeDelta` or `longitudeDelta` that is not a finite number greater
-   * than 0. The `region` prop skips such a region instead.
+   * it finishes, and rejects for a region the map cannot use - a center
+   * outside the world, or a delta that is not a finite number greater than 0 -
+   * which the `region` prop skips instead.
    *
    * @param duration Animation duration in milliseconds. Defaults to `250`;
    * `0` moves the camera without animating.

@@ -4,15 +4,11 @@ extension MKMapView {
   /// The camera `setRegion(_:animated:)` would give this map for `region`,
   /// worked out without moving the map.
   ///
-  /// Only MapKit knows that camera: the altitude that frames a region depends
-  /// on the view's size, on its layout margins - `setRegion` fits the region
-  /// inside them - and on the projection. So the region is set on a stand-in
-  /// map of the same size and margins that is never on screen, and the camera
-  /// is read back from it. That is the camera `setRegion` gives this map, to
-  /// the decimetre, from a rotated or pitched camera as well: heading and
-  /// pitch come back as 0 either way.
-  ///
-  /// Needs a map that has been laid out; an empty `bounds` frames nothing.
+  /// The altitude that frames a region depends on the view's size, on its
+  /// layout margins - `setRegion` fits the region inside them - and on the
+  /// projection, so the region is set on an off-screen stand-in of the same
+  /// size and margins and the camera is read back from it. Like `setRegion`,
+  /// that camera is north up and flat. Needs a map that has been laid out.
   func camera(framing region: MKCoordinateRegion) -> MKMapCamera {
     let framingView = Self.framingView
     framingView.frame = bounds

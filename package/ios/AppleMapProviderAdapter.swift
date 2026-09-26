@@ -43,9 +43,8 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
       forAnnotationViewWithReuseIdentifier: NitroClusterAnnotationView.reuseIdentifier
     )
     mapViewDelegate.installGestureRecognizers(on: mapView)
-    // A turn of the run loop later, so the mount itself does not wait for it,
-    // yet still before a mount effect's `animateToRegion` - that arrives after
-    // a round trip through JS - needs it.
+    // After the mount, but before a mount effect's `animateToRegion` is back
+    // from its round trip through JS.
     DispatchQueue.main.async {
       MKMapView.prepareFramingView()
     }
@@ -316,9 +315,6 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     moveMapCamera(to: camera.toMKMapCamera(), animated: animated, duration: duration)
   }
 
-  /// Moves to a camera MapKit can place. Animated, the move takes `duration`
-  /// however far it goes: MapKit honours the enclosing `UIView.animate` for a
-  /// `camera` assignment, and jumps straight there for a duration of 0.
   private func moveMapCamera(to mapCamera: MKMapCamera, animated: Bool, duration: Double) {
     guard !view.camera.approximatelyEquals(mapCamera) else {
       return

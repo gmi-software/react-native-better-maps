@@ -6,14 +6,8 @@ export const INVALID_REGION_ERROR =
 
 /**
  * Runs an `animateToRegion` call, or rejects it when the map cannot use the
- * region - the counterpart of `runWithValidCamera`. The `region` prop can only
- * skip such a region, but this call has a promise to report it on, and
- * resolving one for a region that never moved the map is the silent no-op
- * `MapViewRef` rules out.
- *
- * Checked before the call is queued, so it rejects straight away - also before
- * the native map exists - and the same way on every platform and provider. The
- * native guards behind it only skip.
+ * region - the region counterpart of `runWithValidCamera`, for the same
+ * reasons.
  */
 export function runWithValidRegion<Result>(
   region: Region,

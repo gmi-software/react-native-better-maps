@@ -4,6 +4,7 @@ import { LruCache } from './lruCache';
 import {
   isMarkerImage,
   markerImageFromResolvedAsset,
+  markerImageWithoutNulls,
 } from './markerImageFromResolvedAsset';
 import { warnOverlay } from './warnOverlay';
 
@@ -43,8 +44,9 @@ export function resolveMarkerImage(
         `marker image "${image.uri}": "origin" is set by the library and was ignored`,
       );
     }
-    resolvedImageCache.set(key, image);
-    return image;
+    const resolved = markerImageWithoutNulls(image);
+    resolvedImageCache.set(key, resolved);
+    return resolved;
   }
 
   if (typeof source === 'number') {

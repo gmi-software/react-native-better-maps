@@ -1,5 +1,14 @@
 import type { MarkerImage } from '../native/specs/overlays';
 
+function copyMarkerImage(image: MarkerImage): MarkerImage {
+  return {
+    uri: image.uri,
+    width: image.width ?? undefined,
+    height: image.height ?? undefined,
+    scale: image.scale ?? undefined,
+  };
+}
+
 /**
  * Converts `Image.resolveAssetSource` output into a `MarkerImage`. Only a `require()`d
  * asset reaches this function, so the result carries `origin: 'bundled'`.
@@ -11,13 +20,15 @@ export function markerImageFromResolvedAsset(
     return undefined;
   }
 
-  return {
-    uri: resolved.uri,
-    width: resolved.width,
-    height: resolved.height,
-    scale: resolved.scale,
-    origin: 'bundled',
-  };
+  return { ...copyMarkerImage(resolved), origin: 'bundled' };
+}
+
+export function markerImageWithoutNulls(image: MarkerImage): MarkerImage {
+  if (image.width === null || image.height === null || image.scale === null) {
+    return copyMarkerImage(image);
+  }
+
+  return image;
 }
 
 export function isMarkerImage(value: unknown): value is MarkerImage {
@@ -31,15 +42,15 @@ export function isMarkerImage(value: unknown): value is MarkerImage {
     return false;
   }
 
-  if (record.width !== undefined && typeof record.width !== 'number') {
+  if (record.width != null && typeof record.width !== 'number') {
     return false;
   }
 
-  if (record.height !== undefined && typeof record.height !== 'number') {
+  if (record.height != null && typeof record.height !== 'number') {
     return false;
   }
 
-  if (record.scale !== undefined && typeof record.scale !== 'number') {
+  if (record.scale != null && typeof record.scale !== 'number') {
     return false;
   }
 

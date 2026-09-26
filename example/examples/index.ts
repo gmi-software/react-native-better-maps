@@ -15,6 +15,7 @@ import {
 import { deliveryZoneScenario } from './deliveryZone';
 import { geojsonScenario } from './geojson';
 import { landmarksScenario } from './landmarks';
+import { mountEffectCameraScenario } from './mountEffectCamera';
 import { createScenarioOverlayProps } from './overlaySource';
 import { riverRouteScenario } from './riverRoute';
 import type { MapScenario } from './types';
@@ -39,4 +40,5 @@ export const MAP_SCENARIOS: MapScenario[] = [
   geojsonScenario,
   advancedFeaturesScenario,
   applePoiDetailsScenario,
+  mountEffectCameraScenario,
 ];

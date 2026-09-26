@@ -18,12 +18,26 @@ final class MapOverlayController {
     let tappable: Bool
   }
 
+  /// The shown overlays of one shape kind and the render version of each,
+  /// keyed by overlay id. Kinds are kept apart because an id only has to be
+  /// unique within its kind: a polyline and a polygon may share one.
+  private final class ShapeLayer {
+    var overlays: [String: MKOverlay] = [:]
+    var versions: [String: ShapeRenderVersion] = [:]
+  }
+
+  /// Every shape is drawn at this level, so its place among the level's
+  /// overlays is its place in the draw order.
+  private static let shapeLevel = MKOverlayLevel.aboveLabels
+
   private weak var mapView: MKMapView?
   /// All currently shown annotations (singles and clusters), keyed by diff key.
   private var displayedAnnotations: [String: MKAnnotation] = [:]
   private var displayedAnnotationVersions: [String: Int] = [:]
   private let markerPipeline = MarkerRenderPipeline()
-  private var shapeOverlays: [String: MKOverlay] = [:]
+  private let polylineLayer = ShapeLayer()
+  private let polygonLayer = ShapeLayer()
+  private let circleLayer = ShapeLayer()
   private var overlayStyles: [ObjectIdentifier: OverlayStyle] = [:]
 
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
@@ -51,10 +65,13 @@ final class MapOverlayController {
     }
 
     mapView.removeAnnotations(Array(displayedAnnotations.values))
-    mapView.removeOverlays(Array(shapeOverlays.values))
+    for layer in [polylineLayer, polygonLayer, circleLayer] {
+      mapView.removeOverlays(Array(layer.overlays.values))
+      layer.overlays.removeAll()
+      layer.versions.removeAll()
+    }
     displayedAnnotations.removeAll()
     displayedAnnotationVersions.removeAll()
-    shapeOverlays.removeAll()
     overlayStyles.removeAll()
   }
 
@@ -195,7 +212,9 @@ final class MapOverlayController {
   func updatePolylines(_ descriptors: [PolylineDescriptor]?) {
     reconcileShapeOverlays(
       descriptors ?? [],
-      kind: .polyline,
+      in: polylineLayer,
+      id: { $0.id },
+      renderVersion: { $0.renderVersion() },
       makeOverlay: { $0.toMKPolyline() },
       makeStyle: { descriptor in
         OverlayStyle(
@@ -213,7 +232,9 @@ final class MapOverlayController {
   func updatePolygons(_ descriptors: [PolygonDescriptor]?) {
     reconcileShapeOverlays(
       descriptors ?? [],
-      kind: .polygon,
+      in: polygonLayer,
+      id: { $0.id },
+      renderVersion: { $0.renderVersion() },
       makeOverlay: { $0.toMKPolygon() },
       makeStyle: { descriptor in
         OverlayStyle(
@@ -232,7 +253,9 @@ final class MapOverlayController {
   func updateCircles(_ descriptors: [CircleDescriptor]?) {
     reconcileShapeOverlays(
       descriptors ?? [],
-      kind: .circle,
+      in: circleLayer,
+      id: { $0.id },
+      renderVersion: { $0.renderVersion() },
       makeOverlay: { $0.toMKCircle() },
       makeStyle: { descriptor in
         OverlayStyle(
@@ -242,7 +265,7 @@ final class MapOverlayController {
           fillColor: descriptor.fillColor?.toUIColor(fallback: UIColor.systemBlue.withAlphaComponent(0.2))
             ?? UIColor.systemBlue.withAlphaComponent(0.2),
           strokeWidth: CGFloat(descriptor.strokeWidth ?? 2),
-          tappable: descriptor.tappable ?? true
+          tappable: descriptor.tappable ?? false
         )
       }
     )
@@ -263,16 +286,21 @@ final class MapOverlayController {
       renderer = MKCircleRenderer(overlay: overlay)
     }
 
+    apply(style, to: renderer)
+
+    return renderer
+  }
+
+  private func apply(_ style: OverlayStyle, to renderer: MKOverlayPathRenderer) {
     renderer.strokeColor = style.strokeColor
     renderer.lineWidth = style.strokeWidth
     if let fillColor = style.fillColor {
       renderer.fillColor = fillColor
     }
-
-    return renderer
   }
 
-  func overlayId(at point: CGPoint) -> String? {
+  /// The topmost tappable shape under `point`.
+  func overlayHit(at point: CGPoint) -> (id: String, kind: OverlayKind)? {
     guard let mapView else {
       return nil
     }
@@ -292,20 +320,26 @@ final class MapOverlayController {
       let rendererPoint = renderer.point(for: mapPoint)
 
       if renderer.path?.contains(rendererPoint) == true {
-        return style.id
+        return (style.id, style.kind)
       }
     }
 
     return nil
   }
 
-  func overlayKind(for id: String) -> OverlayKind? {
-    shapeOverlays[id].flatMap { overlayStyles[ObjectIdentifier($0)]?.kind }
-  }
-
+  /// Applies `computeShapeRenderDiff` to one shape kind. An unchanged shape
+  /// costs no MapKit call. A style-only change restyles the cached renderer in
+  /// place; a geometry change replaces the overlay at its previous place in the
+  /// draw order, because MapKit overlay geometry is immutable.
+  ///
+  /// A style is registered before MapKit sees its overlay: adding an overlay
+  /// asks the delegate for its renderer right away, and a renderer made without
+  /// a style draws nothing for as long as the overlay is shown.
   private func reconcileShapeOverlays<Descriptor>(
     _ descriptors: [Descriptor],
-    kind: OverlayKind,
+    in layer: ShapeLayer,
+    id: (Descriptor) -> String,
+    renderVersion: (Descriptor) -> ShapeRenderVersion,
     makeOverlay: (Descriptor) -> MKOverlay,
     makeStyle: (Descriptor) -> OverlayStyle
   ) {
@@ -313,40 +347,63 @@ final class MapOverlayController {
       return
     }
 
-    let nextIds = Set(
-      descriptors.compactMap { descriptor -> String? in
-        let style = makeStyle(descriptor)
-        return style.kind == kind ? style.id : nil
-      }
-    )
-    let existingIds = Set(
-      shapeOverlays.compactMap { id, overlay -> String? in
-        overlayStyles[ObjectIdentifier(overlay)]?.kind == kind ? id : nil
-      }
+    let diff = computeShapeRenderDiff(
+      descriptors,
+      displayed: layer.versions,
+      id: id,
+      version: renderVersion
     )
 
-    for removedId in existingIds.subtracting(nextIds) {
-      if let overlay = shapeOverlays.removeValue(forKey: removedId) {
-        overlayStyles.removeValue(forKey: ObjectIdentifier(overlay))
-        mapView.removeOverlay(overlay)
+    for removedId in diff.removedIds {
+      guard let overlay = layer.overlays.removeValue(forKey: removedId) else {
+        continue
       }
+      layer.versions.removeValue(forKey: removedId)
+      overlayStyles.removeValue(forKey: ObjectIdentifier(overlay))
+      mapView.removeOverlay(overlay)
     }
 
-    for descriptor in descriptors {
-      let style = makeStyle(descriptor)
-      guard style.kind == kind else {
+    for change in diff.updated {
+      guard let shown = layer.overlays[change.id] else {
         continue
       }
 
-      if let existingOverlay = shapeOverlays[style.id] {
-        overlayStyles.removeValue(forKey: ObjectIdentifier(existingOverlay))
-        mapView.removeOverlay(existingOverlay)
+      let style = makeStyle(change.descriptor)
+      if change.geometryChanged {
+        let overlay = makeOverlay(change.descriptor)
+        overlayStyles[ObjectIdentifier(overlay)] = style
+        let index = mapView.overlays(in: Self.shapeLevel).firstIndex { $0 === shown }
+        overlayStyles.removeValue(forKey: ObjectIdentifier(shown))
+        mapView.removeOverlay(shown)
+        if let index {
+          mapView.insertOverlay(overlay, at: index, level: Self.shapeLevel)
+        } else {
+          mapView.addOverlay(overlay, level: Self.shapeLevel)
+        }
+        layer.overlays[change.id] = overlay
+      } else {
+        overlayStyles[ObjectIdentifier(shown)] = style
+        if let renderer = mapView.renderer(for: shown) as? MKOverlayPathRenderer {
+          apply(style, to: renderer)
+          renderer.setNeedsDisplay()
+        }
       }
-
-      let overlay = makeOverlay(descriptor)
-      shapeOverlays[style.id] = overlay
-      overlayStyles[ObjectIdentifier(overlay)] = style
-      mapView.addOverlay(overlay)
+      layer.versions[change.id] = change.version
     }
+
+    guard !diff.added.isEmpty else {
+      return
+    }
+
+    var added: [MKOverlay] = []
+    added.reserveCapacity(diff.added.count)
+    for change in diff.added {
+      let overlay = makeOverlay(change.descriptor)
+      overlayStyles[ObjectIdentifier(overlay)] = makeStyle(change.descriptor)
+      layer.overlays[change.id] = overlay
+      layer.versions[change.id] = change.version
+      added.append(overlay)
+    }
+    mapView.addOverlays(added, level: Self.shapeLevel)
   }
 }

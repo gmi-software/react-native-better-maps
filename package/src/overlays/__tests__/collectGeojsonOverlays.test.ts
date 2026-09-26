@@ -4,28 +4,8 @@ import type {
   GeojsonProps,
 } from '../../types/geojson';
 import { collectGeojsonOverlays } from '../collectGeojsonOverlays';
-import type { OverlayCollectorState } from '../overlayCollect';
+import { createOverlayCollectorState } from '../overlayCollect';
 import { OverlayType, overlayCallbackKey } from '../overlayType';
-
-function createState(): OverlayCollectorState {
-  return {
-    registry: new Map(),
-    markers: [],
-    polylines: [],
-    polygons: [],
-    circles: [],
-    markerIndex: 0,
-    polylineIndex: 0,
-    polygonIndex: 0,
-    circleIndex: 0,
-    geojsonIndex: 0,
-    hasMarkerPress: false,
-    hasMarkerDragEnd: false,
-    hasPolylinePress: false,
-    hasPolygonPress: false,
-    hasCirclePress: false,
-  };
-}
 
 const collection: GeojsonFeatureCollection = {
   type: 'FeatureCollection',
@@ -69,12 +49,12 @@ const collection: GeojsonFeatureCollection = {
 
 describe('collectGeojsonOverlays', () => {
   test('routes generated overlay presses to their source features', () => {
-    const state = createState();
+    const state = createOverlayCollectorState();
     const onPress = mock<NonNullable<GeojsonProps['onPress']>>(() => {});
 
     collectGeojsonOverlays(
+      'layer',
       {
-        id: 'layer',
         geojson: collection,
         markerColor: '#FF9500',
         onPress,
@@ -109,9 +89,10 @@ describe('collectGeojsonOverlays', () => {
   });
 
   test('respects explicit tappable without installing press handlers', () => {
-    const state = createState();
+    const state = createOverlayCollectorState();
 
     collectGeojsonOverlays(
+      'geojson-0',
       {
         geojson: collection,
         tappable: true,
@@ -128,9 +109,10 @@ describe('collectGeojsonOverlays', () => {
   });
 
   test('keeps explicit tappable false when onPress is present', () => {
-    const state = createState();
+    const state = createOverlayCollectorState();
 
     collectGeojsonOverlays(
+      'geojson-0',
       {
         geojson: collection,
         tappable: false,

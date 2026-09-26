@@ -1,4 +1,5 @@
 export type { Coordinate } from './coordinate';
+export type { Point } from './point';
 export type { Camera } from './camera';
 export type { Region, EdgePadding, VisibleRegion } from './region';
 export type {

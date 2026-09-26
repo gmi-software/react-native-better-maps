@@ -1,20 +1,28 @@
 package com.margelo.nitro.nitromaps
 
-import kotlin.math.max
+import kotlin.math.roundToInt
 
-fun EdgePadding?.toPaddingPixels(): Int {
-  if (this == null) {
+/**
+ * Scales the density-independent insets the prop is documented in to device pixels.
+ *
+ * An inset the map cannot act on — `NaN`, infinite or negative — collapses to none, so a
+ * bad number leaves the padding alone instead of reaching `setPadding` or a camera update.
+ */
+internal fun EdgePadding.toPixels(density: Float): EdgePaddingPixels =
+  EdgePaddingPixels(
+    top = insetPixels(top, density),
+    right = insetPixels(right, density),
+    bottom = insetPixels(bottom, density),
+    left = insetPixels(left, density),
+  )
+
+private fun insetPixels(
+  inset: Double,
+  density: Float,
+): Int {
+  if (!inset.isFinite() || inset <= 0.0) {
     return 0
   }
 
-  return max(max(top, right), max(bottom, left)).toInt()
-}
-
-fun EdgePadding.toPaddingInsets(): IntArray {
-  return intArrayOf(
-    left.toInt(),
-    top.toInt(),
-    right.toInt(),
-    bottom.toInt(),
-  )
+  return (inset * density).roundToInt()
 }

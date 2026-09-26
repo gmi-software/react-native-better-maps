@@ -788,6 +788,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | -------------------------- | ----------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Region / camera            | Supported                                                   | Supported                                  | Supported                                  |
 | Camera animation           | Supported                                                   | Supported                                  | Supported                                  |
+| Animate to region          | Supported                                                   | Supported                                  | Supported                                  |
 | Visible region             | Supported                                                   | Supported                                  | Supported                                  |
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
 | Screen point conversion    | Supported                                                   | Supported                                  | Supported                                  |

@@ -275,7 +275,7 @@ final class HybridMapView: HybridMapViewSpec {
 
   func animateToRegion(region: Region, duration: Double?) throws -> Promise<Void> {
     let seconds = duration.map { $0 / 1000 }
-    return promiseOnMainVoid {
+    return promiseOnMain {
       try $0.animateToRegion(region: region, duration: seconds)
     }
   }

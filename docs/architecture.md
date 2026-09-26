@@ -122,7 +122,9 @@ none of them uses a timer:
   apply the `region` fit and the safe-area padding a few hundred milliseconds
   after mount, though, so on that provider `pointForCoordinate` and
   `coordinateForPoint` wait for the map's first idle. MapKit applies both at
-  once and converts straight away.
+  once and converts straight away. On that provider `animateToRegion` waits
+  instead for the map view's first size, which the camera framing a region
+  depends on, and rejects if the view is released before it has one.
 
 `onMapReady` is a separate, later signal - the map finished loading tiles - and
 is not a precondition for using the ref.

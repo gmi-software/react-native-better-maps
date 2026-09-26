@@ -359,6 +359,10 @@ final class MapOverlayController {
       }
 
       let overlay = makeOverlay(descriptor)
+      // Registered before MapKit sees the overlay: adding one asks the delegate
+      // for its renderer right away, and a renderer made without a style draws
+      // nothing for as long as the overlay is shown.
+      overlayStyles[ObjectIdentifier(overlay)] = style
       if let existingOverlay = shapeOverlays[style.id] {
         overlayStyles.removeValue(forKey: ObjectIdentifier(existingOverlay))
         let previousIndex = mapView.overlays.firstIndex { $0 === existingOverlay }
@@ -372,7 +376,6 @@ final class MapOverlayController {
         mapView.addOverlay(overlay)
       }
       shapeOverlays[style.id] = overlay
-      overlayStyles[ObjectIdentifier(overlay)] = style
       shapeVersions[style.id] = version
     }
 

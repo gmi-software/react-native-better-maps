@@ -503,19 +503,17 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func notifyOverlayPress(at point: CGPoint) -> Bool {
-    guard let overlayId = overlayController.overlayId(at: point) else {
+    guard let hit = overlayController.overlayHit(at: point) else {
       return false
     }
 
-    switch overlayController.overlayKind(for: overlayId) {
+    switch hit.kind {
     case .polyline:
-      onPolylinePress?(overlayId)
+      onPolylinePress?(hit.id)
     case .polygon:
-      onPolygonPress?(overlayId)
+      onPolygonPress?(hit.id)
     case .circle:
-      onCirclePress?(overlayId)
-    case .none:
-      return false
+      onCirclePress?(hit.id)
     }
 
     return true

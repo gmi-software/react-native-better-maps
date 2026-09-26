@@ -19,10 +19,14 @@ fun CircleDescriptor.toCircleOptions(): CircleOptions {
   return options
 }
 
-/** Updates an existing circle in place, with the same defaults as [toCircleOptions]. */
-fun CircleDescriptor.applyTo(circle: Circle) {
+/** Moves an existing circle onto this descriptor's center and radius. */
+fun CircleDescriptor.applyGeometryTo(circle: Circle) {
   circle.center = LatLng(center.latitude, center.longitude)
   circle.radius = radius
+}
+
+/** Restyles an existing circle in place, with the same defaults as [toCircleOptions]. */
+fun CircleDescriptor.applyStyleTo(circle: Circle) {
   circle.strokeColor = strokeColor?.toColorInt() ?: Color.BLACK
   circle.fillColor = fillColor?.toColorInt() ?: Color.TRANSPARENT
   circle.strokeWidth = (strokeWidth ?: 2.0).toFloat()

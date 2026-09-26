@@ -173,7 +173,8 @@ final class GoogleMapOverlayController {
       versions: &polylineVersions,
       next: descriptors ?? [],
       make: makePolyline,
-      update: updatePolyline
+      reshape: reshapePolyline,
+      restyle: restylePolyline
     )
   }
 
@@ -183,7 +184,8 @@ final class GoogleMapOverlayController {
       versions: &polygonVersions,
       next: descriptors ?? [],
       make: makePolygon,
-      update: updatePolygon
+      reshape: reshapePolygon,
+      restyle: restylePolygon
     )
   }
 
@@ -193,7 +195,8 @@ final class GoogleMapOverlayController {
       versions: &circleVersions,
       next: descriptors ?? [],
       make: makeCircle,
-      update: updateCircle
+      reshape: reshapeCircle,
+      restyle: restyleCircle
     )
   }
 
@@ -343,29 +346,38 @@ final class GoogleMapOverlayController {
   }
 
   private func makePolyline(_ descriptor: PolylineDescriptor) -> GMSPolyline {
-    let polyline = GMSPolyline(path: descriptor.coordinates.toGMSPath())
-    updatePolyline(polyline, descriptor)
+    let polyline = GMSPolyline()
+    polyline.userData = descriptor.id
+    reshapePolyline(polyline, descriptor)
+    restylePolyline(polyline, descriptor)
     return polyline
   }
 
-  private func updatePolyline(_ polyline: GMSPolyline, _ descriptor: PolylineDescriptor) {
+  private func reshapePolyline(_ polyline: GMSPolyline, _ descriptor: PolylineDescriptor) {
     polyline.path = descriptor.coordinates.toGMSPath()
+  }
+
+  private func restylePolyline(_ polyline: GMSPolyline, _ descriptor: PolylineDescriptor) {
     polyline.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
     polyline.strokeWidth = CGFloat(descriptor.strokeWidth ?? 4)
     polyline.zIndex = Self.nativeZIndex(descriptor.zIndex)
     polyline.isTappable = descriptor.tappable ?? false
-    polyline.userData = descriptor.id
   }
 
   private func makePolygon(_ descriptor: PolygonDescriptor) -> GMSPolygon {
-    let polygon = GMSPolygon(path: descriptor.coordinates.toGMSPath())
-    updatePolygon(polygon, descriptor)
+    let polygon = GMSPolygon()
+    polygon.userData = descriptor.id
+    reshapePolygon(polygon, descriptor)
+    restylePolygon(polygon, descriptor)
     return polygon
   }
 
-  private func updatePolygon(_ polygon: GMSPolygon, _ descriptor: PolygonDescriptor) {
+  private func reshapePolygon(_ polygon: GMSPolygon, _ descriptor: PolygonDescriptor) {
     polygon.path = descriptor.coordinates.toGMSPath()
     polygon.holes = descriptor.holes?.map { $0.toGMSPath() }
+  }
+
+  private func restylePolygon(_ polygon: GMSPolygon, _ descriptor: PolygonDescriptor) {
     polygon.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
     polygon.fillColor =
       descriptor.fillColor?.toUIColor(
@@ -374,21 +386,22 @@ final class GoogleMapOverlayController {
     polygon.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
     polygon.zIndex = Self.nativeZIndex(descriptor.zIndex)
     polygon.isTappable = descriptor.tappable ?? false
-    polygon.userData = descriptor.id
   }
 
   private func makeCircle(_ descriptor: CircleDescriptor) -> GMSCircle {
-    let circle = GMSCircle(
-      position: descriptor.center.toCLLocationCoordinate2D(),
-      radius: descriptor.radius
-    )
-    updateCircle(circle, descriptor)
+    let circle = GMSCircle()
+    circle.userData = descriptor.id
+    reshapeCircle(circle, descriptor)
+    restyleCircle(circle, descriptor)
     return circle
   }
 
-  private func updateCircle(_ circle: GMSCircle, _ descriptor: CircleDescriptor) {
+  private func reshapeCircle(_ circle: GMSCircle, _ descriptor: CircleDescriptor) {
     circle.position = descriptor.center.toCLLocationCoordinate2D()
     circle.radius = descriptor.radius
+  }
+
+  private func restyleCircle(_ circle: GMSCircle, _ descriptor: CircleDescriptor) {
     circle.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
     circle.fillColor =
       descriptor.fillColor?.toUIColor(
@@ -396,41 +409,53 @@ final class GoogleMapOverlayController {
       ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
     circle.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
     circle.isTappable = descriptor.tappable ?? false
-    circle.userData = descriptor.id
   }
 
-  /// Keeps a render version per overlay id so a descriptor that is sent again
-  /// unchanged costs one hash, and a changed one is updated in place.
+  /// Applies `computeShapeRenderDiff` to one shape kind: an unchanged shape
+  /// costs no SDK call, and a changed one is updated in place - its geometry
+  /// only when that changed, its style only when that did.
   private func reconcile<Descriptor, Overlay: GMSOverlay>(
     current: inout [String: Overlay],
     versions: inout [String: ShapeRenderVersion],
     next descriptors: [Descriptor],
     make: (Descriptor) -> Overlay,
-    update: (Overlay, Descriptor) -> Void
+    reshape: (Overlay, Descriptor) -> Void,
+    restyle: (Overlay, Descriptor) -> Void
   ) where Descriptor: IdentifiedOverlayDescriptor {
     guard let mapView else {
       return
     }
 
-    var nextIds = Set<String>()
-    for descriptor in descriptors {
-      nextIds.insert(descriptor.id)
-      let version = descriptor.renderVersion()
-      if let overlay = current[descriptor.id] {
-        if versions[descriptor.id] != version {
-          update(overlay, descriptor)
-        }
-      } else {
-        let overlay = make(descriptor)
-        overlay.map = mapView
-        current[descriptor.id] = overlay
-      }
-      versions[descriptor.id] = version
-    }
+    let diff = computeShapeRenderDiff(
+      descriptors,
+      displayed: versions,
+      id: { $0.id },
+      version: { $0.renderVersion() }
+    )
 
-    for id in Set(current.keys).subtracting(nextIds) {
+    for id in diff.removedIds {
       current.removeValue(forKey: id)?.map = nil
       versions.removeValue(forKey: id)
+    }
+
+    for change in diff.updated {
+      guard let overlay = current[change.id] else {
+        continue
+      }
+      if change.geometryChanged {
+        reshape(overlay, change.descriptor)
+      }
+      if change.styleChanged {
+        restyle(overlay, change.descriptor)
+      }
+      versions[change.id] = change.version
+    }
+
+    for change in diff.added {
+      let overlay = make(change.descriptor)
+      overlay.map = mapView
+      current[change.id] = overlay
+      versions[change.id] = change.version
     }
   }
 }

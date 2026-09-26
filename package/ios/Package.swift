@@ -24,6 +24,10 @@ let package = Package(
       name: "NitroMapsAdapterSlot",
       path: "AdapterSlot"
     ),
+    .target(
+      name: "NitroMapsShapeDiff",
+      path: "ShapeDiff"
+    ),
     .testTarget(
       name: "NitroMapsColorParserTests",
       dependencies: ["NitroMapsColorParser"],
@@ -44,6 +48,11 @@ let package = Package(
       name: "NitroMapsAdapterSlotTests",
       dependencies: ["NitroMapsAdapterSlot"],
       path: "Tests/AdapterSlot"
+    ),
+    .testTarget(
+      name: "NitroMapsShapeDiffTests",
+      dependencies: ["NitroMapsShapeDiff"],
+      path: "Tests/ShapeDiff"
     ),
   ]
 )

@@ -254,6 +254,49 @@ function ControlledMap() {
 }
 ```
 
+`animateToRegion` takes the `Region` that the `region` prop takes and
+`onRegionChangeComplete` reports, so a view saved from the event can be
+animated back to later:
+
+```tsx
+import { useRef } from 'react';
+import {
+  MapView,
+  type MapViewRef,
+  type Region,
+} from 'react-native-better-maps';
+
+function MapWithSavedView() {
+  const mapRef = useRef<MapViewRef>(null);
+  const savedRegion = useRef<Region | null>(null);
+
+  const returnToSavedView = () => {
+    if (savedRegion.current != null) {
+      mapRef.current?.animateToRegion(savedRegion.current, 500);
+    }
+  };
+
+  return (
+    <MapView
+      ref={mapRef}
+      style={{ flex: 1 }}
+      onRegionChangeComplete={(region) => {
+        savedRegion.current = region;
+      }}
+    />
+  );
+}
+```
+
+The region is framed as the `region` prop frames it: all of it in view, inside
+`mapPadding`, north up and flat. Its proportions rarely match the map's, so one
+axis shows more than the region asks for.
+
+Durations are in milliseconds, for `animateCamera` and `animateToRegion`
+alike, as in react-native-maps. Both default to `250`, and `0` moves the camera
+without animating. Up to 1.2.1 `animateCamera` took seconds, so multiply a
+duration passed to it by 1000 when upgrading.
+
 #### When the ref is usable
 
 The native map is created after React commits, so `mapRef.current` is populated
@@ -726,11 +769,12 @@ A coordinate that arrives as `NaN` or out of range is dropped instead of being f
 - An invalid `region` is ignored, and the map keeps the region it already had.
 - An invalid `camera` is ignored the same way, and a pitch past the range the SDKs draw is pulled back to it rather than rejected.
 - `setCamera` and `animateCamera` reject an invalid camera instead of ignoring it, straight away and on both platforms - unlike a prop, they have a promise to report it on. A pitch past the drawable range is pulled back for them too.
+- `animateToRegion` rejects an invalid region the same way.
 - `pointForCoordinate` and `coordinateForPoint` reject a coordinate outside the world, or a point whose `x` or `y` is not finite, the same way.
 - An overlay whose coordinates, ring length or radius cannot be drawn is skipped; its neighbours still render.
 - Anything supplied through `region`, `camera`, the bulk `markers` prop, or a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
 
-Where the check runs depends on the entry point. `region`, `camera`, `fitToCoordinates`, the two point conversions and marker descriptors are guarded natively on both platforms, so a `hybridRef` call - `setCamera` and `animateCamera` included - cannot reach the SDKs either. Polyline, polygon and circle descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down. Native skips are reported to logcat on Android rather than through `console.warn`.
+Where the check runs depends on the entry point. `region`, `camera`, `fitToCoordinates`, the two point conversions and marker descriptors are guarded natively on both platforms, so a `hybridRef` call - `setCamera`, `animateCamera` and `animateToRegion` included - cannot reach the SDKs either. Polyline, polygon and circle descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down. Native skips are reported to logcat on Android rather than through `console.warn`.
 
 One gap is worth knowing about: descriptors passed through the bulk `polylines` / `polygons` / `circles` props are checked only natively on Android - on iOS they reach MapKit and the Google Maps SDK unchecked, and neither platform warns about them in development.
 
@@ -744,6 +788,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | -------------------------- | ----------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Region / camera            | Supported                                                   | Supported                                  | Supported                                  |
 | Camera animation           | Supported                                                   | Supported                                  | Supported                                  |
+| Animate to region          | Supported                                                   | Supported                                  | Supported                                  |
 | Visible region             | Supported                                                   | Supported                                  | Supported                                  |
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
 | Screen point conversion    | Supported                                                   | Supported                                  | Supported                                  |

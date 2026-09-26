@@ -253,8 +253,17 @@ export interface MapViewMethods extends HybridViewMethods {
    */
   applyCamera(camera: Camera): Promise<void>;
 
-  /** Animates the camera to the given position. */
+  /**
+   * Animates the camera to the given position, over `duration` milliseconds -
+   * 250 when omitted, a jump for 0.
+   */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
+
+  /**
+   * Animates the camera to frame the given region, over `duration`
+   * milliseconds - 250 when omitted, a jump for 0.
+   */
+  animateToRegion(region: Region, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */
   getVisibleRegion(): Promise<VisibleRegion>;

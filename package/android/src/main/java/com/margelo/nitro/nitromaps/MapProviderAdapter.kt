@@ -47,8 +47,14 @@ interface MapProviderAdapter {
 
   fun applyCamera(camera: Camera): Promise<Unit>
 
+  /** [duration] is in milliseconds, here and in [animateToRegion], as JS passes it. */
   fun animateCamera(
     camera: Camera,
+    duration: Double?,
+  ): Promise<Unit>
+
+  fun animateToRegion(
+    region: Region,
     duration: Double?,
   ): Promise<Unit>
 

@@ -266,8 +266,17 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
-    promiseOnMainVoid {
-      try $0.animateCamera(camera: camera, duration: duration)
+    // Milliseconds from JS, seconds for UIKit and Core Animation.
+    let seconds = duration.map { $0 / 1000 }
+    return promiseOnMainVoid {
+      try $0.animateCamera(camera: camera, duration: seconds)
+    }
+  }
+
+  func animateToRegion(region: Region, duration: Double?) throws -> Promise<Void> {
+    let seconds = duration.map { $0 / 1000 }
+    return promiseOnMain {
+      try $0.animateToRegion(region: region, duration: seconds)
     }
   }
 

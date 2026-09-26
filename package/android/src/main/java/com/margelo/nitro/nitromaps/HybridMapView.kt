@@ -299,6 +299,14 @@ class HybridMapView(
     return mounted.animateCamera(camera, duration)
   }
 
+  override fun animateToRegion(
+    region: Region,
+    duration: Double?,
+  ): Promise<Unit> {
+    val mounted = adapter ?: return notMountedRejection()
+    return mounted.animateToRegion(region, duration)
+  }
+
   override fun getVisibleRegion(): Promise<VisibleRegion> {
     val mounted = adapter ?: return notMountedRejection()
     return mounted.getVisibleRegion()

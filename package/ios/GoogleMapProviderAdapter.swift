@@ -9,6 +9,7 @@ import UIKit
 final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private static let liveGestureRefreshInterval: CFTimeInterval = 0.18
   private static let liveGestureAnimationBudget = 24
+  private static let defaultAnimationDuration: TimeInterval = 0.25
 
   private var isMapReady = false
   private var hasDeliveredMapReady = false
@@ -247,8 +248,15 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     updateMapCamera(camera, animated: false)
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
-    updateMapCamera(camera, animated: true, duration: duration ?? 0.25)
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws {
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    updateMapCamera(camera, animated: animationDuration > 0, duration: animationDuration)
+  }
+
+  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    applyRegion(region, animated: animationDuration > 0, duration: animationDuration)
+    return Promise.resolved()
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
@@ -333,7 +341,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     clusterEnteringAnimation = nil
   }
 
-  private func applyRegion(_ region: Region, animated: Bool = false) {
+  private func applyRegion(
+    _ region: Region,
+    animated: Bool = false,
+    duration: TimeInterval? = nil
+  ) {
     guard region.isValid else {
       return
     }
@@ -353,7 +365,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     applyCameraUpdate(
       GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
       animated: animated,
-      duration: nil
+      duration: duration
     )
     self.lastAppliedRegion = region
     // `moveCamera` updates `camera` synchronously; an animation does not, so

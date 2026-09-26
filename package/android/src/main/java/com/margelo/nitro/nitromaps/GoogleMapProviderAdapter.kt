@@ -351,9 +351,32 @@ class GoogleMapProviderAdapter(
     camera: Camera,
     duration: Double?,
   ): Promise<Unit> {
-    val animationDuration = duration ?: 0.25
+    val durationMs = cameraAnimationDurationMs(duration)
     return deferredMap.promise { map ->
-      updateMapCamera(map, camera, animated = true, durationMs = (animationDuration * 1000).toInt())
+      updateMapCamera(map, camera, animated = true, durationMs = durationMs)
+    }
+  }
+
+  override fun animateToRegion(
+    region: Region,
+    duration: Double?,
+  ): Promise<Unit> {
+    // Skipped like an invalid `region` prop: `LatLngBounds` throws for a span that is not positive.
+    if (!region.isValid()) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid region: $region.")
+      return Promise.resolved(Unit)
+    }
+
+    val durationMs = cameraAnimationDurationMs(duration)
+    return deferredMap.promiseCompletion { map, complete ->
+      // Waits for the first layout pass, as `fitToCoordinates` does, and so does the promise.
+      runWhenMapViewLaidOut(
+        onCancel = {
+          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
+        },
+      ) {
+        complete(runCatching { fitCamera(map, region, durationMs) })
+      }
     }
   }
 
@@ -630,10 +653,7 @@ class GoogleMapProviderAdapter(
     map?.setMapStyle(MapStyleOptions(styleJson))
   }
 
-  private fun applyRegion(
-    region: Region,
-    animated: Boolean = false,
-  ) {
+  private fun applyRegion(region: Region) {
     if (!region.isValid()) {
       Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid region: $region.")
       return
@@ -641,11 +661,20 @@ class GoogleMapProviderAdapter(
 
     runOnMain {
       val map = googleMap ?: return@runOnMain
-      runWhenMapViewLaidOut { fitCamera(map, region, animated) }
+      runWhenMapViewLaidOut { fitCamera(map, region, durationMs = 0) }
     }
   }
 
-  private fun fitCamera(map: GoogleMap, region: Region, animated: Boolean) {
+  /**
+   * Frames [region], animating over [durationMs] when it is positive and jumping there
+   * otherwise: `animateCamera` throws for a duration that is not. Needs a laid-out map
+   * view, since `newLatLngBounds` throws on one without a size.
+   */
+  private fun fitCamera(
+    map: GoogleMap,
+    region: Region,
+    durationMs: Int,
+  ) {
     val lastRegion = lastAppliedRegion
     val lastCamera = lastAppliedRegionCamera
     if (
@@ -662,8 +691,8 @@ class GoogleMapProviderAdapter(
     // No padding argument: Google Maps already fits bounds inside the region `setPadding`
     // leaves over, so passing `mapPadding` here as well would inset the region twice.
     val update = CameraUpdateFactory.newLatLngBounds(region.toLatLngBounds(), 0)
-    if (animated) {
-      map.animateCamera(update)
+    if (durationMs > 0) {
+      map.animateCamera(update, durationMs, null)
       // The camera settles later; there is nothing reliable to remember yet.
       lastAppliedRegionCamera = null
     } else {
@@ -696,12 +725,10 @@ class GoogleMapProviderAdapter(
     }
 
     val update = CameraUpdateFactory.newCameraPosition(target)
-    if (animated) {
-      if (durationMs > 0) {
-        map.animateCamera(update, durationMs, null)
-      } else {
-        map.animateCamera(update)
-      }
+    // A duration under a millisecond jumps, as it does on iOS: the timed `animateCamera` throws
+    // for it, and the untimed one would animate for the SDK's own default duration.
+    if (animated && durationMs > 0) {
+      map.animateCamera(update, durationMs, null)
     } else {
       map.moveCamera(update)
     }

@@ -35,6 +35,7 @@ import {
 } from '../projection/runWithValidInput';
 import { resolveMapProvider } from '../providers';
 import { resolveFitCoordinates } from '../region/resolveFitCoordinates';
+import { runWithValidRegion } from '../region/runWithValidRegion';
 import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
@@ -280,6 +281,12 @@ export function MapView({
       animateCamera: (nextCamera, duration) =>
         runWithValidCamera(nextCamera, () =>
           commands.run((hybrid) => hybrid.animateCamera(nextCamera, duration)),
+        ),
+      animateToRegion: (nextRegion, duration) =>
+        runWithValidRegion(nextRegion, () =>
+          commands.run((hybrid) =>
+            hybrid.animateToRegion(nextRegion, duration),
+          ),
         ),
       getVisibleRegion: () =>
         commands.run((hybrid) => hybrid.getVisibleRegion()),

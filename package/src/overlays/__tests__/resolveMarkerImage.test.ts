@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import type { MarkerImage } from '../../native/specs/overlays';
 import {
   isMarkerImage,
   markerImageFromResolvedAsset,
@@ -150,16 +151,31 @@ describe('resolveMarkerImage', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
-  test('passes through MarkerImage objects unchanged', () => {
+  test('passes through MarkerImage objects as an equal copy', () => {
     const image = {
       uri: 'asset:/pin.png',
       width: 32,
       height: 32,
       scale: 2,
     };
+    const resolved = resolveMarkerImage(image);
 
-    expect(resolveMarkerImage(image)).toBe(image);
+    expect(resolved).toEqual(image);
+    expect(resolved).not.toBe(image);
     expect(resolveAssetSourceMock).not.toHaveBeenCalled();
+  });
+
+  test('keeps no reference to the caller object in the cache', () => {
+    // Otherwise stamping the caller's object bundled after the first render would reach
+    // every later cache hit, and Android would skip the host policy for it.
+    const source: MarkerImage = { uri: 'http://192.168.1.1/admin/pin.png' };
+    const resolved = resolveMarkerImage(source);
+
+    source.origin = 'bundled';
+    const rerendered = resolveMarkerImage({ uri: 'http://192.168.1.1/admin/pin.png' });
+
+    expect(rerendered).toBe(resolved);
+    expect(rerendered?.origin).toBeUndefined();
   });
 
   test('caches require() resolutions by module id', () => {

@@ -1,6 +1,11 @@
 import type { MarkerImage } from '../native/specs/overlays';
 
-function copyMarkerImage(image: MarkerImage): MarkerImage {
+/**
+ * A new `MarkerImage` holding only the fields the native side reads, with a `null` field
+ * left out, since Nitro throws on one. `origin` is never copied: the library stamps
+ * provenance, it does not read it from the input.
+ */
+export function copyMarkerImage(image: MarkerImage): MarkerImage {
   return {
     uri: image.uri,
     width: image.width ?? undefined,
@@ -21,14 +26,6 @@ export function markerImageFromResolvedAsset(
   }
 
   return { ...copyMarkerImage(resolved), origin: 'bundled' };
-}
-
-export function markerImageWithoutNulls(image: MarkerImage): MarkerImage {
-  if (image.width === null || image.height === null || image.scale === null) {
-    return copyMarkerImage(image);
-  }
-
-  return image;
 }
 
 export function isMarkerImage(value: unknown): value is MarkerImage {

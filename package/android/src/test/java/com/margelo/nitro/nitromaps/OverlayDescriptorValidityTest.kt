@@ -6,6 +6,14 @@ import org.junit.Test
 
 class OverlayDescriptorValidityTest {
   @Test
+  fun requiresAPlaceableCoordinateForAMarker() {
+    assertTrue(marker(coordinate = point()).isValid())
+    assertFalse(marker(coordinate = point(latitude = Double.NaN)).isValid())
+    assertFalse(marker(coordinate = point(longitude = Double.NEGATIVE_INFINITY)).isValid())
+    assertFalse(marker(coordinate = point(latitude = 90.0001)).isValid())
+  }
+
+  @Test
   fun requiresTwoPlaceablePointsForAPolyline() {
     assertFalse(polyline().isValid())
     assertFalse(polyline(point()).isValid())

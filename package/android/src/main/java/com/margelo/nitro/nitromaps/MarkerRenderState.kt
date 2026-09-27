@@ -10,8 +10,14 @@ package com.margelo.nitro.nitromaps
  *
  * [setMarkers], [setClusteringEnabled] and [attachMap] return whether the caller
  * has to redraw the markers.
+ *
+ * Markers whose coordinate cannot be placed are dropped on the way in and reported
+ * to [onSkippedMarker], so neither the synchronous path nor the viewport pipeline
+ * ever sees one. JS drops them too, but `hybridRef` reaches [setMarkers] directly.
  */
-internal class MarkerRenderState {
+internal class MarkerRenderState(
+  private val onSkippedMarker: (MarkerDescriptor) -> Unit = {},
+) {
   var descriptors: Array<MarkerDescriptor> = emptyArray()
     private set
 
@@ -33,12 +39,13 @@ internal class MarkerRenderState {
 
   fun setMarkers(next: Array<MarkerDescriptor>?): Boolean {
     val nextDescriptors = next ?: emptyArray()
+    // Fingerprinted as delivered, so redelivering drawn markers skips the filter and its reports.
     val nextFingerprint = nextDescriptors.markersFingerprint()
     if (nextFingerprint == fingerprint && isDrawn) {
       return false
     }
 
-    descriptors = nextDescriptors
+    descriptors = placeable(nextDescriptors)
     fingerprint = nextFingerprint
     if (!isMapAttached) {
       // Nothing reached the map, so nothing may be remembered as drawn.
@@ -79,6 +86,12 @@ internal class MarkerRenderState {
     descriptors = emptyArray()
     fingerprint = 0L
     isDrawn = false
+  }
+
+  private fun placeable(delivered: Array<MarkerDescriptor>): Array<MarkerDescriptor> {
+    val (placeable, skipped) = delivered.partition { it.isValid() }
+    skipped.forEach(onSkippedMarker)
+    return placeable.toTypedArray()
   }
 
   private companion object {

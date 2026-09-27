@@ -5,6 +5,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.InetAddress
+import java.net.URL
 
 class RemoteMarkerUriPolicyTest {
   @Test
@@ -81,6 +83,43 @@ class RemoteMarkerUriPolicyTest {
     assertEquals(
       "host not allowlisted",
       rejectReason("http://10.0.2.2:8095/pin.png", origin = MarkerImageOrigin.REMOTE),
+    )
+  }
+
+  @Test
+  fun checksEveryAddressAHostNameResolvesTo() {
+    val publicAddress = InetAddress.getByAddress(byteArrayOf(93, 184.toByte(), 216.toByte(), 34))
+    val privateAddress = InetAddress.getByAddress(byteArrayOf(10, 0, 0, 1))
+
+    fun reasonFor(vararg addresses: InetAddress) =
+      RemoteMarkerUriPolicy.rejectReason(
+        "https://cdn.example.com/pin.png",
+        resolveHostAddress = true,
+        resolveHost = { arrayOf(*addresses) },
+      )
+
+    assertNull(reasonFor(publicAddress))
+    // The connection would move on to the private address if the public one did not answer.
+    assertEquals("host not allowlisted", reasonFor(publicAddress, privateAddress))
+    assertEquals("host not allowlisted", reasonFor())
+  }
+
+  @Test
+  fun followsARedirectOnlyOnHttpAndNeverDownToIt() {
+    fun reasonFor(
+      from: String,
+      to: String,
+    ) = RemoteMarkerUriPolicy.redirectRejectReason(URL(from), URL(to))
+
+    assertNull(reasonFor("http://cdn.example.com/pin.png", "https://cdn.example.com/pin.png"))
+    assertNull(reasonFor("https://cdn.example.com/pin.png", "https://img.example.com/pin.png"))
+    assertEquals(
+      "redirect from https to http",
+      reasonFor("https://cdn.example.com/pin.png", "http://cdn.example.com/pin.png"),
+    )
+    assertEquals(
+      "redirect to an unsupported scheme",
+      reasonFor("http://cdn.example.com/pin.png", "file:///sdcard/pin.png"),
     )
   }
 

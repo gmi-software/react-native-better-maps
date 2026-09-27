@@ -36,6 +36,8 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Google Maps setup](#google-maps-setup)
 - [Marker entering animations](#marker-entering-animations)
 - [Re-renders](#re-renders)
+- [Overlay ids](#overlay-ids)
+- [Overlay presses](#overlay-presses)
 - [Invalid input](#invalid-input)
 - [Capability matrix](#capability-matrix)
 - [Public API](#public-api)
@@ -252,6 +254,149 @@ function ControlledMap() {
 }
 ```
 
+`animateToRegion` takes the `Region` that the `region` prop takes and
+`onRegionChangeComplete` reports, so a view saved from the event can be
+animated back to later:
+
+```tsx
+import { useRef } from 'react';
+import {
+  MapView,
+  type MapViewRef,
+  type Region,
+} from 'react-native-better-maps';
+
+function MapWithSavedView() {
+  const mapRef = useRef<MapViewRef>(null);
+  const savedRegion = useRef<Region | null>(null);
+
+  const returnToSavedView = () => {
+    if (savedRegion.current != null) {
+      mapRef.current?.animateToRegion(savedRegion.current, 500);
+    }
+  };
+
+  return (
+    <MapView
+      ref={mapRef}
+      style={{ flex: 1 }}
+      onRegionChangeComplete={(region) => {
+        savedRegion.current = region;
+      }}
+    />
+  );
+}
+```
+
+The region is framed as the `region` prop frames it: all of it in view, inside
+`mapPadding`, north up and flat. Its proportions rarely match the map's, so one
+axis shows more than the region asks for.
+
+Durations are in milliseconds, for `animateCamera` and `animateToRegion`
+alike, as in react-native-maps. Both default to `250`, and `0` moves the camera
+without animating. Up to 1.2.1 `animateCamera` took seconds, so multiply a
+duration passed to it by 1000 when upgrading.
+
+#### When the ref is usable
+
+The native map is created after React commits, so `mapRef.current` is populated
+before there is anything native behind it. Calls made in that window are held
+and replayed, in the order they were made, as soon as the native map exists:
+
+```tsx
+import { useEffect, useRef } from 'react';
+import {
+  MapView,
+  type Coordinate,
+  type MapViewRef,
+} from 'react-native-better-maps';
+
+function FittedMap({ points }: { points: Coordinate[] }) {
+  const mapRef = useRef<MapViewRef>(null);
+
+  useEffect(() => {
+    // Runs before the native map exists, and still moves the camera.
+    mapRef.current
+      ?.fitToCoordinates(points, undefined, true)
+      .catch((error: Error) => console.warn(error.message));
+  }, [points]);
+
+  return <MapView ref={mapRef} style={{ flex: 1 }} />;
+}
+```
+
+So no call needs `setTimeout`, a retry, or an `onMapReady` handler to be safe.
+`onMapReady` reports something later and different - that the map finished
+loading its tiles - and is the right hook for showing your own UI on top of a
+map that has actually drawn.
+
+A call still waiting when the map view unmounts rejects, as does any call made
+afterwards, so handle the rejection the way the example above does. Development
+builds wrapped in React's `<StrictMode>` see this on every mount: React tears
+the effect down and sets it up again, the first call is rejected by that
+teardown, and the second one does the work.
+
+#### Screen points
+
+`pointForCoordinate` and `coordinateForPoint` convert between a coordinate and a
+position on the map view, which is what placing React Native content exactly
+over the map takes - a label, a custom callout, an animated pointer. A `Point`
+is in density-independent pixels from the top-left corner of the map view, the
+units and origin of the map view's own layout on both platforms:
+
+```tsx
+import { useCallback, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import {
+  MapView,
+  Marker,
+  type MapViewRef,
+  type Point,
+} from 'react-native-better-maps';
+
+const warsaw = { latitude: 52.2297, longitude: 21.0122 };
+
+function LabelledMap() {
+  const mapRef = useRef<MapViewRef>(null);
+  const [labelPoint, setLabelPoint] = useState<Point | null>(null);
+
+  const placeLabel = useCallback(() => {
+    mapRef.current
+      ?.pointForCoordinate(warsaw)
+      .then(setLabelPoint)
+      .catch((error: Error) => console.warn(error.message));
+  }, []);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFill}
+        onMapReady={placeLabel}
+        onRegionChangeComplete={placeLabel}
+      >
+        <Marker coordinate={warsaw} />
+      </MapView>
+      {labelPoint != null && (
+        // The map fills this parent, so a point on the map is also a position in it.
+        <Text
+          pointerEvents="none"
+          style={{ position: 'absolute', left: labelPoint.x, top: labelPoint.y }}
+        >
+          Warsaw
+        </Text>
+      )}
+    </View>
+  );
+}
+```
+
+A point describes the camera at the time of the call, so convert again once the
+camera has moved; `onRegionChangeComplete` reports the moves the user makes. A
+coordinate that is off screen converts to a point outside the map view's
+bounds. Both calls reject straight away for input that is not on the map: a
+coordinate outside ±90 / ±180, or a point whose `x` or `y` is not finite.
+
 ## Map providers
 
 `MapView` accepts an optional `provider` prop:
@@ -376,12 +521,14 @@ Supported image sources:
 A remote URL you pass yourself — `image={{ uri: someUrl }}` — is checked on both platforms before
 the image is fetched. The URL must use `http`/`https`, must not carry `user:password@`, and its
 host must not resolve to a private address: loopback, any-local, link-local, site-local,
-multicast, IPv6 unique-local, a `.local`/`.localhost` name, or a cloud metadata endpoint. This
-guards the common case of a marker icon URL arriving as data from an API.
+multicast, IPv6 unique-local, a `.local`/`.localhost` name, or a cloud metadata endpoint. Every
+redirect target is checked the same way, so a permitted host cannot forward the fetch to a blocked
+one, and a redirect from `https` to `http` is not followed. This guards the common case of a
+marker icon URL arriving as data from an API.
 
-On iOS every redirect destination is checked the same way, so a permitted host cannot forward the
-fetch to a blocked one. Android follows redirects without re-checking them; until that is fixed,
-treat the Android check as covering the URL you pass, not the address finally reached.
+Android also checks the address the connection is actually made to, before it sends the request.
+iOS checks the name only: `URLSession` resolves it again to connect, so a DNS answer that changes
+in between is not re-checked there.
 
 A rejected URL logs `Rejected remote marker image URI` — under the `NitroMaps` logcat tag on
 Android, and under the `NitroMaps` category of the `com.nitromaps` subsystem in the unified log
@@ -592,19 +739,73 @@ setMarkers((current) =>
 );
 ```
 
+## Overlay ids
+
+Every overlay child has an id: native code diffs overlays by it, and `onMarkerPress`, `onMarkerDragEnd`, `onClusterPress`, `onPolylinePress`, `onPolygonPress` and `onCirclePress` report it. `MapView` takes the first of:
+
+1. the `id` prop,
+2. the element's React `key`,
+3. the overlay's position among those of its kind that have neither: `marker-0`, `marker-1`, …, `polyline-0`, … (`geojson-0` for a `<Geojson>` layer).
+
+A keyed list therefore needs nothing more, and the callbacks hand back your own ids:
+
+```tsx
+<MapView
+  style={{ flex: 1 }}
+  onMarkerPress={(id) => setSelected(stops.find((stop) => stop.id === id))}
+>
+  {stops.map((stop) => (
+    <Marker key={stop.id} coordinate={stop.coordinate} title={stop.name} />
+  ))}
+</MapView>
+```
+
+Removing a stop removes one marker and leaves the others alone. With positional ids, every marker after it would take over the id of the one before: it is redrawn, reported under another id, and entering animations play on the wrong marker. React does not warn about a list without keys here, because `MapView` never renders its children, so `MapView` warns once in development instead, when the number of overlays without an `id` or `key` changes.
+
+Ids only have to be unique per kind: a marker and a polyline may share one. Keys only have to be unique within one list, so when two lists hand `MapView` the same key, the later overlay gets `#2` appended (`"42#2"`) and a development warning, rather than one of the two silently not being drawn. An `id` prop is used as given - a key or position that collides with it gets the suffix instead - and two overlays of one kind with the same `id` prop are reported in development, since only one of them is drawn.
+
+## Overlay presses
+
+A polyline, polygon or circle reports taps only when it is tappable. A `<Polyline>`, `<Polygon>` or `<Circle>` child with an `onPress` is tappable automatically. Anything else - a child without `onPress`, and every descriptor in the bulk `polylines` / `polygons` / `circles` props - needs `tappable: true` before `onPolylinePress`, `onPolygonPress` or `onCirclePress` fires for it:
+
+```tsx
+<MapView
+  style={{ flex: 1 }}
+  circles={[
+    {
+      id: 'delivery-zone',
+      center: { latitude: 52.2297, longitude: 21.0122 },
+      radius: 1500,
+      tappable: true,
+    },
+  ]}
+  onCirclePress={(id) => console.log('pressed', id)}
+/>
+```
+
+A tap on a shape that is not tappable passes through to the map and fires `onPress`.
+
+> **Behavior change after 1.2.1:** circles used to be tappable by default on Apple Maps and on Google Maps for Android, but not on Google Maps for iOS. They now default to not tappable on every provider, like polylines and polygons. If you handle presses on bulk `circles`, or on `<Circle>` children without `onPress`, through `onCirclePress`, add `tappable: true` to them.
+
 ## Invalid input
 
 A coordinate that arrives as `NaN` or out of range is dropped instead of being forwarded to MapKit and the Google Maps SDK, which throw on it:
 
 - An invalid `region` is ignored, and the map keeps the region it already had.
+- An invalid `camera` is ignored the same way, and a pitch past the range the SDKs draw is pulled back to it rather than rejected.
+- `setCamera` and `animateCamera` reject an invalid camera instead of ignoring it, straight away and on both platforms - unlike a prop, they have a promise to report it on. A pitch past the drawable range is pulled back for them too.
+- `animateToRegion` rejects an invalid region the same way.
+- `pointForCoordinate` and `coordinateForPoint` reject a coordinate outside the world, or a point whose `x` or `y` is not finite, the same way.
 - An overlay whose coordinates, ring length or radius cannot be drawn is skipped; its neighbours still render.
-- Anything supplied through `region` or through a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
+- Anything supplied through `region`, `camera`, the bulk `markers` prop, or a `<Marker>` / `<Polyline>` / `<Polygon>` / `<Circle>` child is reported through `console.warn` in development.
 
-Where the check runs depends on the entry point. `region` and `fitToCoordinates` are guarded natively on both platforms, so a `hybridRef` call cannot reach the SDKs either. Overlay descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down; those skips are reported to logcat rather than `console.warn`.
+Where the check runs depends on the entry point. `region`, `camera`, `fitToCoordinates`, the two point conversions and marker descriptors are guarded natively on both platforms, so a `hybridRef` call - `setCamera`, `animateCamera` and `animateToRegion` included - cannot reach the SDKs either. Polyline, polygon and circle descriptors are additionally filtered natively on Android, where an undrawable overlay throws inside the Fabric mount transaction and would otherwise take the whole screen down. Native skips are reported to logcat on Android rather than through `console.warn`.
 
-Two gaps are worth knowing about: the `camera` prop is not validated anywhere, and descriptors passed through the bulk `markers` prop are checked on neither side - only the `<Marker>` child is.
+One gap is worth knowing about: descriptors passed through the bulk `polylines` / `polygons` / `circles` props are checked only natively on Android - on iOS they reach MapKit and the Google Maps SDK unchecked, and neither platform warns about them in development.
 
-Valid means: latitude and longitude finite and within ±90 / ±180, region deltas finite and greater than 0, two coordinates for a polyline, three per polygon ring, and a finite radius of at least 0 for a circle. A region whose span would run past a pole is pulled back to what the map can show rather than rejected.
+Valid means: latitude and longitude finite and within ±90 / ±180, region deltas finite and greater than 0, camera `zoom` / `heading` / `pitch` / `altitude` finite when supplied (with `zoom` and `heading` also small enough for the 32-bit float the SDKs keep them in), two coordinates for a polyline, three per polygon ring, and a finite radius of at least 0 for a circle. A region whose span would run past a pole is pulled back to what the map can show rather than rejected.
+
+An optional overlay field set to `null` - the way JSON data usually says "no value" - is treated as if it were left out: `title: null`, `image: null` or `strokeColor: null` behave like no title, no image and the default stroke, in overlay children and bulk props alike.
 
 ## Capability matrix
 
@@ -612,13 +813,16 @@ Valid means: latitude and longitude finite and within ±90 / ±180, region delta
 | -------------------------- | ----------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Region / camera            | Supported                                                   | Supported                                  | Supported                                  |
 | Camera animation           | Supported                                                   | Supported                                  | Supported                                  |
+| Animate to region          | Supported                                                   | Supported                                  | Supported                                  |
 | Visible region             | Supported                                                   | Supported                                  | Supported                                  |
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
+| Screen point conversion    | Supported                                                   | Supported                                  | Supported                                  |
 | Map types                  | Standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain       | Standard, satellite, hybrid, terrain       |
 | Gestures                   | Supported                                                   | Supported                                  | Supported                                  |
 | User location              | Supported; host app owns permission prompt                  | Supported; host app owns permission prompt | Supported; host app owns permission prompt |
+| Follow user location       | Supported                                                   | Supported                                  | Unsupported; debug builds log a warning    |
 | Compass                    | Supported                                                   | Supported                                  | Supported                                  |
-| Scale control              | Supported                                                   | Unsupported                                | Unsupported                                |
+| Scale control              | Supported                                                   | Unsupported                                | Unsupported; debug builds log a warning    |
 | Markers / overlays         | Supported                                                   | Supported                                  | Supported                                  |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |
@@ -650,6 +854,7 @@ Valid means: latitude and longitude finite and within ±90 / ±180, region delta
 | Type                         | Description                                           |
 | ---------------------------- | ----------------------------------------------------- |
 | `Coordinate`                 | `{ latitude, longitude }`                             |
+| `Point`                      | `{ x, y }` in dp from the map view's top-left corner  |
 | `Region`                     | Center + span                                         |
 | `Camera`                     | Position, zoom, heading, pitch                        |
 | `MapType`                    | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'`  |
@@ -659,7 +864,7 @@ Valid means: latitude and longitude finite and within ±90 / ±180, region delta
 | `GooglePoiPressEvent`        | Google Maps POI payload with place ID                 |
 | `ApplePoiCategory`           | Known MapKit POI categories plus `unknown`            |
 | `ApplePoiDetailPresentation` | `'automatic' \| 'callout' \| 'sheet' \| 'openInMaps'` |
-| `MapViewRef`                 | Imperative handle for camera control                  |
+| `MapViewRef`                 | Imperative handle for the camera and screen points    |
 | `MapViewProps`               | Props for `MapView`                                   |
 | `MapViewPropsForProvider`    | Provider-specific `MapView` props                     |
 | `MarkerDescriptor`           | Bulk marker descriptor                                |
@@ -724,6 +929,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 | Provider throws before rendering            | Check the [supported platforms](#supported-platforms) table. `openstreetmap` and `mapbox` are reserved for future support but do not render yet.               |
 | Expo Go does not load native maps           | Use a development build after `expo prebuild`; native Nitro modules are not available in Expo Go.                                                              |
 | Marker animations affect gesture smoothness | For very large marker sets, prefer clustering, shorter durations, or disable marker/cluster entering animations.                                               |
+| `MapView is not mounted` from a ref call    | The map view has unmounted. Calls made before the native map exists are held and replayed, so a freshly mounted map is not the cause.                          |
 
 ## Development
 

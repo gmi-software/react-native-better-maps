@@ -1,5 +1,26 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from 'bun:test';
 import type { MarkerDescriptor } from '../../types/overlays';
+
+const warnSpy = spyOn(console, 'warn');
+const previousDev = (globalThis as { __DEV__?: boolean }).__DEV__;
+
+function restoreDevFlag(): void {
+  const globalDev = globalThis as { __DEV__?: boolean };
+  if (previousDev === undefined) {
+    delete globalDev.__DEV__;
+    return;
+  }
+
+  globalDev.__DEV__ = previousDev;
+}
 
 const resolveAssetSourceMock = mock(
   (
@@ -36,10 +57,66 @@ const baseDescriptor = {
   zIndex: 3,
 } satisfies MarkerDescriptor;
 
+function withCoordinate(
+  id: string,
+  latitude: number,
+  longitude: number,
+): MarkerDescriptor {
+  return { ...baseDescriptor, id, coordinate: { latitude, longitude } };
+}
+
 describe('normalizeMarkerDescriptors', () => {
   beforeEach(() => {
     resolveAssetSourceMock.mockClear();
     clearResolvedMarkerImageCacheForTests();
+    warnSpy.mockClear();
+    (globalThis as { __DEV__?: boolean }).__DEV__ = true;
+  });
+
+  afterEach(() => {
+    warnSpy.mockClear();
+    restoreDevFlag();
+  });
+
+  test('skips a descriptor whose coordinate cannot be placed and keeps its neighbours in order', () => {
+    const normalized = normalizeMarkerDescriptors([
+      withCoordinate('first', 52.23, 21.01),
+      withCoordinate('nan', Number.NaN, 21.01),
+      withCoordinate('infinite', 52.23, Number.POSITIVE_INFINITY),
+      withCoordinate('out-of-range', 1000, 0),
+      withCoordinate('last', 50.06, 19.94),
+    ]);
+
+    expect(normalized.map((descriptor) => descriptor.id)).toEqual([
+      'first',
+      'last',
+    ]);
+  });
+
+  test('warns once per skipped descriptor, naming its id', () => {
+    normalizeMarkerDescriptors([
+      withCoordinate('bad-1', Number.NaN, Number.NaN),
+      withCoordinate('good', 52.23, 21.01),
+      withCoordinate('bad-2', Number.POSITIVE_INFINITY, 0),
+    ]);
+
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    expect(warnSpy.mock.calls[0]?.[0]).toContain(
+      'marker "bad-1" skipped: invalid coordinate',
+    );
+    expect(warnSpy.mock.calls[1]?.[0]).toContain(
+      'marker "bad-2" skipped: invalid coordinate',
+    );
+  });
+
+  test('skips a descriptor that has no coordinate at all', () => {
+    const normalized = normalizeMarkerDescriptors([
+      { ...baseDescriptor, id: 'undefined', coordinate: undefined as never },
+      { ...baseDescriptor, id: 'null', coordinate: null as never },
+    ]);
+
+    expect(normalized).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 
   test('carries a descriptor without an image across unchanged', () => {

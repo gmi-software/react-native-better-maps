@@ -17,6 +17,7 @@ export interface MapScenarioAdvancedOptions {
   customMapStyle?: string;
   mapPadding?: EdgePadding;
   fitToCoordinatesOnReady?: boolean;
+  fitToCoordinatesOnMount?: boolean;
 }
 
 export interface MapScenario {

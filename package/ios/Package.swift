@@ -17,6 +17,18 @@ let package = Package(
       path: "Geometry"
     ),
     .target(
+      name: "NitroMapsClusterBadge",
+      path: "ClusterBadge"
+    ),
+    .target(
+      name: "NitroMapsAdapterSlot",
+      path: "AdapterSlot"
+    ),
+    .target(
+      name: "NitroMapsShapeDiff",
+      path: "ShapeDiff"
+    ),
+    .target(
       name: "NitroMapsRemoteImagePolicy",
       path: "RemoteImagePolicy"
     ),
@@ -29,6 +41,22 @@ let package = Package(
       name: "NitroMapsGeometryTests",
       dependencies: ["NitroMapsGeometry"],
       path: "Tests/Geometry"
+    ),
+    .testTarget(
+      name: "NitroMapsClusterBadgeTests",
+      // The color parser checks that every color in the style is valid hex.
+      dependencies: ["NitroMapsClusterBadge", "NitroMapsColorParser"],
+      path: "Tests/ClusterBadge"
+    ),
+    .testTarget(
+      name: "NitroMapsAdapterSlotTests",
+      dependencies: ["NitroMapsAdapterSlot"],
+      path: "Tests/AdapterSlot"
+    ),
+    .testTarget(
+      name: "NitroMapsShapeDiffTests",
+      dependencies: ["NitroMapsShapeDiff"],
+      path: "Tests/ShapeDiff"
     ),
     .testTarget(
       name: "NitroMapsRemoteImagePolicyTests",

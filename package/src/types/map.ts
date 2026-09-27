@@ -66,13 +66,24 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Whether to show the user's current location on the map. */
   showsUserLocation?: boolean;
 
-  /** Whether the map camera should follow the user's location. */
+  /**
+   * Whether the map camera should follow the user's location. Needs
+   * `showsUserLocation` as well.
+   *
+   * Ignored on Android, where Google Maps has no follow mode; debug builds log
+   * a warning. Call `animateCamera` from a location listener instead.
+   */
   followsUserLocation?: boolean;
 
   /** Whether to show the compass control. */
   showsCompass?: boolean;
 
-  /** Padding applied to map edges, in density-independent pixels. */
+  /**
+   * Padding applied to map edges, in density-independent pixels.
+   *
+   * `region` is fitted into the area the padding leaves over, and
+   * `fitToCoordinates` padding is added on top of it.
+   */
   mapPadding?: EdgePadding;
 
   /**
@@ -140,7 +151,10 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
   /** Google Map IDs require the explicit Google provider. */
   googleMapId?: never;
 
-  /** Whether to show the scale control (supported by Apple MapKit). */
+  /**
+   * Whether to show the scale control. Apple MapKit only: ignored on Android,
+   * where the Google Maps SDK has no scale control; debug builds log a warning.
+   */
   showsScale?: boolean;
 
   /**

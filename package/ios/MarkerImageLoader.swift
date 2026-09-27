@@ -4,7 +4,14 @@ import UIKit
 /// Loads marker images from bundled assets or remote URLs with in-memory caching.
 /// Local images decode off-thread; completions always land on main.
 enum MarkerImageLoader {
-  private static let cache = NSCache<NSString, UIImage>()
+  private static let maximumCachedImages = 256
+  private static let maximumCacheBytes = 32 * 1024 * 1024
+  private static let cache: NSCache<NSString, UIImage> = {
+    let cache = NSCache<NSString, UIImage>()
+    cache.countLimit = maximumCachedImages
+    cache.totalCostLimit = maximumCacheBytes
+    return cache
+  }()
   /// Not `URLSession.shared`, which cannot carry a delegate: without one the policy would check
   /// the URL the app supplied and then follow a redirect anywhere, which is the cheapest way to
   /// defeat it — an attacker-controlled public host answering 302 to a private address.
@@ -53,7 +60,7 @@ enum MarkerImageLoader {
     decodeQueue.async {
       let loaded = loadLocal(uri: uri, image: image)
       if let loaded {
-        cache.setObject(loaded, forKey: cacheKey)
+        cache.setObject(loaded, forKey: cacheKey, cost: byteCost(of: loaded))
       }
       DispatchQueue.main.async {
         completion(loaded)
@@ -171,7 +178,7 @@ enum MarkerImageLoader {
       if let data, let decoded = UIImage(data: data) {
         uiImage = resize(decoded, image: image)
         if let uiImage {
-          cache.setObject(uiImage, forKey: cacheKey)
+          cache.setObject(uiImage, forKey: cacheKey, cost: byteCost(of: uiImage))
         }
       } else {
         uiImage = nil
@@ -223,6 +230,13 @@ enum MarkerImageLoader {
         completionHandler(request)
       }
     }
+  }
+
+  /// Decoded size in bytes, so the cache evicts by memory rather than by count.
+  private static func byteCost(of image: UIImage) -> Int {
+    let pixelWidth = Int(image.size.width * image.scale)
+    let pixelHeight = Int(image.size.height * image.scale)
+    return max(1, pixelWidth * pixelHeight * 4)
   }
 
   private static func resize(_ uiImage: UIImage, image: MarkerImage) -> UIImage {

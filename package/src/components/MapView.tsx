@@ -2,12 +2,13 @@ import {
   useCallback,
   useImperativeHandle,
   useMemo,
-  useRef,
   type Ref,
-  type RefObject,
 } from 'react';
+import { runWithValidCamera } from '../camera/runWithValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
+import { useMapViewCommands } from '../hooks/useMapViewCommands';
 import { useNitroCallback } from '../hooks/useNitroCallback';
+import { useStableCameraProps } from '../hooks/useStableCameraProps';
 import { useStableValue } from '../hooks/useStableValue';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
@@ -23,27 +24,22 @@ import {
 } from '../overlays/descriptorEquality';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
+import {
+  normalizeCircleDescriptors,
+  normalizePolygonDescriptors,
+  normalizePolylineDescriptors,
+} from '../overlays/normalizeShapeDescriptors';
+import {
+  runWithValidCoordinate,
+  runWithValidPoint,
+} from '../projection/runWithValidInput';
 import { resolveMapProvider } from '../providers';
 import { resolveFitCoordinates } from '../region/resolveFitCoordinates';
-import { useValidRegion } from '../region/useValidRegion';
+import { runWithValidRegion } from '../region/runWithValidRegion';
 import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
-
-const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
-
-function withHybridRef<T>(
-  hybridRef: RefObject<NativeMapViewHybrid | null>,
-  run: (hybrid: NativeMapViewHybrid) => T,
-): T {
-  const hybrid = hybridRef.current;
-  if (hybrid == null) {
-    return Promise.reject(new Error(MAP_VIEW_NOT_MOUNTED_ERROR)) as T;
-  }
-
-  return run(hybrid);
-}
 
 export function MapView({
   ref,
@@ -86,7 +82,10 @@ export function MapView({
   onCirclePress: onCirclePressProp,
 }: MapViewProps & { ref?: Ref<MapViewRef> }) {
   const resolvedProvider = resolveMapProvider(provider);
-  const hybridRef = useRef<NativeMapViewHybrid>(null);
+  // Both are creation-time SDK configuration, so changing either remounts the
+  // native view.
+  const nativeViewKey = `${resolvedProvider}:${googleMapId ?? ''}`;
+  const commands = useMapViewCommands(nativeViewKey);
   const {
     markers: collectedMarkers,
     polylines: collectedPolylines,
@@ -104,6 +103,23 @@ export function MapView({
       markersProp != null ? normalizeMarkerDescriptors(markersProp) : null,
     [markersProp],
   );
+  const normalizedBulkPolylines = useMemo(
+    () =>
+      polylinesProp != null
+        ? normalizePolylineDescriptors(polylinesProp)
+        : null,
+    [polylinesProp],
+  );
+  const normalizedBulkPolygons = useMemo(
+    () =>
+      polygonsProp != null ? normalizePolygonDescriptors(polygonsProp) : null,
+    [polygonsProp],
+  );
+  const normalizedBulkCircles = useMemo(
+    () =>
+      circlesProp != null ? normalizeCircleDescriptors(circlesProp) : null,
+    [circlesProp],
+  );
 
   // Everything below is rebuilt whenever `children`, a bulk prop or an animation
   // prop changes identity - which for inline JSX is every render. Nitro would
@@ -114,15 +130,15 @@ export function MapView({
     markerListsEqual,
   );
   const polylines = useStableValue(
-    polylinesProp ?? collectedPolylines,
+    normalizedBulkPolylines ?? collectedPolylines,
     polylineListsEqual,
   );
   const polygons = useStableValue(
-    polygonsProp ?? collectedPolygons,
+    normalizedBulkPolygons ?? collectedPolygons,
     polygonListsEqual,
   );
   const circles = useStableValue(
-    circlesProp ?? collectedCircles,
+    normalizedBulkCircles ?? collectedCircles,
     circleListsEqual,
   );
   const markerEntering = useStableValue(
@@ -133,7 +149,7 @@ export function MapView({
     normalizeEnteringAnimation(clusterEnteringAnimation),
     enteringAnimationsEqual,
   );
-  const validRegion = useValidRegion(region);
+  const cameraProps = useStableCameraProps({ region, camera, mapPadding });
 
   const hasMarkerPress =
     onMarkerPressProp != null || hasCollectedMarkerPress;
@@ -149,9 +165,12 @@ export function MapView({
     | ((event: PoiPressEvent) => void)
     | undefined;
 
-  const handleHybridRef = useCallback((nativeRef: NativeMapViewHybrid) => {
-    hybridRef.current = nativeRef;
-  }, []);
+  const handleHybridRef = useCallback(
+    (nativeRef: NativeMapViewHybrid) => {
+      commands.attach(nativeRef);
+    },
+    [commands],
+  );
 
   const handleMarkerPress = useCallback(
     (id: string) => {
@@ -254,38 +273,53 @@ export function MapView({
   useImperativeHandle(
     ref,
     () => ({
-      getCamera: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.fetchCamera()),
+      getCamera: () => commands.run((hybrid) => hybrid.fetchCamera()),
       setCamera: (nextCamera) =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.applyCamera(nextCamera)),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.applyCamera(nextCamera)),
+        ),
       animateCamera: (nextCamera, duration) =>
-        withHybridRef(hybridRef, (hybrid) =>
-          hybrid.animateCamera(nextCamera, duration),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.animateCamera(nextCamera, duration)),
+        ),
+      animateToRegion: (nextRegion, duration) =>
+        runWithValidRegion(nextRegion, () =>
+          commands.run((hybrid) =>
+            hybrid.animateToRegion(nextRegion, duration),
+          ),
         ),
       getVisibleRegion: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.getVisibleRegion()),
+        commands.run((hybrid) => hybrid.getVisibleRegion()),
       fitToCoordinates: (coordinates, padding, animated) =>
-        withHybridRef(hybridRef, (hybrid) =>
+        commands.run((hybrid) =>
           hybrid.fitToCoordinates(
             resolveFitCoordinates(coordinates),
             padding,
             animated,
           ),
         ),
+      pointForCoordinate: (coordinate) =>
+        runWithValidCoordinate(coordinate, () =>
+          commands.run((hybrid) => hybrid.pointForCoordinate(coordinate)),
+        ),
+      coordinateForPoint: (point) =>
+        runWithValidPoint(point, () =>
+          commands.run((hybrid) => hybrid.coordinateForPoint(point)),
+        ),
     }),
-    [],
+    [commands],
   );
 
   return (
     <NativeMapView
-      key={`${resolvedProvider}:${googleMapId ?? ''}`}
+      key={nativeViewKey}
       style={style}
       hybridRef={hybridRefCallback}
       provider={resolvedProvider}
       googleMapId={googleMapId}
       mapType={mapType}
-      region={validRegion}
-      camera={camera}
+      region={cameraProps.region}
+      camera={cameraProps.camera}
       scrollEnabled={scrollEnabled}
       zoomEnabled={zoomEnabled}
       rotateEnabled={rotateEnabled}
@@ -297,7 +331,7 @@ export function MapView({
       applePoiDetailPresentation={applePoiDetailPresentation}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
-      mapPadding={mapPadding}
+      mapPadding={cameraProps.mapPadding}
       markerEnteringAnimation={markerEntering}
       clusterEnteringAnimation={clusterEntering}
       markers={markers}

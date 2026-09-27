@@ -1,5 +1,8 @@
 package com.margelo.nitro.nitromaps
 
+/** A marker is placed by its coordinate alone; clustering one that cannot be placed throws in `LatLngBounds`. */
+internal fun MarkerDescriptor.isValid(): Boolean = coordinate.isValid()
+
 /** A polyline needs two placeable points before `GoogleMap.addPolyline` accepts it. */
 internal fun PolylineDescriptor.isValid(): Boolean = coordinates.isValidPath(MINIMUM_POLYLINE_SIZE)
 

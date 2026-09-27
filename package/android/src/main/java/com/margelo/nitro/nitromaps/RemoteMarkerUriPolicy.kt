@@ -4,6 +4,7 @@ import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.URI
 import java.net.URISyntaxException
+import java.net.URL
 import java.net.UnknownHostException
 import java.util.Locale
 
@@ -39,7 +40,21 @@ internal object RemoteMarkerUriPolicy {
       return null
     }
 
-    val uri = parseUri(image.uri) ?: return "invalid URI"
+    return rejectReason(image.uri, resolveHostAddress)
+  }
+
+  /**
+   * The same check for a URI that carries no bundled origin, such as where a user-supplied
+   * image redirects to.
+   *
+   * @param resolveHost looks up every address of a host name; a seam for tests.
+   */
+  fun rejectReason(
+    uriString: String,
+    resolveHostAddress: Boolean,
+    resolveHost: (String) -> Array<InetAddress> = { host -> InetAddress.getAllByName(host) },
+  ): String? {
+    val uri = parseUri(uriString) ?: return "invalid URI"
 
     when (uri.scheme?.lowercase(Locale.US)) {
       "http", "https" -> Unit
@@ -52,11 +67,29 @@ internal object RemoteMarkerUriPolicy {
     }
 
     val host = uri.host?.lowercase(Locale.US)?.takeIf { it.isNotEmpty() } ?: return "missing host"
-    if (!isAllowlistedHost(host, resolveHostAddress)) {
+    if (!isAllowlistedHost(host, resolveHostAddress, resolveHost)) {
       return "host not allowlisted"
     }
 
     return null
+  }
+
+  /**
+   * Returns why a redirect from [from] to [target] must not be followed, or `null` when it may
+   * be. This holds for bundled images too: a redirect stays on `http`/`https`, and never goes from
+   * `https` down to `http`, which the platform does not follow either. The host of a user-supplied
+   * image's target still has to pass [rejectReason], like any other URI.
+   */
+  fun redirectRejectReason(
+    from: URL,
+    target: URL,
+  ): String? {
+    val scheme = target.protocol.lowercase(Locale.US)
+    return when {
+      scheme != "http" && scheme != "https" -> "redirect to an unsupported scheme"
+      scheme == "http" && from.protocol.equals("https", ignoreCase = true) -> "redirect from https to http"
+      else -> null
+    }
   }
 
   private fun parseUri(uriString: String): URI? =
@@ -69,6 +102,7 @@ internal object RemoteMarkerUriPolicy {
   private fun isAllowlistedHost(
     host: String,
     resolveHostAddress: Boolean,
+    resolveHost: (String) -> Array<InetAddress>,
   ): Boolean {
     if (host == "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
       return false
@@ -81,14 +115,16 @@ internal object RemoteMarkerUriPolicy {
       return true
     }
 
-    val address =
+    val addresses =
       try {
-        InetAddress.getByName(host)
+        resolveHost(host)
       } catch (_: UnknownHostException) {
         return !resolveHostAddress
       }
 
-    return isAllowlistedAddress(address)
+    // Every address, not just the first: the connection moves on to the next one when the first
+    // does not answer, so a public address listed ahead of a private one proves nothing.
+    return addresses.isNotEmpty() && addresses.all(::isAllowlistedAddress)
   }
 
   private fun isNumericHostLiteral(host: String): Boolean {
@@ -104,7 +140,8 @@ internal object RemoteMarkerUriPolicy {
       }
   }
 
-  private fun isAllowlistedAddress(address: InetAddress): Boolean {
+  /** Whether a connection to [address] may carry a request for a user-supplied image. */
+  fun isAllowlistedAddress(address: InetAddress): Boolean {
     if (
       address.isLoopbackAddress ||
       address.isAnyLocalAddress ||

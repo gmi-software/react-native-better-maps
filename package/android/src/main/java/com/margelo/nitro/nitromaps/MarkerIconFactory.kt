@@ -11,7 +11,6 @@ import android.util.LruCache
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.Marker
-import java.net.URL
 import java.util.WeakHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -22,7 +21,9 @@ internal class MarkerIconFactory(
   private val density: Float,
   private val markerRegistry: () -> Map<String, Marker>,
 ) {
-  private val cache = object : LruCache<String, BitmapDescriptor>(64) {}
+  private val cache = object : LruCache<String, CachedIcon>(iconCacheBytes()) {
+    override fun sizeOf(key: String, value: CachedIcon): Int = value.byteCount
+  }
   private val sizeCache = object : LruCache<String, Pair<Float, Float>>(64) {}
   private val mainHandler = Handler(Looper.getMainLooper())
   private val appliedIconKeys = WeakHashMap<Marker, String>()
@@ -33,6 +34,8 @@ internal class MarkerIconFactory(
     val iconKey: String,
     var onIconApplied: () -> Unit,
   )
+
+  private class CachedIcon(val descriptor: BitmapDescriptor, val byteCount: Int)
 
   fun applyVisualProps(
     descriptor: MarkerDescriptor,
@@ -112,7 +115,7 @@ internal class MarkerIconFactory(
     }
 
     cache.get(iconKey)?.let { cached ->
-      marker.setIcon(cached)
+      marker.setIcon(cached.descriptor)
       setApplied(marker, iconKey)
       onIconApplied()
       return
@@ -175,8 +178,8 @@ internal class MarkerIconFactory(
     onLoaded: (BitmapDescriptor?) -> Unit,
   ) {
     val key = cacheKey(image)
-    cache.get(key)?.let {
-      deliverOnMainThread { onLoaded(it) }
+    cache.get(key)?.let { cached ->
+      deliverOnMainThread { onLoaded(cached.descriptor) }
       return
     }
 
@@ -240,19 +243,10 @@ internal class MarkerIconFactory(
     image: MarkerImage,
     key: String,
   ): BitmapDescriptor? {
-    RemoteMarkerUriPolicy.rejectReason(image, resolveHostAddress = true)?.let { reason ->
-      logRejectedRemoteMarkerUri(image.uri, reason)
-      return null
-    }
-
     return try {
-      val connection = URL(image.uri).openConnection()
-      connection.connectTimeout = 10_000
-      connection.readTimeout = 10_000
-      connection.getInputStream().use { stream ->
-        val bitmap = decodeByteArray(stream.readBytes(), image) ?: return null
-        cacheBitmap(key, resizeBitmap(bitmap, image))
-      }
+      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
+      val bitmap = decodeByteArray(bytes, image) ?: return null
+      cacheBitmap(key, resizeBitmap(bitmap, image))
     } catch (error: Exception) {
       Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image: ${image.uri}", error)
       null
@@ -395,7 +389,7 @@ internal class MarkerIconFactory(
     bitmap: Bitmap,
   ): BitmapDescriptor {
     val descriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
-    cache.put(key, descriptor)
+    cache.put(key, CachedIcon(descriptor, bitmap.allocationByteCount.coerceAtLeast(1)))
     sizeCache.put(key, bitmap.width.toFloat() to bitmap.height.toFloat())
     return descriptor
   }
@@ -429,7 +423,21 @@ internal class MarkerIconFactory(
     private const val DEFAULT_MARKER_HEIGHT_DP = 52f
     private const val MAX_DECODE_DIMENSION = 2048
     private const val MAX_DECODE_PIXELS = 2048L * 2048L
+    private const val MIN_ICON_CACHE_BYTES = 1024 * 1024
+    private const val MAX_ICON_CACHE_BYTES = 32 * 1024 * 1024
+
+    /** Icon cache budget in decoded bytes: a slice of the heap, capped well below it. */
+    private fun iconCacheBytes(): Int {
+      val budget = Runtime.getRuntime().maxMemory() / 16
+      return budget
+        .coerceIn(MIN_ICON_CACHE_BYTES.toLong(), MAX_ICON_CACHE_BYTES.toLong())
+        .toInt()
+    }
 
     private val loadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    // Shared by every map, and first built on the load executor: an HTTP client loads the system
+    // trust store when it is created.
+    private val remoteImageFetcher by lazy { RemoteMarkerImageFetcher() }
   }
 }

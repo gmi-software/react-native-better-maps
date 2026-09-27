@@ -147,6 +147,10 @@ enum MarkerImageLoader {
         return
       }
 
+      // URLSession resolves the host again to connect, and it has no hook between that lookup and
+      // the request. So unlike Android, which checks the address it connected to, an answer that
+      // changes after the check above (DNS rebinding) is not re-checked. Reaching the network the
+      // device itself is on still needs the user's Local Network permission.
       startRemoteTask(url: url, cacheKey: cacheKey, image: image, completion: completion)
     }
   }

@@ -528,7 +528,8 @@ marker icon URL arriving as data from an API.
 
 Android also checks the address the connection is actually made to, before it sends the request.
 iOS checks the name only: `URLSession` resolves it again to connect, so a DNS answer that changes
-in between is not re-checked there.
+in between is not re-checked there. Reaching the network the device itself is on still needs the
+user's Local Network permission on iOS.
 
 A rejected URL logs `Rejected remote marker image URI` — under the `NitroMaps` logcat tag on
 Android, and under the `NitroMaps` category of the `com.nitromaps` subsystem in the unified log

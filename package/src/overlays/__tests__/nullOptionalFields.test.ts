@@ -161,6 +161,8 @@ const imageFields = {
   width: 32,
   height: 48,
   scale: 2,
+  // The library stamps it, so it is dropped from app input whatever its value.
+  origin: 'remote',
 } satisfies EveryOptionalField<MarkerImage>;
 
 const animation = {
@@ -400,10 +402,14 @@ describe('complete descriptors', () => {
   });
 
   test('markers keep every field, as a child or in the bulk prop', () => {
+    // All but a claimed image `origin`, which only the library may stamp.
+    const { origin: _claimedOrigin, ...imageWithoutOrigin } =
+      markerFields.image;
     const expected: NativeMarkerDescriptor = {
       id: 'pin',
       coordinate: WARSAW,
       ...markerFields,
+      image: imageWithoutOrigin,
       enteringAnimation: { kind: 'fade', ...animationFields },
     };
 

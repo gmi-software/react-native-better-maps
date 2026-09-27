@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import NitroMapsRemoteImagePolicy
@@ -136,6 +137,25 @@ func classifiesARedirectDestinationTheSameWayAsAnOriginalUri() {
   #expect(rejectReason("http://127.0.0.1/pin.png") == "host not allowlisted")
   #expect(rejectReason("ftp://example.com/pin.png") == "unsupported scheme")
   #expect(rejectReason("https://cdn.example.com/pin.png") == nil)
+}
+
+@Test
+func followsARedirectOnlyOnHttpAndNeverDownToIt() {
+  func reason(from source: String, to destination: String) -> String? {
+    RemoteMarkerUriPolicy.redirectRejectReason(
+      from: URL(string: source)!,
+      to: URL(string: destination)!
+    )
+  }
+
+  #expect(reason(from: "http://cdn.example.com/pin.png", to: "https://cdn.example.com/pin.png") == nil)
+  #expect(reason(from: "https://cdn.example.com/pin.png", to: "https://img.example.com/pin.png") == nil)
+  #expect(
+    reason(from: "https://cdn.example.com/pin.png", to: "http://cdn.example.com/pin.png")
+      == "redirect from https to http")
+  #expect(
+    reason(from: "http://cdn.example.com/pin.png", to: "file:///var/mobile/pin.png")
+      == "redirect to an unsupported scheme")
 }
 
 @Test

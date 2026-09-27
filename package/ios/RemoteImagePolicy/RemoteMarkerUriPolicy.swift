@@ -66,6 +66,23 @@ enum RemoteMarkerUriPolicy {
     return allowed ? nil : "host not allowlisted"
   }
 
+  /// Returns why a redirect from `source` to `destination` must not be followed, or `nil` when it
+  /// may be.
+  ///
+  /// This holds for a bundled image too: a redirect stays on `http`/`https`, and never goes from
+  /// `https` down to `http`. The destination of a user-supplied image still has to pass
+  /// `rejectReason(uri:isBundled:resolveHostAddress:)`, like any other URI.
+  static func redirectRejectReason(from source: URL, to destination: URL) -> String? {
+    let scheme = destination.scheme?.lowercased()
+    if scheme != "http" && scheme != "https" {
+      return "redirect to an unsupported scheme"
+    }
+    if scheme == "http" && source.scheme?.lowercased() == "https" {
+      return "redirect from https to http"
+    }
+    return nil
+  }
+
   /// The parts of a rejected URI that are safe to write to the log.
   ///
   /// A rejected URI can carry the very thing that got it rejected — `user:password@` is one of the

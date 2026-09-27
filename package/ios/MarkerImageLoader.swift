@@ -205,15 +205,25 @@ enum MarkerImageLoader {
       newRequest request: URLRequest,
       completionHandler: @escaping (URLRequest?) -> Void
     ) {
+      guard let destination = request.url else {
+        completionHandler(nil)
+        return
+      }
+
+      if let source = response.url,
+        let reason = RemoteMarkerUriPolicy.redirectRejectReason(from: source, to: destination)
+      {
+        MarkerImageLoader.logRejected(uri: destination.absoluteString, reason: reason)
+        completionHandler(nil)
+        return
+      }
+
       if task.taskDescription == MarkerImageLoader.bundledTaskDescription {
         completionHandler(request)
         return
       }
 
-      guard let uri = request.url?.absoluteString else {
-        completionHandler(nil)
-        return
-      }
+      let uri = destination.absoluteString
 
       // Off the delegate queue: resolving blocks, and this queue also delivers completions.
       MarkerImageLoader.policyQueue.async {

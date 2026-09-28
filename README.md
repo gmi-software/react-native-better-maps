@@ -900,6 +900,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Visible region             | Supported                                                   | Supported                                  | Supported                                  |
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
 | Screen point conversion    | Supported                                                   | Supported                                  | Supported                                  |
+| Region change events       | Supported, with `isGesture`                                 | Supported, with `isGesture`                | Supported, with `isGesture`                |
 | Map types                  | Standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain       | Standard, satellite, hybrid, terrain       |
 | Gestures                   | Supported                                                   | Supported                                  | Supported                                  |
 | User location              | Supported; host app owns permission prompt                  | Supported; host app owns permission prompt | Supported; host app owns permission prompt |

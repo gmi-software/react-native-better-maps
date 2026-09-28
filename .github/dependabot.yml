@@ -6,7 +6,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       github-actions:
         patterns:
@@ -20,24 +20,68 @@ updates:
   # Version updates are supported; security updates are not, so Dependabot
   # security alerts for these dependencies have to be acted on by hand.
   - package-ecosystem: bun
-    directories:
-      - /
-      - /package
-      - /example
+    # Only the root. `bun.lock` lives here, and a run from `/` already updates
+    # package/ and example/ through the workspaces. Listing those two as well
+    # opened a second copy of every bump without the lockfile, which fails
+    # `bun install --frozen-lockfile` in every job.
+    directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    # A dependency that matches several groups goes to the one whose pattern
+    # names it most exactly, so the catch-all groups keep `patterns: ['*']`.
     groups:
-      dev-dependencies:
-        dependency-type: development
+      # Reanimated refuses to pod install next to a Worklets minor it does not
+      # support, so the two only ever move together.
+      reanimated:
+        patterns:
+          - react-native-reanimated
+          - react-native-worklets
+      # Runtime dependencies. Only the example app has any; the library itself
+      # declares peers only.
+      example-app:
+        dependency-type: production
         patterns:
           - '*'
-    # React Native, React and Nitro are peer dependencies with native
-    # counterparts; upgrading them is a deliberate, tested change, never an
-    # automated bump.
+      # Minor and patch updates should pass as they are. Majors usually need a
+      # config or code change, so they get a pull request of their own instead
+      # of failing all the others with them.
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+        patterns:
+          - '*'
+      dev-dependencies-major:
+        dependency-type: development
+        update-types:
+          - major
+        patterns:
+          - '*'
     ignore:
+      # React Native, React and Nitro are peer dependencies with native
+      # counterparts; upgrading them is a deliberate, tested change, never an
+      # automated bump.
       - dependency-name: react
       - dependency-name: react-native
       - dependency-name: react-native-nitro-modules
       - dependency-name: nitrogen
+      # A new major of an Expo package belongs to the next Expo SDK. Moving to
+      # it is an SDK upgrade (`npx expo install --fix`), not a single bump.
+      - dependency-name: expo
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'expo-*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@expo/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: babel-preset-expo
+        update-types: ['version-update:semver-major']
+      # babel-preset-expo is built from Babel 7 plugins.
+      - dependency-name: '@babel/core'
+        update-types: ['version-update:semver-major']
+      # typescript-eslint refuses to run on TypeScript 7, and TypeScript 7 no
+      # longer accepts `moduleResolution: node` in tsconfig.plugin.json.
+      - dependency-name: typescript
+        versions: ['>=7.0.0']
     commit-message:
       prefix: chore

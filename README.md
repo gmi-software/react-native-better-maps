@@ -30,6 +30,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Installation](#installation)
 - [Quick start](#quick-start)
 - [Map providers](#map-providers)
+- [Region change events](#region-change-events)
 - [Native POI press events](#native-poi-press-events)
 - [Custom marker images](#custom-marker-images)
 - [GeoJSON overlays](#geojson-overlays)
@@ -210,7 +211,9 @@ function MyMap() {
     <MapView
       style={{ flex: 1 }}
       mapType="standard"
-      onRegionChangeComplete={(region) => console.log(region)}
+      onRegionChangeComplete={(region, details) =>
+        console.log(region, details.isGesture)
+      }
     >
       <Marker
         coordinate={{ latitude: 52.2297, longitude: 21.0122 }}
@@ -243,11 +246,25 @@ import { MapView, type MapViewRef } from 'react-native-better-maps';
 function ControlledMap() {
   const mapRef = useRef<MapViewRef>(null);
 
-  const flyToWarsaw = () => {
-    mapRef.current?.animateCamera({
-      center: { latitude: 52.2297, longitude: 21.0122 },
-      zoom: 12,
-    });
+  const flyToWarsaw = async () => {
+    const map = mapRef.current;
+    if (map == null) {
+      return;
+    }
+
+    try {
+      await map.animateCamera(
+        { center: { latitude: 52.2297, longitude: 21.0122 }, zoom: 12 },
+        1000,
+      );
+
+      // The camera is there now, so this reads where it actually arrived.
+      const camera = await map.getCamera();
+      console.log(camera.center);
+    } catch (error) {
+      // The map view unmounted, so there is no camera left to move or read.
+      console.warn(error);
+    }
   };
 
   return <MapView ref={mapRef} style={{ flex: 1 }} />;
@@ -336,6 +353,26 @@ builds wrapped in React's `<StrictMode>` see this on every mount: React tears
 the effect down and sets it up again, the first call is rejected by that
 teardown, and the second one does the work.
 
+#### When the camera promises settle
+
+`animateCamera`, `animateToRegion` and `fitToCoordinates` resolve when the camera
+has arrived, not when the animation is handed to the map. `setCamera` moves
+without animating, so it resolves right away, as do a `0` duration and
+`fitToCoordinates` with `animated: false`.
+
+An animation that is cut short - by a gesture, by a later camera command, or by
+the map view unmounting mid-animation - resolves too rather than hanging. It does
+not reject, and it does not report whether the requested position was reached:
+read `getVisibleRegion()` or `getCamera()` after the `await` when that matters.
+(On Apple Maps a gesture cannot cut `animateCamera` or `animateToRegion` short:
+the map ignores touches until the animation ends.)
+
+Pass `fitToCoordinates`' `animated` argument explicitly: left out, iOS animates
+the fit and Android jumps to it.
+
+> **Behavior change after 1.2.1:** these promises used to resolve as soon as the
+> animation started, so `await` returned with the camera still at its old position.
+
 #### Screen points
 
 `pointForCoordinate` and `coordinateForPoint` convert between a coordinate and a
@@ -392,7 +429,7 @@ function LabelledMap() {
 ```
 
 A point describes the camera at the time of the call, so convert again once the
-camera has moved; `onRegionChangeComplete` reports the moves the user makes. A
+camera has moved; `onRegionChangeComplete` reports every move, whoever made it. A
 coordinate that is off screen converts to a point outside the map view's
 bounds. Both calls reject straight away for input that is not on the map: a
 coordinate outside ±90 / ±180, or a point whose `x` or `y` is not finite.
@@ -422,6 +459,68 @@ When `provider` is omitted, defaults stay backward-compatible:
 Changing `provider` remounts the native map view. Controlled props such as `region`, `camera`, overlays, and callbacks should therefore be supplied again through React props.
 
 Provider-specific TypeScript props are exposed through `MapViewPropsForProvider<P>`. For example, `showsScale` is accepted for `apple` but rejected for `google` because Google Maps SDK has no native scale control.
+
+## Region change events
+
+`onRegionChange` fires when the camera starts moving and `onRegionChangeComplete` when it
+stops. Both fire for every move, whoever started it: a pinch or pan, `setCamera`,
+`animateCamera`, `fitToCoordinates`, or an updated `region` / `camera` prop. The second
+argument says which it was.
+
+```tsx
+<MapView
+  style={{ flex: 1 }}
+  onRegionChange={(region, details) => {
+    if (details.isGesture) {
+      cancelAutoFollow();
+    }
+  }}
+  onRegionChangeComplete={(region, details) => {
+    console.log(
+      details.isGesture ? 'user moved the map' : 'the app moved the map',
+    );
+  }}
+/>
+```
+
+One move emits exactly one `onRegionChange` and one `onRegionChangeComplete`, with the
+same `details` on both, and nothing fires while the camera is on its way. An update that
+leaves the camera where it is - a `region` or `camera` prop set to what the map already
+shows, or a repeated `fitToCoordinates` - emits nothing, and neither does the map settling
+into its first position as it appears. Read `getVisibleRegion()` from `onMapReady` for
+that one.
+
+A gesture that interrupts the app's own animation ends that move and starts the user's:
+`onRegionChangeComplete` with `isGesture: false` where the finger caught the camera, then
+`onRegionChange` with `isGesture: true`. The opposite does not split: a camera command
+issued while the map is still moving from a gesture stays part of the gesture's move. On
+Apple Maps an `animateCamera` animation cannot be interrupted this way, because the map
+ignores touches until it ends.
+
+`isGesture` means a touch gesture on the map itself. Android's own controls (the zoom
+buttons and the my-location button) report as `isGesture: false`, because the Google Maps
+SDK classifies them as an API animation rather than a gesture.
+
+### react-native-maps migration (region events)
+
+| react-native-maps                                 | react-native-better-maps                             |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| `onRegionChangeStart(region, details)`            | `onRegionChange(region, details)`                    |
+| `onRegionChange(region, details)`, on every frame | No equivalent - nothing fires while the camera moves |
+| `onRegionChangeComplete(region, details)`         | Same                                                 |
+| `details.isGesture`, on Google Maps only          | `details.isGesture`, on Apple and Google Maps alike  |
+
+Note the first two rows: `onRegionChange` here fires once, when a move begins, which is
+what `react-native-maps` calls `onRegionChangeStart`.
+
+> **Behavior change after 1.2.1:** both callbacks used to fire only for user gestures, and
+> took the region alone. Code that treated every event as user input should now check
+> `details.isGesture`.
+
+Feeding `onRegionChangeComplete` back into a controlled `region` prop is safe: the map is
+already showing that region, so the update moves nothing and emits nothing. Feeding back
+`onRegionChange` is not. It hands the map the region the camera is leaving, and for a move
+the app started, going back there cancels it.
 
 ## Native POI press events
 
@@ -818,6 +917,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Visible region             | Supported                                                   | Supported                                  | Supported                                  |
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
 | Screen point conversion    | Supported                                                   | Supported                                  | Supported                                  |
+| Region change events       | Supported, with `isGesture`                                 | Supported, with `isGesture`                | Supported, with `isGesture`                |
 | Map types                  | Standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain       | Standard, satellite, hybrid, terrain       |
 | Gestures                   | Supported                                                   | Supported                                  | Supported                                  |
 | User location              | Supported; host app owns permission prompt                  | Supported; host app owns permission prompt | Supported; host app owns permission prompt |
@@ -857,6 +957,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | `Coordinate`                 | `{ latitude, longitude }`                             |
 | `Point`                      | `{ x, y }` in dp from the map view's top-left corner  |
 | `Region`                     | Center + span                                         |
+| `RegionChangeDetails`        | `{ isGesture }` context for a region change           |
 | `Camera`                     | Position, zoom, heading, pitch                        |
 | `MapType`                    | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'`  |
 | `MapProvider`                | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'`  |

@@ -14,6 +14,13 @@ import type { EdgePadding, Region, VisibleRegion } from './region';
  * A call that is still waiting when the map view unmounts rejects, as does any
  * call made afterwards. Nothing silently does nothing.
  *
+ * The camera methods resolve when the move is over, never before. An animated
+ * move resolves when the camera arrives, or as soon as something cuts it short:
+ * a gesture, a later camera command, or the map view unmounting mid-animation.
+ * It resolves rather than rejects in those cases, and does not say whether the
+ * requested position was reached - read {@linkcode MapViewRef.getCamera} or
+ * {@linkcode MapViewRef.getVisibleRegion} after the `await` when that matters.
+ *
  * @example
  * ```tsx
  * const mapRef = useRef<MapViewRef>(null);
@@ -30,7 +37,8 @@ export interface MapViewRef {
   getCamera(): Promise<Camera>;
 
   /**
-   * Sets the camera position immediately.
+   * Sets the camera position immediately. Resolves once the camera is there,
+   * which for this un-animated move is right away.
    *
    * Rejects straight away, and leaves the map where it is, for a camera the
    * map cannot use: a center outside the world, or a zoom, heading, pitch or
@@ -40,9 +48,10 @@ export interface MapViewRef {
   setCamera(camera: Camera): Promise<void>;
 
   /**
-   * Animates the camera to the given position. Resolves once the animation has
-   * been handed to the native map, not when it finishes, and rejects for a
-   * camera the map cannot use, as {@linkcode MapViewRef.setCamera} does.
+   * Animates the camera to the given position. Resolves when the animation
+   * ends - after roughly `duration`, or earlier if something cuts it short -
+   * and rejects for a camera the map cannot use, as
+   * {@linkcode MapViewRef.setCamera} does.
    *
    * @param duration Animation duration in milliseconds. Defaults to `250`;
    * `0` moves the camera without animating.
@@ -55,10 +64,10 @@ export interface MapViewRef {
    * {@linkcode MapViewProps.onRegionChangeComplete} passed back returns the map
    * to that view.
    *
-   * Resolves once the animation has been handed to the native map, not when
-   * it finishes, and rejects for a region the map cannot use - a center
-   * outside the world, or a delta that is not a finite number greater than 0 -
-   * which the `region` prop skips instead.
+   * Resolves when the animation ends - after roughly `duration`, or earlier if
+   * something cuts it short. Rejects for a region the map cannot use, which the
+   * `region` prop skips instead: a center outside the world, or a delta that is
+   * not a finite number greater than 0.
    *
    * @param duration Animation duration in milliseconds. Defaults to `250`;
    * `0` moves the camera without animating.
@@ -70,7 +79,8 @@ export interface MapViewRef {
 
   /**
    * Fits the camera to show all given coordinates with optional edge padding.
-   * An empty {@linkcode coordinates} list is a no-op.
+   * Resolves once the camera has arrived, which for an un-animated fit is
+   * right away. An empty {@linkcode coordinates} list is a no-op.
    *
    * {@linkcode padding} is added on top of {@linkcode MapViewProps.mapPadding}.
    *

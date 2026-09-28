@@ -48,6 +48,7 @@ import {
   type OverlayEnteringAnimation,
   type PoiPressEvent,
   Region,
+  type RegionChangeDetails,
 } from 'react-native-better-maps';
 import {
   APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
@@ -126,6 +127,11 @@ const springSnappy = { damping: 22, stiffness: 420 };
 const springSoft = { damping: 20, stiffness: 240 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function regionLabel(region: Region, details: RegionChangeDetails): string {
+  const source = details.isGesture ? 'gesture' : 'app';
+  return `${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)} (${source})`;
+}
 
 function mergeMapPadding(
   padding: EdgePadding | undefined,
@@ -599,8 +605,11 @@ type MapSceneProps = {
   onPress: (coordinate: Coordinate) => void;
   onPoiPress: (event: PoiPressEvent) => void;
   onLongPress: (coordinate: Coordinate) => void;
-  onRegionChange: (region: Region) => void;
-  onRegionChangeComplete: (region: Region) => void;
+  onRegionChange: (region: Region, details: RegionChangeDetails) => void;
+  onRegionChangeComplete: (
+    region: Region,
+    details: RegionChangeDetails,
+  ) => void;
 };
 
 const MapScene = memo(function MapScene({
@@ -959,17 +968,19 @@ export default function App() {
     );
   }, []);
 
-  const handleRegionChange = useCallback((region: Region) => {
-    setStatus(
-      `Region start · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
-    );
-  }, []);
+  const handleRegionChange = useCallback(
+    (region: Region, details: RegionChangeDetails) => {
+      setStatus(`Region start · ${regionLabel(region, details)}`);
+    },
+    [],
+  );
 
-  const handleRegionChangeComplete = useCallback((region: Region) => {
-    setStatus(
-      `Region complete · ${region.latitude.toFixed(4)}, ${region.longitude.toFixed(4)}`,
-    );
-  }, []);
+  const handleRegionChangeComplete = useCallback(
+    (region: Region, details: RegionChangeDetails) => {
+      setStatus(`Region complete · ${regionLabel(region, details)}`);
+    },
+    [],
+  );
 
   return (
     <View style={styles.container}>

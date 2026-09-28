@@ -36,7 +36,13 @@ class GoogleMapProviderAdapter(
 ) : MapProviderAdapter,
   LifecycleEventListener {
   private var googleMap: GoogleMap? = null
-  private var isUserGesture = false
+  private val regionChanges =
+    RegionChangeTracker(
+      position = { googleMap?.cameraPosition },
+      region = { currentRegion() },
+      onBegin = { region, details -> onRegionChange?.invoke(region, details) },
+      onComplete = { region, details -> onRegionChangeComplete?.invoke(region, details) },
+    )
   private var hasFiredMapReady = false
   private val overlayController = MapOverlayController(context)
   private val locationSource = FusedLocationSource(context)
@@ -47,6 +53,7 @@ class GoogleMapProviderAdapter(
   private var pendingCircles: Array<CircleDescriptor>? = null
   private val density: Float = context.resources.displayMetrics.density
   private val deferredMap = DeferredGoogleMap()
+  private val cameraAnimations = CameraAnimations()
   private var lastAppliedRegion: Region? = null
   private var lastAppliedRegionCamera: CameraPosition? = null
 
@@ -118,7 +125,7 @@ class GoogleMapProviderAdapter(
     get() = _region
     set(value) {
       _region = value
-      if (value != null && !isUserGesture && _camera == null) {
+      if (value != null && !regionChanges.isGesture && _camera == null) {
         applyRegion(value)
       }
     }
@@ -128,7 +135,7 @@ class GoogleMapProviderAdapter(
     get() = _camera
     set(value) {
       _camera = value
-      if (value != null && !isUserGesture) {
+      if (value != null && !regionChanges.isGesture) {
         applyCameraProp(value)
       }
     }
@@ -267,8 +274,8 @@ class GoogleMapProviderAdapter(
       overlayController.clusterEnteringAnimation = value
     }
 
-  override var onRegionChange: ((region: Region) -> Unit)? = null
-  override var onRegionChangeComplete: ((region: Region) -> Unit)? = null
+  override var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
+  override var onRegionChangeComplete: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
   override var onMapReady: (() -> Unit)? = null
   override var onPress: ((coordinate: Coordinate) -> Unit)? = null
   override var onPoiPress: ((event: NativePoiPressEvent) -> Unit)? = null
@@ -352,8 +359,10 @@ class GoogleMapProviderAdapter(
     duration: Double?,
   ): Promise<Unit> {
     val durationMs = cameraAnimationDurationMs(duration)
-    return deferredMap.promise { map ->
-      updateMapCamera(map, camera, animated = true, durationMs = durationMs)
+    return deferredMap.promiseCompletion { map, complete ->
+      updateMapCamera(map, camera, animated = true, durationMs = durationMs) {
+        complete(Result.success(Unit))
+      }
     }
   }
 
@@ -368,16 +377,8 @@ class GoogleMapProviderAdapter(
     }
 
     val durationMs = cameraAnimationDurationMs(duration)
-    return deferredMap.promiseCompletion { map, complete ->
-      // Waits for the first layout pass, as `fitToCoordinates` does, and so does the promise.
-      runWhenMapViewLaidOut(
-        onCancel = {
-          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
-        },
-      ) {
-        complete(runCatching { fitCamera(map, region, durationMs) })
-      }
-    }
+    // Waits for the first layout pass, as `fitToCoordinates` does, and so does the promise.
+    return promiseMoveWhenLaidOut { map, onEnd -> fitCamera(map, region, durationMs, onEnd) }
   }
 
   override fun getVisibleRegion(): Promise<VisibleRegion> = deferredMap.promise { map -> map.projection.toNitroVisibleRegion() }
@@ -400,7 +401,7 @@ class GoogleMapProviderAdapter(
 
     // `newLatLngBounds` throws on a map that has no size yet, so the camera update
     // waits for the first layout pass -- and so does the promise.
-    return promiseWhenLaidOut { map ->
+    return promiseMoveWhenLaidOut { map, onEnd ->
       val builder = LatLngBounds.Builder()
       for (coordinate in validCoordinates) {
         builder.include(LatLng(coordinate.latitude, coordinate.longitude))
@@ -417,9 +418,10 @@ class GoogleMapProviderAdapter(
         ) ?: bounds
       val update = CameraUpdateFactory.newLatLngBounds(target, 0)
       if (animated == true) {
-        map.animateCamera(update)
+        map.animateCamera(update, cameraAnimations.callback(onEnd))
       } else {
         map.moveCamera(update)
+        onEnd()
       }
     }
   }
@@ -491,16 +493,17 @@ class GoogleMapProviderAdapter(
     syncMarkerPressHandlers()
 
     map.setOnCameraMoveStartedListener { reason ->
-      handleRegionWillChange(
-        userInteracting = reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE,
+      regionChanges.moveStarted(
+        isGesture = reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE,
       )
     }
     map.setOnCameraMoveListener {
       overlayController.onCameraMove()
+      regionChanges.cameraMoved()
     }
     map.setOnCameraIdleListener {
       overlayController.onCameraIdle()
-      handleRegionDidChange()
+      regionChanges.cameraStopped()
     }
     map.setOnMapClickListener { latLng ->
       onPress?.invoke(latLng.toCoordinate())
@@ -667,13 +670,15 @@ class GoogleMapProviderAdapter(
 
   /**
    * Frames [region], animating over [durationMs] when it is positive and jumping there
-   * otherwise: `animateCamera` throws for a duration that is not. Needs a laid-out map
+   * otherwise: `animateCamera` throws for a duration that is not. Calls [onEnd] once the
+   * camera has stopped - straight away when nothing had to move. Needs a laid-out map
    * view, since `newLatLngBounds` throws on one without a size.
    */
   private fun fitCamera(
     map: GoogleMap,
     region: Region,
     durationMs: Int,
+    onEnd: () -> Unit = {},
   ) {
     val lastRegion = lastAppliedRegion
     val lastCamera = lastAppliedRegionCamera
@@ -685,6 +690,15 @@ class GoogleMapProviderAdapter(
     ) {
       // Same region as last time and the camera has not moved since, so the
       // fit would land on the camera the map already shows.
+      onEnd()
+      return
+    }
+
+    // What the map already shows is exactly what an `onRegionChangeComplete` consumer
+    // hands back as the next `region` prop. Fitting it again must not move the camera,
+    // or the echo would answer every move with another one.
+    if (currentRegion().approximatelyEquals(region)) {
+      onEnd()
       return
     }
 
@@ -692,21 +706,28 @@ class GoogleMapProviderAdapter(
     // leaves over, so passing `mapPadding` here as well would inset the region twice.
     val update = CameraUpdateFactory.newLatLngBounds(region.toLatLngBounds(), 0)
     if (durationMs > 0) {
-      map.animateCamera(update, durationMs, null)
+      map.animateCamera(update, durationMs, cameraAnimations.callback(onEnd))
       // The camera settles later; there is nothing reliable to remember yet.
       lastAppliedRegionCamera = null
     } else {
       map.moveCamera(update)
       lastAppliedRegionCamera = map.cameraPosition
+      onEnd()
     }
     lastAppliedRegion = region
   }
 
+  /**
+   * Moves the camera to [camera], and calls [onEnd] once it has stopped: straight away
+   * after a jump, or when nothing had to move, and otherwise when the animation finishes
+   * or is cut short.
+   */
   private fun updateMapCamera(
     map: GoogleMap,
     camera: Camera,
     animated: Boolean,
     durationMs: Int = 0,
+    onEnd: () -> Unit = {},
   ) {
     // Every camera path ends here - the `camera` prop, its replay in `configureMap`, and
     // `applyCamera`/`animateCamera` - so this one check covers them all. An invalid camera is
@@ -716,22 +737,26 @@ class GoogleMapProviderAdapter(
     // before the call is queued.
     if (!camera.isValid()) {
       Log.w(NITRO_MAPS_LOG_TAG, "Ignored an invalid camera: $camera.")
+      onEnd()
       return
     }
 
     val target = camera.toCameraPosition(map.cameraPosition)
     if (map.cameraPosition.approximatelyEquals(target)) {
+      onEnd()
       return
     }
 
     val update = CameraUpdateFactory.newCameraPosition(target)
     // A duration under a millisecond jumps, as it does on iOS: the timed `animateCamera` throws
     // for it, and the untimed one would animate for the SDK's own default duration.
-    if (animated && durationMs > 0) {
-      map.animateCamera(update, durationMs, null)
-    } else {
+    if (!animated || durationMs <= 0) {
       map.moveCamera(update)
+      onEnd()
+      return
     }
+
+    map.animateCamera(update, durationMs, cameraAnimations.callback(onEnd))
   }
 
   private fun installViewportSizeListener(mapView: MapView) {
@@ -767,6 +792,22 @@ class GoogleMapProviderAdapter(
     }
 
   /**
+   * Like [promiseWhenLaidOut], for a camera move that ends in a later SDK callback: the
+   * promise settles when [block] calls the `onEnd` it is handed, not when it returns.
+   */
+  private fun promiseMoveWhenLaidOut(block: (GoogleMap, onEnd: () -> Unit) -> Unit): Promise<Unit> =
+    deferredMap.promiseCompletion { map, complete ->
+      runWhenMapViewLaidOut(
+        onCancel = {
+          complete(Result.failure(IllegalStateException(MAP_RELEASED_BEFORE_LAYOUT_MESSAGE)))
+        },
+      ) {
+        runCatching { block(map) { complete(Result.success(Unit)) } }
+          .onFailure { error -> complete(Result.failure(error)) }
+      }
+    }
+
+  /**
    * Runs [block] once the map view has a size - see [DeferredLayout]. [onCancel] runs
    * instead if the map is destroyed before that.
    */
@@ -782,29 +823,6 @@ class GoogleMapProviderAdapter(
 
   private fun updateOverlayViewportSize() {
     overlayController.setViewportSize(view.width, view.height)
-  }
-
-  private fun handleRegionWillChange(userInteracting: Boolean) {
-    if (userInteracting && !isUserGesture) {
-      isUserGesture = true
-      emitRegionChange(complete = false)
-    }
-  }
-
-  private fun handleRegionDidChange() {
-    if (isUserGesture) {
-      emitRegionChange(complete = true)
-      isUserGesture = false
-    }
-  }
-
-  private fun emitRegionChange(complete: Boolean) {
-    val region = currentRegion()
-    if (complete) {
-      onRegionChangeComplete?.invoke(region)
-    } else {
-      onRegionChange?.invoke(region)
-    }
   }
 
   private fun currentRegion(): Region {
@@ -857,6 +875,9 @@ class GoogleMapProviderAdapter(
   private fun destroyMapView() {
     deferredMap.release()
     deferredLayout.release()
+    // A call that never reached the SDK rejects above. An animation already under way
+    // ends here instead, like any other move cut short, and resolves.
+    cameraAnimations.release()
 
     if (lifecycle.isDestroyed) {
       return

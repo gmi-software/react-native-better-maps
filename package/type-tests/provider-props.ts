@@ -2,6 +2,7 @@ import type {
   ApplePoiCategory,
   MapViewProps,
   MapViewPropsForProvider,
+  Region,
 } from '../src';
 
 export const appleProps: MapViewPropsForProvider<'apple'> = {
@@ -55,6 +56,18 @@ export const defaultProviderProps: MapViewProps = {
 // @ts-expect-error Google Map IDs require the explicit Google provider.
 export const defaultProviderGoogleMapIdProps: MapViewProps = {
   googleMapId: 'google-map-id',
+};
+
+export const regionChangeProps: MapViewProps = {
+  onRegionChange: (region, details) => {
+    region satisfies Region;
+    details.isGesture satisfies boolean;
+  },
+  onRegionChangeComplete: (region, details) => {
+    region satisfies Region;
+    // @ts-expect-error The details carry the gesture flag, not the region.
+    details.latitude satisfies number;
+  },
 };
 
 export const plannedProviderProps: MapViewProps = {

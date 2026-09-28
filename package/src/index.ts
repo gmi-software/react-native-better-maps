@@ -12,6 +12,7 @@ export type {
   Coordinate,
   Point,
   Region,
+  RegionChangeDetails,
   Camera,
   EdgePadding,
   VisibleRegion,

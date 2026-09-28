@@ -151,12 +151,12 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
-  var onRegionChange: ((Region) -> Void)? {
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)? {
     get { getBacked(\.onRegionChange) }
     set { setBackedOnMain(newValue, store: \.onRegionChange) { $0.onRegionChange = $1 } }
   }
 
-  var onRegionChangeComplete: ((Region) -> Void)? {
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)? {
     get { getBacked(\.onRegionChangeComplete) }
     set {
       setBackedOnMain(newValue, store: \.onRegionChangeComplete) {
@@ -242,13 +242,13 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   func applyCamera(camera: Camera) throws -> Promise<Void> {
-    promiseOnMainVoid { try $0.applyCamera(camera: camera) }
+    promiseOnMain { try $0.applyCamera(camera: camera) }
   }
 
   func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
     // Milliseconds from JS, seconds for UIKit and Core Animation.
     let seconds = duration.map { $0 / 1000 }
-    return promiseOnMainVoid {
+    return promiseOnMain {
       try $0.animateCamera(camera: camera, duration: seconds)
     }
   }
@@ -269,7 +269,7 @@ final class HybridMapView: HybridMapViewSpec {
     padding: EdgePadding?,
     animated: Bool?
   ) throws -> Promise<Void> {
-    promiseOnMainVoid {
+    promiseOnMain {
       try $0.fitToCoordinates(
         coordinates: coordinates,
         padding: padding,
@@ -449,35 +449,6 @@ final class HybridMapView: HybridMapViewSpec {
     } else {
       DispatchQueue.main.async(execute: work)
     }
-  }
-
-  private func promiseOnMainVoid(
-    _ work: @escaping (MapProviderAdapter) throws -> Void
-  ) -> Promise<Void> {
-    let promise = Promise<Void>()
-    let lifecycle = currentLifecycleSnapshot()
-    let run = { [weak self] in
-      guard let self else {
-        promise.reject(withError: Self.mapViewNotMountedError())
-        return
-      }
-
-      do {
-        let adapter = try self.currentAdapter(matching: lifecycle)
-        try work(adapter)
-        promise.resolve(withResult: ())
-      } catch {
-        promise.reject(withError: error)
-      }
-    }
-
-    if Thread.isMainThread {
-      run()
-    } else {
-      DispatchQueue.main.async(execute: run)
-    }
-
-    return promise
   }
 
   private func promiseOnMain<T>(

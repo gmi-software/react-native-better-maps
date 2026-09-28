@@ -9,6 +9,10 @@ let package = Package(
   platforms: [.macOS(.v13)],
   targets: [
     .target(
+      name: "NitroMapsCamera",
+      path: "Camera"
+    ),
+    .target(
       name: "NitroMapsColorParser",
       path: "ColorParser"
     ),
@@ -31,6 +35,11 @@ let package = Package(
     .target(
       name: "NitroMapsRemoteImagePolicy",
       path: "RemoteImagePolicy"
+    ),
+    .testTarget(
+      name: "NitroMapsCameraTests",
+      dependencies: ["NitroMapsCamera"],
+      path: "Tests/Camera"
     ),
     .testTarget(
       name: "NitroMapsColorParserTests",

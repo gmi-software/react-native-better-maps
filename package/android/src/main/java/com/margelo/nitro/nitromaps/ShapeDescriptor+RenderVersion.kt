@@ -3,9 +3,9 @@ package com.margelo.nitro.nitromaps
 /**
  * Render versions for shape overlay descriptors.
  *
- * Overlay controllers keep the version of every shape they have shown so a
- * descriptor that is sent again unchanged costs one hash instead of a native
- * remove-and-add, and a changed one is updated in place.
+ * Overlay controllers keep the version of every shape they have shown, so a
+ * descriptor that is sent again unchanged costs one hash instead of an SDK
+ * call, and a changed one is updated in place.
  */
 private fun Array<Coordinate>.geometrySignature(): Long {
   var hash = size.toLong()
@@ -31,39 +31,20 @@ private fun Array<Array<Coordinate>>?.holesSignature(): Long {
   return hash
 }
 
-internal fun PolylineDescriptor.renderVersion(): Long =
-  renderSignature(
-    "polyline",
-    id,
-    coordinates.geometrySignature(),
-    strokeColor,
-    strokeWidth,
-    zIndex,
-    tappable,
+internal fun PolylineDescriptor.renderVersion(): ShapeRenderVersion =
+  ShapeRenderVersion(
+    geometry = coordinates.geometrySignature(),
+    style = renderSignature(strokeColor, strokeWidth, zIndex, tappable),
   )
 
-internal fun PolygonDescriptor.renderVersion(): Long =
-  renderSignature(
-    "polygon",
-    id,
-    coordinates.geometrySignature(),
-    holes.holesSignature(),
-    fillColor,
-    strokeColor,
-    strokeWidth,
-    zIndex,
-    tappable,
+internal fun PolygonDescriptor.renderVersion(): ShapeRenderVersion =
+  ShapeRenderVersion(
+    geometry = 1099511628211L * coordinates.geometrySignature() + holes.holesSignature(),
+    style = renderSignature(fillColor, strokeColor, strokeWidth, zIndex, tappable),
   )
 
-internal fun CircleDescriptor.renderVersion(): Long =
-  renderSignature(
-    "circle",
-    id,
-    center.latitude,
-    center.longitude,
-    radius,
-    fillColor,
-    strokeColor,
-    strokeWidth,
-    tappable,
+internal fun CircleDescriptor.renderVersion(): ShapeRenderVersion =
+  ShapeRenderVersion(
+    geometry = renderSignature(center.latitude, center.longitude, radius),
+    style = renderSignature(fillColor, strokeColor, strokeWidth, tappable),
   )

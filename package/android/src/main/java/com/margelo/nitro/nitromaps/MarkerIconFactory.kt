@@ -11,13 +11,6 @@ import android.util.LruCache
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.Marker
-import java.net.Inet6Address
-import java.net.InetAddress
-import java.net.URI
-import java.net.URISyntaxException
-import java.net.URL
-import java.net.UnknownHostException
-import java.util.Locale
 import java.util.WeakHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -167,7 +160,9 @@ internal class MarkerIconFactory(
   private fun defaultMarkerDisplaySizePx(): Pair<Float, Float> = (DEFAULT_MARKER_WIDTH_DP * density) to (DEFAULT_MARKER_HEIGHT_DP * density)
 
   private fun cacheKey(image: MarkerImage): String {
-    return "${image.uri}|${image.width ?: ""}|${image.height ?: ""}|${image.scale ?: ""}"
+    // `origin` is part of the key so a bundled image cannot warm the cache for a
+    // user-supplied one with the same URI, which would hand it a policy-free entry.
+    return "${image.uri}|${image.width ?: ""}|${image.height ?: ""}|${image.scale ?: ""}|${image.origin ?: ""}"
   }
 
   private fun loadLocalIcon(
@@ -188,8 +183,8 @@ internal class MarkerIconFactory(
       return
     }
 
-    if (isRemoteMarkerUri(image.uri)) {
-      remoteMarkerUriRejectReason(image.uri, resolveHostAddress = false)?.let { reason ->
+    if (RemoteMarkerUriPolicy.isRemoteUri(image.uri)) {
+      RemoteMarkerUriPolicy.rejectReason(image, resolveHostAddress = false)?.let { reason ->
         logRejectedRemoteMarkerUri(image.uri, reason)
         deliverOnMainThread { onLoaded(null) }
         return
@@ -198,7 +193,7 @@ internal class MarkerIconFactory(
 
     loadExecutor.execute {
       val descriptor =
-        if (isRemoteMarkerUri(image.uri)) {
+        if (RemoteMarkerUriPolicy.isRemoteUri(image.uri)) {
           loadRemoteIcon(image, key)
         } else {
           loadLocalIcon(image, key)
@@ -248,19 +243,10 @@ internal class MarkerIconFactory(
     image: MarkerImage,
     key: String,
   ): BitmapDescriptor? {
-    remoteMarkerUriRejectReason(image.uri, resolveHostAddress = true)?.let { reason ->
-      logRejectedRemoteMarkerUri(image.uri, reason)
-      return null
-    }
-
     return try {
-      val connection = URL(image.uri).openConnection()
-      connection.connectTimeout = 10_000
-      connection.readTimeout = 10_000
-      connection.getInputStream().use { stream ->
-        val bitmap = decodeByteArray(stream.readBytes(), image) ?: return null
-        cacheBitmap(key, resizeBitmap(bitmap, image))
-      }
+      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
+      val bitmap = decodeByteArray(bytes, image) ?: return null
+      cacheBitmap(key, resizeBitmap(bitmap, image))
     } catch (error: Exception) {
       Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image: ${image.uri}", error)
       null
@@ -279,7 +265,7 @@ internal class MarkerIconFactory(
       return decodeFile(uri, image)
     }
 
-    if (isRemoteMarkerUri(uri)) {
+    if (RemoteMarkerUriPolicy.isRemoteUri(uri)) {
       return null
     }
 
@@ -408,101 +394,6 @@ internal class MarkerIconFactory(
     return descriptor
   }
 
-  private fun isRemoteMarkerUri(uriString: String): Boolean {
-    val scheme = parseRemoteMarkerUri(uriString)?.scheme?.lowercase(Locale.US) ?: return false
-    return scheme == "http" || scheme == "https"
-  }
-
-  private fun parseRemoteMarkerUri(uriString: String): URI? =
-    try {
-      URI(uriString)
-    } catch (_: URISyntaxException) {
-      null
-    }
-
-  private fun remoteMarkerUriRejectReason(
-    uriString: String,
-    resolveHostAddress: Boolean,
-  ): String? {
-    val uri = parseRemoteMarkerUri(uriString) ?: return "invalid URI"
-
-    when (uri.scheme?.lowercase(Locale.US)) {
-      "http", "https" -> Unit
-      null -> return "missing scheme"
-      else -> return "unsupported scheme"
-    }
-
-    if (uri.userInfo != null) {
-      return "user info not allowed"
-    }
-
-    val host = uri.host?.lowercase(Locale.US)?.takeIf { it.isNotEmpty() } ?: return "missing host"
-    if (!isAllowlistedRemoteHost(host, resolveHostAddress)) {
-      return "host not allowlisted"
-    }
-
-    return null
-  }
-
-  private fun isAllowlistedRemoteHost(
-    host: String,
-    resolveHostAddress: Boolean,
-  ): Boolean {
-    if (host == "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
-      return false
-    }
-    if (host in BLOCKED_REMOTE_HOSTS) {
-      return false
-    }
-
-    if (!resolveHostAddress && !isNumericHostLiteral(host)) {
-      return true
-    }
-
-    val address =
-      try {
-        InetAddress.getByName(host)
-      } catch (_: UnknownHostException) {
-        return !resolveHostAddress
-      }
-
-    return isAllowlistedRemoteAddress(address)
-  }
-
-  private fun isNumericHostLiteral(host: String): Boolean {
-    if (host.startsWith("[") && host.endsWith("]")) {
-      return true
-    }
-
-    val parts = host.split('.')
-    return parts.size == 4 &&
-      parts.all { part ->
-        val value = part.toIntOrNull() ?: return@all false
-        value in 0..255
-      }
-  }
-
-  private fun isAllowlistedRemoteAddress(address: InetAddress): Boolean {
-    if (
-      address.isLoopbackAddress ||
-      address.isAnyLocalAddress ||
-      address.isLinkLocalAddress ||
-      address.isSiteLocalAddress ||
-      address.isMulticastAddress
-    ) {
-      return false
-    }
-
-    if (address is Inet6Address) {
-      val firstOctet = address.address[0].toInt() and 0xff
-      if ((firstOctet and 0xfe) == 0xfc) {
-        return false
-      }
-    }
-
-    return true
-  }
-
   private fun logRejectedRemoteMarkerUri(
     uri: String,
     reason: String,
@@ -545,10 +436,8 @@ internal class MarkerIconFactory(
 
     private val loadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
-    private val BLOCKED_REMOTE_HOSTS =
-      setOf(
-        "metadata.google.internal",
-        "metadata.goog",
-      )
+    // Shared by every map, and first built on the load executor: an HTTP client loads the system
+    // trust store when it is created.
+    private val remoteImageFetcher by lazy { RemoteMarkerImageFetcher() }
   }
 }

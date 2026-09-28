@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import type { MarkerImage } from '../../native/specs/overlays';
 import {
   isMarkerImage,
   markerImageFromResolvedAsset,
@@ -7,8 +8,9 @@ import {
 const resolveAssetSourceMock = mock(
   (source: number | { uri: string; width?: number; height?: number; scale?: number }) => {
     if (typeof source === 'number') {
+      // A development build: Metro serves the asset from the packager, not as a drawable.
       return {
-        uri: `asset:/require-${source}.png`,
+        uri: `http://10.0.2.2:8081/assets/require-${source}.png`,
         width: 32,
         height: 32,
         scale: 2,
@@ -27,6 +29,16 @@ const { clearResolvedMarkerImageCacheForTests, resolveMarkerImage } = await impo
   '../resolveMarkerImage'
 );
 
+const warnSpy = spyOn(console, 'warn');
+
+beforeEach(() => {
+  (globalThis as { __DEV__?: boolean }).__DEV__ = true;
+});
+
+afterEach(() => {
+  warnSpy.mockClear();
+});
+
 describe('markerImageFromResolvedAsset', () => {
   test('returns undefined for missing asset', () => {
     expect(markerImageFromResolvedAsset(undefined)).toBeUndefined();
@@ -34,7 +46,7 @@ describe('markerImageFromResolvedAsset', () => {
     expect(markerImageFromResolvedAsset({ uri: '' })).toBeUndefined();
   });
 
-  test('maps resolved asset records to MarkerImage', () => {
+  test('maps resolved asset records to MarkerImage stamped as bundled', () => {
     expect(
       markerImageFromResolvedAsset({
         uri: 'asset:/pin.png',
@@ -47,6 +59,7 @@ describe('markerImageFromResolvedAsset', () => {
       width: 32,
       height: 32,
       scale: 2,
+      origin: 'bundled',
     });
   });
 
@@ -62,6 +75,7 @@ describe('markerImageFromResolvedAsset', () => {
     expect(markerImageFromResolvedAsset(resolved as never)).toEqual({
       uri: 'asset:/pin.png',
       scale: 2,
+      origin: 'bundled',
     });
     expect(isMarkerImage(resolved)).toBe(true);
   });
@@ -98,10 +112,11 @@ describe('resolveMarkerImage', () => {
 
   test('resolves require() module ids through resolveAssetSource', () => {
     expect(resolveMarkerImage(99)).toEqual({
-      uri: 'asset:/require-99.png',
+      uri: 'http://10.0.2.2:8081/assets/require-99.png',
       width: 32,
       height: 32,
       scale: 2,
+      origin: 'bundled',
     });
     expect(resolveAssetSourceMock).toHaveBeenCalledTimes(1);
     expect(resolveAssetSourceMock).toHaveBeenCalledWith(99);
@@ -109,23 +124,58 @@ describe('resolveMarkerImage', () => {
 
   test('passes through uri-only sources as MarkerImage without resolveAssetSource', () => {
     const source = { uri: 'https://example.com/pin.png' };
+    const resolved = resolveMarkerImage(source);
 
-    expect(resolveMarkerImage(source)).toEqual({
+    expect(resolved).toEqual({
       uri: 'https://example.com/pin.png',
     });
+    expect(resolved?.origin).toBeUndefined();
     expect(resolveAssetSourceMock).not.toHaveBeenCalled();
   });
 
-  test('passes through MarkerImage objects unchanged', () => {
+  test('drops an origin claimed by a user-supplied image', () => {
+    // `image={apiResponse.icon}` must not stamp itself bundled and skip the host policy.
+    const source = {
+      uri: 'http://192.168.1.1/admin/pin.png',
+      origin: 'bundled',
+    } as const;
+
+    const resolved = resolveMarkerImage(source);
+
+    expect(resolved).toEqual({ uri: 'http://192.168.1.1/admin/pin.png' });
+    expect(resolved?.origin).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    // A re-render hits the cache, so the warning does not repeat.
+    resolveMarkerImage({ ...source });
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test('passes through MarkerImage objects as an equal copy', () => {
     const image = {
       uri: 'asset:/pin.png',
       width: 32,
       height: 32,
       scale: 2,
     };
+    const resolved = resolveMarkerImage(image);
 
-    expect(resolveMarkerImage(image)).toBe(image);
+    expect(resolved).toEqual(image);
+    expect(resolved).not.toBe(image);
     expect(resolveAssetSourceMock).not.toHaveBeenCalled();
+  });
+
+  test('keeps no reference to the caller object in the cache', () => {
+    // Otherwise stamping the caller's object bundled after the first render would reach
+    // every later cache hit, and Android would skip the host policy for it.
+    const source: MarkerImage = { uri: 'http://192.168.1.1/admin/pin.png' };
+    const resolved = resolveMarkerImage(source);
+
+    source.origin = 'bundled';
+    const rerendered = resolveMarkerImage({ uri: 'http://192.168.1.1/admin/pin.png' });
+
+    expect(rerendered).toBe(resolved);
+    expect(rerendered?.origin).toBeUndefined();
   });
 
   test('caches require() resolutions by module id', () => {

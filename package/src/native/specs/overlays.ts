@@ -1,10 +1,20 @@
 import type { Coordinate } from '../../types/coordinate';
 
+/**
+ * Where a marker image came from. Stamped by `resolveMarkerImage`, never read from user
+ * input: a development build resolves a `require()`d asset to a Metro packager URL, whose
+ * host is indistinguishable from the private addresses the Android policy blocks.
+ */
+export type MarkerImageOrigin = 'bundled' | 'remote';
+
 export interface MarkerImage {
   uri: string;
   width?: number;
   height?: number;
   scale?: number;
+
+  /** Absent means user-supplied — the Android remote host policy applies. */
+  origin?: MarkerImageOrigin;
 }
 
 export type MarkerImageSource = number | MarkerImage;

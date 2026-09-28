@@ -22,12 +22,16 @@ fun PolygonDescriptor.toPolygonOptions(): PolygonOptions {
   return options
 }
 
-/** Updates an existing polygon in place, with the same defaults as [toPolygonOptions]. */
-fun PolygonDescriptor.applyTo(polygon: Polygon) {
+/** Moves an existing polygon onto this descriptor's outline and holes. */
+fun PolygonDescriptor.applyGeometryTo(polygon: Polygon) {
   polygon.points = coordinates.map { LatLng(it.latitude, it.longitude) }
   polygon.holes = holes?.map { hole ->
     hole.map { LatLng(it.latitude, it.longitude) }
   } ?: emptyList()
+}
+
+/** Restyles an existing polygon in place, with the same defaults as [toPolygonOptions]. */
+fun PolygonDescriptor.applyStyleTo(polygon: Polygon) {
   polygon.strokeColor = strokeColor?.toColorInt() ?: Color.BLACK
   polygon.fillColor = fillColor?.toColorInt() ?: Color.TRANSPARENT
   polygon.strokeWidth = (strokeWidth ?: 2.0).toFloat()

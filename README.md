@@ -252,14 +252,19 @@ function ControlledMap() {
       return;
     }
 
-    await map.animateCamera(
-      { center: { latitude: 52.2297, longitude: 21.0122 }, zoom: 12 },
-      1000,
-    );
+    try {
+      await map.animateCamera(
+        { center: { latitude: 52.2297, longitude: 21.0122 }, zoom: 12 },
+        1000,
+      );
 
-    // The camera is there now, so this reads where it actually arrived.
-    const camera = await map.getCamera();
-    console.log(camera.center);
+      // The camera is there now, so this reads where it actually arrived.
+      const camera = await map.getCamera();
+      console.log(camera.center);
+    } catch (error) {
+      // The map view unmounted, so there is no camera left to move or read.
+      console.warn(error);
+    }
   };
 
   return <MapView ref={mapRef} style={{ flex: 1 }} />;

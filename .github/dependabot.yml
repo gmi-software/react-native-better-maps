@@ -29,6 +29,9 @@ updates:
       interval: monthly
     # A dependency that matches several groups goes to the one whose pattern
     # names it most exactly, so the catch-all groups keep `patterns: ['*']`.
+    # GitHub's options reference does not list `dependency-type` for bun, but
+    # Dependabot applies it with the npm rule: `dependencies` and
+    # `optionalDependencies` are production, everything else development.
     groups:
       # Reanimated refuses to pod install next to a Worklets minor it does not
       # support, so the two only ever move together.

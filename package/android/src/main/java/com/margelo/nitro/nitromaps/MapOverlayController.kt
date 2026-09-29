@@ -316,6 +316,7 @@ internal class MapOverlayController(
               .position(element.position)
               .icon(iconFactory.icon(element.count))
               .anchor(0.5f, 0.5f)
+              .title(element.accessibilityLabel(context.resources))
           if (shouldAnimate) {
             options.alpha(0f)
           }
@@ -356,6 +357,7 @@ internal class MapOverlayController(
           marker.alpha = 1f
           marker.position = element.position
           marker.setIcon(iconFactory.icon(element.count))
+          marker.title = element.accessibilityLabel(context.resources)
           clusterByKey[key] = element
         }
       }

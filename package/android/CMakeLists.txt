@@ -6,7 +6,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 20)
 
 # Define the C++ library and add all sources
-add_library(${PACKAGE_NAME} SHARED src/main/cpp/cpp-adapter.cpp)
+add_library(${PACKAGE_NAME} SHARED src/main/cpp/cpp-adapter.cpp ../cpp/MarkerProjectionRegistry.cpp)
 
 # Add the Nitrogen-generated specs
 include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroMaps+autolinking.cmake)

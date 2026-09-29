@@ -39,6 +39,7 @@ Pod::Spec.new do |s|
     'ios/**/*.{m,mm}',
     'cpp/**/*.{hpp,cpp}',
   ]
+  s.private_header_files = ['cpp/**/*.{h,hpp}']
   s.exclude_files = [
     'ios/Package.swift',
     'ios/Tests/**/*',

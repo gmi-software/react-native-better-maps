@@ -43,6 +43,7 @@ final class NitroMapContainerView: UIView {
   func unmountFabricChild(_ child: UIView) {
     if let index = markerContents.firstIndex(where: { $0.fabricHost === child }) {
       let content = markerContents.remove(at: index)
+      content.clearProjection()
       content.mapContainer = nil
       content.fabricHost = nil
       child.transform = .identity

@@ -1,11 +1,27 @@
 import UIKit
 
+@_silgen_name("NitroMapsPublishMarkerProjection")
+private func publishMarkerProjection(_ tag: Int32, _ x: Float, _ y: Float)
+
+@_silgen_name("NitroMapsClearMarkerProjection")
+private func clearMarkerProjectionNative(_ tag: Int32)
+
 /// Owns Fabric children for their entire lifetime. Only the outer host moves.
 final class NitroMarkerContentView: UIView {
   var coordinate: Coordinate?
   var anchor: MarkerAnchor?
   weak var mapContainer: NitroMapContainerView?
   weak var fabricHost: UIView?
+  private var publishedTag: Int32 = 0
+  private var publishedX: CGFloat = .nan
+  private var publishedY: CGFloat = .nan
+
+  func clearProjection() {
+    if publishedTag > 0 { clearMarkerProjectionNative(publishedTag) }
+    publishedTag = 0
+    publishedX = .nan
+    publishedY = .nan
+  }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -35,6 +51,7 @@ final class NitroMarkerContentView: UIView {
           point.x.isFinite, point.y.isFinite,
           host.bounds.width > 0, host.bounds.height > 0 else {
       host.isHidden = true
+      clearProjection()
       return
     }
     let x = point.x - host.bounds.width * CGFloat(anchor?.x ?? 0.5)
@@ -45,6 +62,18 @@ final class NitroMarkerContentView: UIView {
     if visible {
       let transform = CGAffineTransform(translationX: x, y: y)
       if host.transform != transform { host.transform = transform }
+      let tag = Int32(truncatingIfNeeded: host.tag)
+      if tag > 0 && (tag != publishedTag || x != publishedX || y != publishedY) {
+        if publishedTag > 0 && publishedTag != tag {
+          clearMarkerProjectionNative(publishedTag)
+        }
+        publishMarkerProjection(tag, Float(x), Float(y))
+        publishedTag = tag
+        publishedX = x
+        publishedY = y
+      }
+    } else {
+      clearProjection()
     }
   }
 }

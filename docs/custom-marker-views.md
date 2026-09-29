@@ -39,6 +39,10 @@ The same live-host mechanism is implemented for MapKit, Google iOS, and Google A
 
 Provider camera callbacks update positions synchronously on the native UI thread. Idle maps do not run a projection timer. Empty maps have no marker projection loop. Layout/coordinate changes update affected hosts; provider/map lifecycle tears down the association. Host projection hides offscreen content from drawing/hit-testing. The native clustering/large-dataset pipeline additionally controls which React subtrees are mounted. Unmounting releases their React/Reanimated subscriptions; application-owned external timers still require application cleanup.
 
+The native projection is also exposed through the marker's Fabric shadow transform. Child `measure()` and `measureInWindow()` therefore include the projected position, which lets `Pressable` compare finger movement with its actual screen bounds. A thread-safe native registry shares offsets without per-frame JavaScript updates or Yoga commits. `measureLayout()` retains React Native's layout-relative behavior and excludes transforms.
+
+For touch regression checks, build the example with `EXPO_PUBLIC_MARKER_TOUCH_CHECK=1`. The screen includes direct and nested `Pressable` children, event counters, measured screen bounds, and a map mount toggle. See the [touch validation record](research/custom-marker-touch-validation.md) for the reproduction and platform results.
+
 ## Clusters with arbitrary JSX
 
 Enable `clusteringEnabled` to group nearby points. Marker count alone does not enable clustering. Descriptor markers and `MarkerView` children feed the same native engine and can belong to the same cluster. Without a renderer, clusters use the existing SDK badge. Supply `renderCluster` to replace those badges with live JSX:

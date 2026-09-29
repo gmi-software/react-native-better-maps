@@ -51,6 +51,39 @@ for (const name of ['MapView', 'MarkerView']) {
   );
 }
 
+// Only MarkerView has a native-projected position. Expose that position through
+// its Fabric shadow transform so DOM.measure() sees the same page coordinates
+// as the native touch target. This is intentionally outside Yoga layout.
+replaceOnce(
+  join(packageDir, 'nitrogen/generated/shared/c++/views/HybridMarkerViewComponent.hpp'),
+  '#include <react/renderer/components/view/ViewProps.h>\n',
+  '#include <react/renderer/components/view/ViewProps.h>\n#include "MarkerProjectionRegistry.hpp"\n',
+);
+replaceOnce(
+  join(packageDir, 'nitrogen/generated/shared/c++/views/HybridMarkerViewComponent.hpp'),
+  `  using HybridMarkerViewShadowNode = react::ConcreteViewShadowNode<HybridMarkerViewComponentName /* "HybridMarkerView" */,
+                                                                   HybridMarkerViewProps /* custom props */,
+                                                                   react::ViewEventEmitter /* default */,
+                                                                   HybridMarkerViewState /* custom state */>;`,
+  `  class HybridMarkerViewShadowNode final: public react::ConcreteViewShadowNode<HybridMarkerViewComponentName,
+                                                                                  HybridMarkerViewProps,
+                                                                                  react::ViewEventEmitter,
+                                                                                  HybridMarkerViewState> {
+  public:
+    using BaseShadowNode = react::ConcreteViewShadowNode<HybridMarkerViewComponentName,
+                                                          HybridMarkerViewProps,
+                                                          react::ViewEventEmitter,
+                                                          HybridMarkerViewState>;
+    using BaseShadowNode::BaseShadowNode;
+
+    react::Transform getTransform() const override {
+      const auto base = BaseShadowNode::getTransform();
+      const auto offset = markerProjection(getTag());
+      return react::Transform::Translate(offset.x, offset.y, 0) * base;
+    }
+  };`,
+);
+
 for (const fileName of [
   'Func_void_std__vector_std__string__Coordinate.swift',
   'HybridMapViewSpec_cxx.swift',

@@ -1,5 +1,6 @@
 package com.margelo.nitro.nitromaps
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Point
 import android.view.MotionEvent
@@ -9,6 +10,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
@@ -93,5 +95,30 @@ class MarkerViewGestureTest {
     send(map, MotionEvent.ACTION_UP, 185f, 40)
     assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP), childActions)
     assertTrue(surface.actions.isEmpty())
+  }
+
+  @Test fun nestedChildTracksProjectedPositionAfterMapOffsetAndReprojection() {
+    val child = View(context)
+    val (map, _) = fixture(child)
+    val marker = map.markerViewAt(0) as NitroMarkerContentView
+    child.layout(12, 8, 84, 36)
+    val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+    activity.setContentView(map)
+    map.layout(40, 60, 440, 460)
+
+    fun assertChildAt(projectedX: Int, projectedY: Int) {
+      val mapOnScreen = IntArray(2)
+      val childOnScreen = IntArray(2)
+      map.getLocationOnScreen(mapOnScreen)
+      child.getLocationOnScreen(childOnScreen)
+      assertEquals(projectedX + 12, childOnScreen[0] - mapOnScreen[0])
+      assertEquals(projectedY + 8, childOnScreen[1] - mapOnScreen[1])
+    }
+
+    assertChildAt(150, 150)
+    marker.anchor = MarkerAnchor(0.5, 1.0)
+    map.projectCoordinate = { Point(250, 280) }
+    map.updateMarkerPositions()
+    assertChildAt(200, 180)
   }
 }

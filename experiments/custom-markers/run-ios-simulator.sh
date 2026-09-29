@@ -11,6 +11,7 @@ bench_app="$bench_build/SnapshotBench.app"
 mkdir -p "$bench_app" "$(dirname "$bench_output")"
 bench_sdk="$(xcrun --sdk iphonesimulator --show-sdk-path)"
 bench_arch="$(uname -m)"
+bench_react_common="$bench_dir/../../example/node_modules/react-native/ReactCommon"
 trap 'rm -rf "$bench_build"' EXIT
 
 cat > "$bench_app/Info.plist" <<'PLIST'
@@ -29,12 +30,20 @@ cat > "$bench_app/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 
+xcrun --sdk iphonesimulator clang++ -std=c++20 -O2 -c \
+  -isysroot "$bench_sdk" -target "$bench_arch-apple-ios16.0-simulator" \
+  -I "$bench_react_common" \
+  -I "$bench_react_common/react/renderer/graphics/platform/ios" \
+  "$bench_dir/../../package/cpp/MarkerProjectionRegistry.cpp" \
+  -o "$bench_build/MarkerProjectionRegistry.o"
+
 xcrun --sdk iphonesimulator swiftc -O -parse-as-library \
   -sdk "$bench_sdk" -target "$bench_arch-apple-ios16.0-simulator" \
   -module-cache-path "$bench_build/ModuleCache" \
   "$bench_dir/SnapshotBench.swift" "$bench_dir/HostChecks.swift" \
   "$bench_dir/../../package/ios/NitroMapContainerView.swift" \
-  "$bench_dir/../../package/ios/NitroMarkerContentView.swift" -o "$bench_app/SnapshotBench"
+  "$bench_dir/../../package/ios/NitroMarkerContentView.swift" \
+  "$bench_build/MarkerProjectionRegistry.o" -lc++ -o "$bench_app/SnapshotBench"
 codesign --force --sign - "$bench_app"
 xcrun simctl terminate "$bench_device" "$bench_bundle" >/dev/null 2>&1 || true
 xcrun simctl install "$bench_device" "$bench_app"

@@ -22,6 +22,7 @@ export function useStableValue<Value>(
   isEqual: (left: Value, right: Value) => boolean,
 ): Value {
   const previous = useRef(next);
+  // eslint-disable-next-line react-hooks/refs -- compares with the last committed value, see above
   const stable = isEqual(previous.current, next) ? previous.current : next;
 
   useLayoutEffect(() => {

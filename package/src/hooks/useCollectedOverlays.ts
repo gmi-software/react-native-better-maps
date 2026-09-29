@@ -34,8 +34,10 @@ export function useCollectedOverlays(children: ReactNode): CollectedOverlays {
   const overlays = useMemo(() => {
     const state = collectOverlayChildren(children, { resolveMarkerImage });
 
+    /* eslint-disable react-hooks/refs -- the press handlers read the registry of the latest render */
     callbackRegistry.current = state.registry;
     trackPositionalIds(positionalIds.current, state.ids.anonymous);
+    /* eslint-enable react-hooks/refs */
 
     return {
       markers: state.markers,

@@ -96,8 +96,8 @@
     "react-native": "0.86.0",
     "react-native-builder-bob": "^0.43.1",
     "react-native-nitro-modules": "^0.35.10",
-    "release-it": "^19.0.0",
-    "typescript": "^5.8.3"
+    "release-it": "^21.1.0",
+    "typescript": "^6.0.3"
   },
   "react-native-builder-bob": {
     "source": "src",

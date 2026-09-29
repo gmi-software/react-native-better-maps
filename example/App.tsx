@@ -204,10 +204,10 @@ const ScalePressable = memo(function ScalePressable({
       style={[style, animatedStyle]}
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withSpring(0.96, springSnappy);
+        scale.set(withSpring(0.96, springSnappy));
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, springSnappy);
+        scale.set(withSpring(1, springSnappy));
       }}
     >
       {children}

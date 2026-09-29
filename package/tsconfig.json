@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/typescript",
-    "noEmit": true
+    "noEmit": true,
+    "types": ["bun"]
   },
   "include": ["src"]
 }

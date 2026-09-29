@@ -13,6 +13,7 @@ import { resolveCameraProp } from './resolveCameraProp';
 export function useValidCamera(camera: Camera | undefined): Camera | undefined {
   const lastAccepted = useRef<Camera | undefined>(undefined);
   const accepted = useMemo(
+    // eslint-disable-next-line react-hooks/refs -- read only when `camera` changes, as in useValidRegion
     () => resolveCameraProp(camera, lastAccepted.current),
     [camera],
   );

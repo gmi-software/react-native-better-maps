@@ -13,9 +13,10 @@ import { resolveRegionProp } from './resolveRegionProp';
  */
 export function useValidRegion(region: Region | undefined): Region | undefined {
   const lastAccepted = useRef<Region | undefined>(undefined);
-  // Reading the ref here is safe: it only matters at the moment `region`
-  // changes, which is exactly when this recomputes.
   const accepted = useMemo(
+    // Reading the ref here is safe: it only matters at the moment `region`
+    // changes, which is exactly when this recomputes.
+    // eslint-disable-next-line react-hooks/refs
     () => resolveRegionProp(region, lastAccepted.current),
     [region],
   );

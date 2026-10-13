@@ -25,7 +25,7 @@ enum GoogleMapsAPIKey {
 }
 #endif
 
-enum MapProviderConfigurationError: LocalizedError {
+enum MapProviderConfigurationError: LocalizedError, CustomStringConvertible {
   case missingGoogleMapsIosApiKey
   case googleMapsSdkNotLinked
   case unsupportedIOSProvider(MapProvider)
@@ -40,5 +40,9 @@ enum MapProviderConfigurationError: LocalizedError {
     case .unsupportedIOSProvider(let provider):
       return "Map provider \"\(provider)\" is not supported on iOS."
     }
+  }
+
+  var description: String {
+    errorDescription ?? "Map provider configuration failed."
   }
 }

@@ -107,6 +107,7 @@ class GoogleMapProviderAdapter(
     view.getMapAsync { map ->
       googleMap = map
       configureMap(map)
+      onCameraMoved?.invoke()
     }
 
     installViewportSizeListener(view)
@@ -214,6 +215,26 @@ class GoogleMapProviderAdapter(
       check(normalizeGoogleMapId(value) == googleMapIdAtCreation) {
         "googleMapId is applied when the Google MapView is created. Recreate the adapter to change it."
       }
+    }
+
+  override var onCameraMoved: (() -> Unit)? = null
+
+  /** One `Projection` per camera frame, shared by every live marker. */
+  override fun makeMarkerProjection(): MarkerProjection? {
+    val projection = googleMap?.projection ?: return null
+    return { coordinate -> projection.toScreenLocation(LatLng(coordinate.latitude, coordinate.longitude)) }
+  }
+
+  override var customClusterViews: Boolean? = null
+    set(value) {
+      field = value
+      overlayController.setCustomClusterViews(value == true)
+    }
+
+  override var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)? = null
+    set(value) {
+      field = value
+      overlayController.onMarkerViewRenderState = value
     }
 
   private var _clusteringEnabled: Boolean? = null
@@ -498,10 +519,12 @@ class GoogleMapProviderAdapter(
       )
     }
     map.setOnCameraMoveListener {
+      onCameraMoved?.invoke()
       overlayController.onCameraMove()
       regionChanges.cameraMoved()
     }
     map.setOnCameraIdleListener {
+      onCameraMoved?.invoke()
       overlayController.onCameraIdle()
       regionChanges.cameraStopped()
     }
@@ -851,6 +874,8 @@ class GoogleMapProviderAdapter(
   override fun release() {
     // Drop the JS callbacks first: a map event still in flight must not reach a
     // view that is already gone.
+    onCameraMoved = null
+    onMarkerViewRenderState = null
     onRegionChange = null
     onRegionChangeComplete = null
     onMapReady = null

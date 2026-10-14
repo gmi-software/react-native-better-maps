@@ -45,3 +45,8 @@ export type {
   GeojsonToOverlayOptions,
 } from './geojson';
 export type { MapViewRef } from './ref';
+export type {
+  MarkerViewCluster,
+  MarkerViewProps,
+  RenderMarkerViewCluster,
+} from './markerView';

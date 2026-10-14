@@ -8,6 +8,7 @@ extension MarkerDescriptor {
     hasher.combine(subtitle)
     hasher.combine(draggable)
     hasher.combine(clusterable)
+    hasher.combine(liveView)
     hasher.combine(image?.uri)
     hasher.combine(image?.width)
     hasher.combine(image?.height)

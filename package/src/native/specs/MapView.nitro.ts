@@ -116,6 +116,22 @@ export interface NativePoiPressEvent {
   placeId?: string;
 }
 
+/** A cluster that `renderCluster` draws as a live `MarkerView`. */
+export interface NativeMarkerViewCluster {
+  id: string;
+  coordinate: Coordinate;
+  markerIds: string[];
+}
+
+/**
+ * Which live `MarkerView` hosts the native clustering and viewport pipeline
+ * currently shows. Sent only when that set changes, never per camera frame.
+ */
+export interface NativeMarkerViewRenderState {
+  markerIds: string[];
+  clusters: NativeMarkerViewCluster[];
+}
+
 /**
  * Native props for the {@linkcode MapView} Nitro HybridView.
  *
@@ -176,6 +192,12 @@ export interface MapViewProps extends HybridViewProps {
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
+
+  /** Whether clusters are drawn by `renderCluster` instead of the SDK badge. */
+  customClusterViews?: boolean;
+
+  /** Receives the displayed live marker set whenever it changes. */
+  onMarkerViewRenderState?: (state: NativeMarkerViewRenderState) => void;
 
   /** Padding applied to map edges, in density-independent pixels. */
   mapPadding?: EdgePadding;

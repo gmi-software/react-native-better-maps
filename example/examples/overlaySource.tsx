@@ -3,6 +3,7 @@ import {
   type Coordinate,
   type MapViewProps,
 } from 'react-native-better-maps';
+import { liveMarkerChildren, renderLiveCluster } from './liveMarkers';
 import type { MapScenario } from './types';
 
 type ScenarioOverlayProps = Pick<
@@ -12,6 +13,7 @@ type ScenarioOverlayProps = Pick<
   | 'polygons'
   | 'circles'
   | 'children'
+  | 'renderCluster'
   | 'onMarkerPress'
   | 'onMarkerDragEnd'
   | 'onPolylinePress'
@@ -32,9 +34,10 @@ export function createScenarioOverlayProps(
     polylines: scenario.polylines,
     polygons: scenario.polygons,
     circles: scenario.circles,
-    children:
-      geojson == null ? undefined : (
+    children: [
+      geojson == null ? null : (
         <Geojson
+          key="geojson"
           id={scenario.id}
           geojson={geojson}
           strokeColor={scenario.geojsonStyle?.strokeColor}
@@ -46,6 +49,11 @@ export function createScenarioOverlayProps(
           }}
         />
       ),
+      scenario.livePlaces == null
+        ? null
+        : liveMarkerChildren(scenario.livePlaces, onOverlayPress),
+    ],
+    renderCluster: scenario.livePlaces == null ? undefined : renderLiveCluster,
     onMarkerPress: scenario.markers != null ? onMarkerPress : undefined,
     onMarkerDragEnd: scenario.markers != null ? onMarkerDragEnd : undefined,
     onPolylinePress: scenario.polylines != null ? onOverlayPress : undefined,

@@ -1,5 +1,6 @@
 import type {
   ApplePoiDetailPresentation,
+  Coordinate,
   EdgePadding,
   GeojsonInput,
   GeojsonProps,
@@ -20,6 +21,14 @@ export interface MapScenarioAdvancedOptions {
   fitToCoordinatesOnMount?: boolean;
 }
 
+/** A place drawn as a live `MarkerView`. */
+export interface LivePlace {
+  id: string;
+  coordinate: Coordinate;
+  price: number;
+  isHot: boolean;
+}
+
 export interface MapScenario {
   id: string;
   name: string;
@@ -30,6 +39,8 @@ export interface MapScenario {
   polygons?: NonNullable<MapViewProps['polygons']>;
   circles?: NonNullable<MapViewProps['circles']>;
   geojson?: GeojsonInput;
+  /** Drawn as `MarkerView` children, with JSX cluster badges. */
+  livePlaces?: LivePlace[];
   geojsonStyle?: Pick<
     GeojsonProps,
     'strokeColor' | 'fillColor' | 'strokeWidth'

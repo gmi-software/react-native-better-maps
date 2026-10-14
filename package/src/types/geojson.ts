@@ -149,6 +149,14 @@ export interface GeojsonOverlayDescriptors {
 
 export interface GeojsonProps extends GeojsonToOverlayOptions {
   /**
+   * Prefix of the ids of the markers, polylines, and polygons generated from
+   * this layer. Defaults to the element's React `key`, then to `geojson-<n>`,
+   * its position among the layers that have neither. Must be unique among the
+   * map's Geojson layers.
+   */
+  id?: string;
+
+  /**
    * GeoJSON object or JSON string. FeatureCollections, Features, geometry
    * objects, and GeometryCollections are flattened into markers, polylines,
    * and polygons.

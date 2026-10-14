@@ -11,7 +11,7 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
   # Rehearsal against the current branch. Always a dry run: it validates the
-  # version, changelog and full gate without tagging or publishing anything.
+  # version and the full gate without tagging or publishing anything.
   workflow_dispatch:
 
 concurrency:
@@ -19,7 +19,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The gate 1.2.0 did not have. That release reached npm with a Google-only Swift
+  # file that was not guarded behind `canImport(GoogleMaps)`, breaking every
+  # Apple-Maps-only install. Native pull request runs are `paths:`-filtered and
+  # advisory, so this is the step that actually stops a broken native build from
+  # being published.
+  native:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/native-build.yml
+
   release:
+    needs: [native]
     runs-on: ubuntu-latest
     permissions:
       # Create the GitHub Release for the pushed tag.
@@ -29,7 +40,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Full history so conventional-changelog can build the release notes
           # from every commit since the previous tag.
@@ -37,12 +48,12 @@ jobs:
           persist-credentials: false
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           # Node 24 ships npm >= 11.5.1, required for npm trusted publishing.
           # `registry-url` is deliberately omitted: it writes an `_authToken`
@@ -81,15 +92,6 @@ jobs:
             exit 1
           fi
 
-      - name: Verify CHANGELOG entry exists
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if ! grep -qE "^## +${VERSION//./\\.}( |$)" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no '## $VERSION' section. Add the release notes before publishing."
-            exit 1
-          fi
-
       - name: Verify version is not already published
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -116,6 +118,13 @@ jobs:
 
       - name: Test
         run: bun run --filter react-native-better-maps test
+
+      - name: Copy README into the package
+        # npm reads the README shown on the registry page from the package
+        # directory while it builds the manifest, before any pack script runs.
+        # The `prepack` copy therefore never reaches the registry (1.0.0 through
+        # 1.2.0 all show "No README data found!"); the file must exist here first.
+        run: cp README.md package/README.md
 
       - name: Publish
         working-directory: package

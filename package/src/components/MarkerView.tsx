@@ -1,29 +1,24 @@
-import { useContext } from 'react';
-import type { ReactNode } from 'react';
+import { useContext, useMemo } from 'react';
 import { NativeMarkerView } from '../native/MarkerViewNative';
-import type { Coordinate } from '../types/coordinate';
-import type { MarkerAnchor } from '../types/overlays';
-import { MapChildrenContext } from './MapChildrenContext';
-
-export interface MarkerViewProps {
-  /** Stable identity used in cluster membership and onClusterPress. */
-  id?: string;
-  coordinate: Coordinate;
-  /** Defaults to true when clustering is enabled on the map. */
-  clusterable?: boolean;
-  /** Fixed layout bounds in points/dp. Animate content inside these bounds. */
-  width: number;
-  height: number;
-  /** Point in the content attached to the coordinate; defaults to bottom-center. */
-  anchor?: MarkerAnchor;
-  /** Live React Native content, including Pressable and Animated views. */
-  children: ReactNode;
-}
+import type { OverlayComponentType } from '../overlays/overlayType';
+import { OverlayType } from '../overlays/overlayType';
+import { warnOverlay } from '../overlays/warnOverlay';
+import type { MarkerViewProps } from '../types/markerView';
+import { MarkerViewHostContext } from './MarkerViewHostContext';
 
 /**
- * A live, screen-aligned marker. Its JSX stays in Fabric; no snapshots or
- * per-frame JS camera updates are used. Native clustering mounts only the
- * visible display set; keep persistent application state outside the marker.
+ * A marker drawn by live React Native content instead of an image: state,
+ * `Pressable`, Reanimated animations and all.
+ *
+ * Use it as a direct child of {@linkcode MapView}. The map places it with its
+ * native projection on every camera frame - no JS runs and nothing is
+ * snapshotted while the camera moves - and mounts its JSX only while the
+ * native clustering and viewport pipeline shows it. A marker grouped into a
+ * cluster or scrolled far off screen is unmounted, so keep state that has to
+ * outlive that in your app, not in the marker.
+ *
+ * For large static datasets prefer {@linkcode Marker}: an SDK-drawn image
+ * costs far less than a live view.
  */
 export function MarkerView({
   coordinate,
@@ -32,52 +27,26 @@ export function MarkerView({
   anchor,
   children,
 }: MarkerViewProps) {
-  const isInsideMap = useContext(MapChildrenContext);
-  if (!isInsideMap) {
-    throw new Error('MarkerView must be a child of MapView');
+  const isInMap = useContext(MarkerViewHostContext);
+  const style = useMemo(
+    () => ({ position: 'absolute' as const, left: 0, top: 0, width, height }),
+    [width, height],
+  );
+
+  if (!isInMap) {
+    warnOverlay('MarkerView renders only as a direct child of MapView.');
+    return null;
   }
-  validateMarkerViewProps({ coordinate, width, height, anchor, children });
+
   return (
     <NativeMarkerView
       coordinate={coordinate}
-      anchor={anchor}
-      style={{ position: 'absolute', left: 0, top: 0, width, height }}
+      anchor={anchor ?? undefined}
+      style={style}
     >
       {children}
     </NativeMarkerView>
   );
 }
 
-export function validateMarkerViewProps({
-  coordinate,
-  width,
-  height,
-  anchor,
-}: MarkerViewProps) {
-  if (
-    !Number.isFinite(width) ||
-    width <= 0 ||
-    !Number.isFinite(height) ||
-    height <= 0
-  ) {
-    throw new Error(
-      'MarkerView width and height must be finite positive numbers',
-    );
-  }
-  if (
-    !Number.isFinite(coordinate.latitude) ||
-    Math.abs(coordinate.latitude) > 90 ||
-    !Number.isFinite(coordinate.longitude) ||
-    Math.abs(coordinate.longitude) > 180
-  ) {
-    throw new Error(
-      'MarkerView coordinate must contain a valid latitude and longitude',
-    );
-  }
-  if (
-    anchor != null &&
-    (!Number.isFinite(anchor.x) || !Number.isFinite(anchor.y))
-  ) {
-    throw new Error('MarkerView anchor must contain finite values');
-  }
-}
+(MarkerView as OverlayComponentType).overlayType = OverlayType.MarkerView;

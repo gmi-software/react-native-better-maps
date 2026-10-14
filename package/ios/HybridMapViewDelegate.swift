@@ -30,7 +30,6 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     let point = recognizer.location(in: parent.view)
-    if (parent.view.superview as? NitroMapContainerView)?.containsMarker(at: point) == true { return }
     if parent.notifyOverlayPress(at: point) {
       return
     }
@@ -59,19 +58,7 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     let point = recognizer.location(in: parent.view)
-    if (parent.view.superview as? NitroMapContainerView)?.containsMarker(at: point) == true { return }
     parent.notifyLongPress(at: point)
-  }
-
-  func gestureRecognizer(
-    _ gestureRecognizer: UIGestureRecognizer,
-    shouldReceive touch: UITouch
-  ) -> Bool {
-    guard let mapView = parent?.view,
-          let container = mapView.superview as? NitroMapContainerView else { return true }
-    // Reject before recognition: returning early from handleTap still cancels
-    // the child's touch sequence when UIKit recognizes this tap.
-    return !container.containsMarker(at: touch.location(in: mapView))
   }
 
   func gestureRecognizer(
@@ -79,6 +66,18 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
   ) -> Bool {
     true
+  }
+
+  /// A touch on a live marker belongs to its JSX. Turned away before
+  /// recognition: a recognized map tap would cancel the marker's own touches.
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldReceive touch: UITouch
+  ) -> Bool {
+    guard let container = parent?.view.superview as? NitroMapContainerView else {
+      return true
+    }
+    return !container.containsMarker(at: touch.location(in: container))
   }
 
   private func isAnnotationView(at point: CGPoint, in mapView: MKMapView) -> Bool {
@@ -92,17 +91,16 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     return false
   }
 
-  func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
-    parent?.onCameraMoved?()
-  }
-
   func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
     parent?.handleRegionWillChange(userInteracting: mapView.isUserInteracting)
   }
 
   func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-    parent?.onCameraMoved?()
     parent?.handleRegionDidChange()
+  }
+
+  func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+    parent?.handleVisibleRegionChange()
   }
 
   func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
@@ -119,9 +117,10 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
   func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
     if let cluster = annotation as? MapClusterAnnotation {
-      let view = mapView.dequeueReusableAnnotationView(
-        withIdentifier: NitroClusterAnnotationView.reuseIdentifier
-      ) as? NitroClusterAnnotationView
+      let view =
+        mapView.dequeueReusableAnnotationView(
+          withIdentifier: NitroClusterAnnotationView.reuseIdentifier
+        ) as? NitroClusterAnnotationView
         ?? NitroClusterAnnotationView(
           annotation: cluster,
           reuseIdentifier: NitroClusterAnnotationView.reuseIdentifier
@@ -137,19 +136,21 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     if marker.image != nil {
-      let imageView = mapView.dequeueReusableAnnotationView(
-        withIdentifier: NitroImageAnnotationView.reuseIdentifier,
-        for: marker
-      ) as! NitroImageAnnotationView
+      let imageView =
+        mapView.dequeueReusableAnnotationView(
+          withIdentifier: NitroImageAnnotationView.reuseIdentifier,
+          for: marker
+        ) as! NitroImageAnnotationView
 
       imageView.configure(for: marker)
       return imageView
     }
 
-    let pinView = mapView.dequeueReusableAnnotationView(
-      withIdentifier: NitroPinAnnotationView.reuseIdentifier,
-      for: marker
-    ) as! NitroPinAnnotationView
+    let pinView =
+      mapView.dequeueReusableAnnotationView(
+        withIdentifier: NitroPinAnnotationView.reuseIdentifier,
+        for: marker
+      ) as! NitroPinAnnotationView
 
     pinView.configure(for: marker)
     return pinView
@@ -158,14 +159,16 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
     for view in views {
       if let marker = view.annotation as? MapMarkerAnnotation,
-         marker.enteringAnimation.kind != .system {
+        marker.enteringAnimation.kind != .system
+      {
         OverlayEnteringAnimationResolver.animateAnnotationView(
           view,
           animation: marker.enteringAnimation,
           supportsScale: true
         )
       } else if let cluster = view.annotation as? MapClusterAnnotation,
-                cluster.enteringAnimation.kind != .system {
+        cluster.enteringAnimation.kind != .system
+      {
         OverlayEnteringAnimationResolver.animateAnnotationView(
           view,
           animation: cluster.enteringAnimation,
@@ -176,9 +179,16 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   }
 
   func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+    // MapKit selects whatever is under a tap, including beneath a live marker.
+    if mapView.touchStartedOnLiveMarker, let annotation = view.annotation {
+      mapView.deselectAnnotation(annotation, animated: false)
+      return
+    }
+
     if #available(iOS 16.0, *),
-       let mapFeature = view.annotation as? MKMapFeatureAnnotation,
-       handleMapFeatureSelection(mapFeature) {
+      let mapFeature = view.annotation as? MKMapFeatureAnnotation,
+      handleMapFeatureSelection(mapFeature, in: mapView)
+    {
       return
     }
 
@@ -204,14 +214,42 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   }
 
   func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
+    if mapView.touchStartedOnLiveMarker {
+      mapView.deselectAnnotation(annotation, animated: false)
+      return
+    }
+
     if #available(iOS 16.0, *),
-       let mapFeature = annotation as? MKMapFeatureAnnotation {
-      _ = handleMapFeatureSelection(mapFeature)
+      let mapFeature = annotation as? MKMapFeatureAnnotation
+    {
+      _ = handleMapFeatureSelection(mapFeature, in: mapView)
     }
   }
 
+  /// Supplies MapKit's native place details for selected POIs when
+  /// `applePoiDetailPresentation` is configured. MapKit keeps rendering its own
+  /// feature annotation view; only the selection accessory is provided here.
+  @available(iOS 18.0, *)
+  func mapView(
+    _ mapView: MKMapView,
+    selectionAccessoryFor annotation: MKAnnotation
+  ) -> MKSelectionAccessory? {
+    guard let mapFeature = annotation as? MKMapFeatureAnnotation,
+      mapFeature.featureType == .pointOfInterest
+    else {
+      return nil
+    }
+
+    return parent?.applePoiDetailPresentation?.toMKSelectionAccessory(
+      presentedFrom: mapView.nearestViewController
+    )
+  }
+
   @available(iOS 16.0, *)
-  private func handleMapFeatureSelection(_ mapFeature: MKMapFeatureAnnotation) -> Bool {
+  private func handleMapFeatureSelection(
+    _ mapFeature: MKMapFeatureAnnotation,
+    in mapView: MKMapView
+  ) -> Bool {
     guard mapFeature.featureType == .pointOfInterest else {
       return false
     }
@@ -229,6 +267,13 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     }
 
     parent?.notifyPoiPress(annotation: mapFeature)
+
+    // MapKit shows the native details through the selection accessory (iOS 18+), which
+    // needs the POI to stay selected. Otherwise there is nothing to show, so clear it.
+    if #available(iOS 18.0, *), parent?.applePoiDetailPresentation != nil {
+      return true
+    }
+    mapView.deselectAnnotation(mapFeature, animated: false)
     return true
   }
 
@@ -239,7 +284,8 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     fromOldState oldState: MKAnnotationView.DragState
   ) {
     guard newState == .ending,
-          let marker = view.annotation as? MapMarkerAnnotation else {
+      let marker = view.annotation as? MapMarkerAnnotation
+    else {
       return
     }
 

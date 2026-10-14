@@ -62,15 +62,17 @@ final class MapMarkerAnnotation: NSObject, MKAnnotation {
     draggable = nextDraggable
     isClusterable = nextClusterable
 
-    let imageChanged = switch (image, descriptor.image) {
-    case (nil, nil): false
-    case let (current?, next?):
-      MarkerImageLoader.cacheKey(for: current) != MarkerImageLoader.cacheKey(for: next)
-    default: true
-    }
+    let imageChanged =
+      switch (image, descriptor.image) {
+      case (nil, nil): false
+      case (let current?, let next?):
+        MarkerImageLoader.cacheKey(for: current) != MarkerImageLoader.cacheKey(for: next)
+      default: true
+      }
     let markerColorChanged = markerColor != descriptor.markerColor
     let anchorChanged = anchor?.x != descriptor.anchor?.x || anchor?.y != descriptor.anchor?.y
-    let centerOffsetChanged = centerOffset?.x != descriptor.centerOffset?.x
+    let centerOffsetChanged =
+      centerOffset?.x != descriptor.centerOffset?.x
       || centerOffset?.y != descriptor.centerOffset?.y
     let rotationChanged = rotation != descriptor.rotation
     let flatChanged = flat != descriptor.flat

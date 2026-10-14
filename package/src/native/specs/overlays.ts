@@ -1,10 +1,20 @@
 import type { Coordinate } from '../../types/coordinate';
 
+/**
+ * Where a marker image came from. Stamped by `resolveMarkerImage`, never read from user
+ * input: a development build resolves a `require()`d asset to a Metro packager URL, whose
+ * host is indistinguishable from the private addresses the Android policy blocks.
+ */
+export type MarkerImageOrigin = 'bundled' | 'remote';
+
 export interface MarkerImage {
   uri: string;
   width?: number;
   height?: number;
   scale?: number;
+
+  /** Absent means user-supplied — the Android remote host policy applies. */
+  origin?: MarkerImageOrigin;
 }
 
 export type MarkerImageSource = number | MarkerImage;
@@ -53,9 +63,6 @@ export interface MarkerDescriptor {
   /** Unique identifier for the marker. */
   id: string;
 
-  /** Internal Fabric host identity; omitted for SDK-rendered markers. */
-  customViewId?: string;
-
   /** Geographic position of the marker. */
   coordinate: Coordinate;
 
@@ -71,11 +78,20 @@ export interface MarkerDescriptor {
   /** Whether the marker participates in clustering when enabled on the map. */
   clusterable?: boolean;
 
+  /**
+   * Drawn by a live `MarkerView` host instead of the SDK. Native clustering and
+   * viewport filtering still place it; the SDK draws nothing for it.
+   */
+  liveView?: boolean;
+
   /** Custom marker image. */
   image?: MarkerImage;
 
   /** Color applied to the default marker when no custom image is set. */
   markerColor?: string;
+
+  /** Drawing order relative to other map overlays. */
+  zIndex?: number;
 
   /** Anchor point on the image relative to the coordinate (default bottom-center). */
   anchor?: MarkerAnchor;
@@ -91,9 +107,6 @@ export interface MarkerDescriptor {
 
   /** Opacity from 0 to 1. */
   opacity?: number;
-
-  /** Drawing order relative to other map overlays. */
-  zIndex?: number;
 
   /** Entering animation override for this marker. */
   enteringAnimation?: OverlayEnteringAnimationDescriptor;
@@ -118,7 +131,7 @@ export interface PolylineDescriptor {
   /** Drawing order relative to other map overlays. */
   zIndex?: number;
 
-  /** Whether the polyline is tappable. */
+  /** Whether taps on the polyline reach `onPolylinePress`. Defaults to `false`. */
   tappable?: boolean;
 }
 
@@ -147,7 +160,7 @@ export interface PolygonDescriptor {
   /** Drawing order relative to other map overlays. */
   zIndex?: number;
 
-  /** Whether the polygon is tappable. */
+  /** Whether taps on the polygon reach `onPolygonPress`. Defaults to `false`. */
   tappable?: boolean;
 }
 
@@ -173,6 +186,6 @@ export interface CircleDescriptor {
   /** Stroke width in density-independent pixels. */
   strokeWidth?: number;
 
-  /** Whether the circle is tappable. */
+  /** Whether taps on the circle reach `onCirclePress`. Defaults to `false`. */
   tappable?: boolean;
 }

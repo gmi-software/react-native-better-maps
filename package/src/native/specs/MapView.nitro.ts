@@ -6,7 +6,13 @@ import type {
 import type { Camera } from '../../types/camera';
 import type { Coordinate } from '../../types/coordinate';
 import type { MapProvider, MapType } from '../../types/map';
-import type { EdgePadding, Region, VisibleRegion } from '../../types/region';
+import type { Point } from '../../types/point';
+import type {
+  EdgePadding,
+  Region,
+  RegionChangeDetails,
+  VisibleRegion,
+} from '../../types/region';
 import type {
   CircleDescriptor,
   MarkerDescriptor,
@@ -93,6 +99,14 @@ export type ApplePoiCategory =
   | 'zoo'
   | 'unknown';
 
+/**
+ * Native MapKit presentation for a selected point of interest (iOS 18+).
+ *
+ * Mirrors the `MKSelectionAccessory.mapItemDetail(_:)` presentation styles.
+ */
+export type ApplePoiDetailPresentation =
+  'automatic' | 'callout' | 'sheet' | 'openInMaps';
+
 export interface NativePoiPressEvent {
   provider: MapProvider;
   coordinate: Coordinate;
@@ -102,15 +116,19 @@ export interface NativePoiPressEvent {
   placeId?: string;
 }
 
+/** A cluster that `renderCluster` draws as a live `MarkerView`. */
 export interface NativeMarkerViewCluster {
   id: string;
   coordinate: Coordinate;
   markerIds: string[];
-  region: Region;
 }
 
+/**
+ * Which live `MarkerView` hosts the native clustering and viewport pipeline
+ * currently shows. Sent only when that set changes, never per camera frame.
+ */
 export interface NativeMarkerViewRenderState {
-  markerViewIds: string[];
+  markerIds: string[];
   clusters: NativeMarkerViewCluster[];
 }
 
@@ -163,16 +181,22 @@ export interface MapViewProps extends HybridViewProps {
   /** Whether to show the scale control (iOS only). */
   showsScale?: boolean;
 
+  /**
+   * Native MapKit detail presentation for selected points of interest
+   * (Apple MapKit only, iOS 18+). Omit to disable.
+   */
+  applePoiDetailPresentation?: ApplePoiDetailPresentation;
+
   /** Custom map style as a JSON string (full support on Android; curated subset on iOS 16+). */
   customMapStyle?: string;
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
 
-  /** Use live Fabric hosts for cluster badges. */
+  /** Whether clusters are drawn by `renderCluster` instead of the SDK badge. */
   customClusterViews?: boolean;
 
-  /** Emitted only when the native display set changes, not for camera frames. */
+  /** Receives the displayed live marker set whenever it changes. */
   onMarkerViewRenderState?: (state: NativeMarkerViewRenderState) => void;
 
   /** Padding applied to map edges, in density-independent pixels. */
@@ -184,11 +208,14 @@ export interface MapViewProps extends HybridViewProps {
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimationDescriptor;
 
-  /** Called once when a user-initiated region change begins. */
-  onRegionChange?: (region: Region) => void;
+  /** Called once when a region change begins, whoever started it. */
+  onRegionChange?: (region: Region, details: RegionChangeDetails) => void;
 
-  /** Called once when a user-initiated region change ends. */
-  onRegionChangeComplete?: (region: Region) => void;
+  /** Called once when a region change ends, whoever started it. */
+  onRegionChangeComplete?: (
+    region: Region,
+    details: RegionChangeDetails,
+  ) => void;
 
   /** Called when the map is ready to use. */
   onMapReady?: () => void;
@@ -249,25 +276,52 @@ export interface MapViewMethods extends HybridViewMethods {
   fetchCamera(): Promise<Camera>;
 
   /**
-   * Sets the camera position immediately.
+   * Sets the camera position immediately. Resolves once the move is done, which
+   * for a non-animated move is right away.
    *
    * Named `applyCamera` in the Nitro spec to avoid colliding with the `camera`
    * prop accessor (`getCamera`/`setCamera`) in generated C++ bindings.
    */
   applyCamera(camera: Camera): Promise<void>;
 
-  /** Animates the camera to the given position. Duration is in seconds. */
+  /**
+   * Animates the camera to the given position, over `duration` milliseconds -
+   * 250 when omitted, a jump for 0. Resolves once the camera has arrived, or
+   * once the animation is cut short.
+   */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
+
+  /**
+   * Animates the camera to frame the given region, over `duration`
+   * milliseconds - 250 when omitted, a jump for 0. Resolves once the camera has
+   * arrived, or once the animation is cut short.
+   */
+  animateToRegion(region: Region, duration?: number): Promise<void>;
 
   /** Returns the currently visible geographic region. */
   getVisibleRegion(): Promise<VisibleRegion>;
 
-  /** Fits the camera to show all given coordinates with optional edge padding. */
+  /**
+   * Fits the camera to show all given coordinates with optional edge padding.
+   * Resolves once the camera has arrived, or once the animation is cut short.
+   */
   fitToCoordinates(
     coordinates: Coordinate[],
     padding?: EdgePadding,
     animated?: boolean,
   ): Promise<void>;
+
+  /**
+   * Returns where the map draws a coordinate, in density-independent pixels
+   * from the top-left corner of the map view.
+   */
+  pointForCoordinate(coordinate: Coordinate): Promise<Point>;
+
+  /**
+   * Returns the coordinate under a point given in density-independent pixels
+   * from the top-left corner of the map view.
+   */
+  coordinateForPoint(point: Point): Promise<Coordinate>;
 }
 
 /**

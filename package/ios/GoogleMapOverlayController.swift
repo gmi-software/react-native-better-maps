@@ -34,23 +34,12 @@ final class GoogleMapOverlayController {
   private var polylines: [String: GMSPolyline] = [:]
   private var polygons: [String: GMSPolygon] = [:]
   private var circles: [String: GMSCircle] = [:]
+  private var polylineVersions: [String: ShapeRenderVersion] = [:]
+  private var polygonVersions: [String: ShapeRenderVersion] = [:]
+  private var circleVersions: [String: ShapeRenderVersion] = [:]
   private let markerPipeline: MarkerRenderPipeline
   private let markerViews = MarkerViewRenderRegistry()
-  private var renderedVersions: [String: Int] {
-    markerVersions.merging(markerViews.versions) { _, live in live }
-  }
-  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
-    get { markerViews.onChange }
-    set { markerViews.onChange = newValue }
-  }
-  func setCustomClusterViews(_ enabled: Bool) {
-    guard markerViews.customClusters != enabled else { return }
-    markerViews.customClusters = enabled
-    clearMarkers()
-    reapplyMarkers()
-  }
   private let visualApplier = GoogleMarkerVisualApplier()
-  private var clusterIconCache: [String: UIImage] = [:]
 
   var onMarkerPress: ((String) -> Void)?
   var onMarkerDragEnd: ((String, Coordinate) -> Void)?
@@ -69,6 +58,26 @@ final class GoogleMapOverlayController {
 
   private var usesViewportPipeline: Bool {
     markerPipeline.usesViewportPipeline
+  }
+
+  /// What the pipeline diffs against: the SDK markers and the live hosts.
+  private var displayedVersions: [String: Int] {
+    markerViews.displayedVersions(merging: markerVersions)
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { markerViews.onChange }
+    set { markerViews.onChange = newValue }
+  }
+
+  /// Switching who draws clusters redraws every marker: a cluster on screen
+  /// belongs to the SDK or to JS, and the diff cannot move it between them.
+  func setCustomClusterViews(_ enabled: Bool) {
+    guard markerViews.setCustomClusters(enabled) else {
+      return
+    }
+    clearMarkers()
+    reapplyMarkers()
   }
 
   func reset() {
@@ -100,7 +109,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.refreshNow(
-      displayedVersions: renderedVersions,
+      displayedVersions: displayedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -123,7 +132,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.scheduleViewportRefresh(
-      displayedVersions: renderedVersions,
+      displayedVersions: displayedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       immediate: immediate,
@@ -139,10 +148,10 @@ final class GoogleMapOverlayController {
 
   func handleMarkerTap(_ marker: GMSMarker) -> Bool {
     switch marker.userData as? MarkerPayload {
-    case let .marker(id):
+    case .marker(let id):
       onMarkerPress?(id)
       return marker.title == nil && marker.snippet == nil
-    case let .cluster(memberIds, region):
+    case .cluster(let memberIds, let region):
       onClusterPress?(
         memberIds,
         Coordinate(latitude: marker.position.latitude, longitude: marker.position.longitude)
@@ -155,7 +164,7 @@ final class GoogleMapOverlayController {
   }
 
   func handleMarkerDragEnd(_ marker: GMSMarker) {
-    guard case let .marker(id) = marker.userData as? MarkerPayload else {
+    guard case .marker(let id) = marker.userData as? MarkerPayload else {
       return
     }
 
@@ -182,27 +191,33 @@ final class GoogleMapOverlayController {
   func updatePolylines(_ descriptors: [PolylineDescriptor]?) {
     reconcile(
       current: &polylines,
+      versions: &polylineVersions,
       next: descriptors ?? [],
       make: makePolyline,
-      update: updatePolyline
+      reshape: reshapePolyline,
+      restyle: restylePolyline
     )
   }
 
   func updatePolygons(_ descriptors: [PolygonDescriptor]?) {
     reconcile(
       current: &polygons,
+      versions: &polygonVersions,
       next: descriptors ?? [],
       make: makePolygon,
-      update: updatePolygon
+      reshape: reshapePolygon,
+      restyle: restylePolygon
     )
   }
 
   func updateCircles(_ descriptors: [CircleDescriptor]?) {
     reconcile(
       current: &circles,
+      versions: &circleVersions,
       next: descriptors ?? [],
       make: makeCircle,
-      update: updateCircle
+      reshape: reshapeCircle,
+      restyle: restyleCircle
     )
   }
 
@@ -212,7 +227,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.reapply(
-      displayedVersions: renderedVersions,
+      displayedVersions: displayedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -222,7 +237,7 @@ final class GoogleMapOverlayController {
   }
 
   private func applyDiff(
-    _ incoming: MarkerRenderDiff,
+    _ pipelineDiff: MarkerRenderDiff,
     animateEntering: Bool = true,
     animationBudget: Int = maximumAnimatedMarkersPerDiff
   ) {
@@ -230,7 +245,8 @@ final class GoogleMapOverlayController {
       return
     }
 
-    let diff = markerViews.consume(incoming)
+    let diff = markerViews.consume(pipelineDiff)
+
     for key in diff.removedKeys {
       markers.removeValue(forKey: key)?.map = nil
       markerVersions.removeValue(forKey: key)
@@ -243,7 +259,8 @@ final class GoogleMapOverlayController {
       let marker = GMSMarker()
       updateMarker(marker, with: entry.element)
       let animation = enteringAnimation(for: entry.element)
-      let shouldAnimate = animateEntering
+      let shouldAnimate =
+        animateEntering
         && remainingAnimationBudget > 0
         && OverlayEnteringAnimationResolver.canAnimateGoogleMarker(animation)
 
@@ -290,7 +307,7 @@ final class GoogleMapOverlayController {
     for element: MarkerClusterEngine.Element
   ) -> ResolvedOverlayEnteringAnimation {
     switch element {
-    case let .single(descriptor):
+    case .single(let descriptor):
       return OverlayEnteringAnimationResolver.resolve(
         descriptor.enteringAnimation,
         fallback: markerEnteringAnimation
@@ -302,7 +319,7 @@ final class GoogleMapOverlayController {
 
   private func updateMarker(_ marker: GMSMarker, with element: MarkerClusterEngine.Element) {
     switch element {
-    case let .single(descriptor):
+    case .single(let descriptor):
       marker.position = descriptor.coordinate.toCLLocationCoordinate2D()
       marker.title = descriptor.title
       marker.snippet = descriptor.subtitle
@@ -310,73 +327,19 @@ final class GoogleMapOverlayController {
       marker.zIndex = Self.nativeZIndex(descriptor.zIndex)
       marker.userData = MarkerPayload.marker(descriptor.id)
       visualApplier.apply(descriptor, to: marker)
-    case let .cluster(_, coordinate, count, memberIds, region):
+    case .cluster(_, let coordinate, let count, let memberIds, let region):
       marker.position = coordinate
       marker.title = nil
       marker.snippet = nil
       marker.isDraggable = false
       marker.zIndex = 0
-      let icon = clusterIcon(count: count)
+      let icon = ClusterBadgeRenderer.image(count: count)
       if marker.icon !== icon {
         marker.icon = icon
       }
       marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
       marker.userData = MarkerPayload.cluster(memberIds: memberIds, region: region)
     }
-  }
-
-  private func clusterIcon(count: Int) -> UIImage {
-    let diameter = ClusterBadgeMetrics.diameter(for: count)
-    let text = Self.formatClusterCount(count)
-    let cacheKey = "\(Int(diameter)):\(text)"
-    if let icon = clusterIconCache[cacheKey] {
-      return icon
-    }
-
-    let format = UIGraphicsImageRendererFormat.default()
-    format.scale = UIScreen.main.scale
-    let icon = UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter), format: format)
-      .image { context in
-        let rect = CGRect(x: 0, y: 0, width: diameter, height: diameter)
-        let colors = [
-          UIColor(red: 0.30, green: 0.62, blue: 1.0, alpha: 1).cgColor,
-          UIColor(red: 0.04, green: 0.52, blue: 1.0, alpha: 1).cgColor,
-        ] as CFArray
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0, 1])!
-        context.cgContext.addEllipse(in: rect.insetBy(dx: 1, dy: 1))
-        context.cgContext.clip()
-        context.cgContext.drawLinearGradient(
-          gradient,
-          start: CGPoint(x: diameter / 2, y: 0),
-          end: CGPoint(x: diameter / 2, y: diameter),
-          options: []
-        )
-        context.cgContext.resetClip()
-        UIColor.white.setStroke()
-        let borderPath = UIBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
-        borderPath.lineWidth = 2
-        borderPath.stroke()
-
-        let attributes: [NSAttributedString.Key: Any] = [
-          .font: UIFont.systemFont(ofSize: 13, weight: .bold),
-          .foregroundColor: UIColor.white,
-        ]
-        let textSize = text.size(withAttributes: attributes)
-        text.draw(
-          at: CGPoint(x: (diameter - textSize.width) / 2, y: (diameter - textSize.height) / 2),
-          withAttributes: attributes
-        )
-      }
-    clusterIconCache[cacheKey] = icon
-    return icon
-  }
-
-  private static func formatClusterCount(_ count: Int) -> String {
-    if count >= 1000 {
-      return String(format: "%.1fk", Double(count) / 1000)
-    }
-    return String(count)
   }
 
   private func clearMarkers() {
@@ -401,101 +364,137 @@ final class GoogleMapOverlayController {
     polylines.removeAll()
     polygons.removeAll()
     circles.removeAll()
+    polylineVersions.removeAll()
+    polygonVersions.removeAll()
+    circleVersions.removeAll()
   }
 
   private func makePolyline(_ descriptor: PolylineDescriptor) -> GMSPolyline {
-    let polyline = GMSPolyline(path: descriptor.coordinates.toGMSPath())
-    updatePolyline(polyline, descriptor)
+    let polyline = GMSPolyline()
+    polyline.userData = descriptor.id
+    reshapePolyline(polyline, descriptor)
+    restylePolyline(polyline, descriptor)
     return polyline
   }
 
-  private func updatePolyline(_ polyline: GMSPolyline, _ descriptor: PolylineDescriptor) {
+  private func reshapePolyline(_ polyline: GMSPolyline, _ descriptor: PolylineDescriptor) {
     polyline.path = descriptor.coordinates.toGMSPath()
+  }
+
+  private func restylePolyline(_ polyline: GMSPolyline, _ descriptor: PolylineDescriptor) {
     polyline.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
     polyline.strokeWidth = CGFloat(descriptor.strokeWidth ?? 4)
     polyline.zIndex = Self.nativeZIndex(descriptor.zIndex)
     polyline.isTappable = descriptor.tappable ?? false
-    polyline.userData = descriptor.id
   }
 
   private func makePolygon(_ descriptor: PolygonDescriptor) -> GMSPolygon {
-    let polygon = GMSPolygon(path: descriptor.coordinates.toGMSPath())
-    updatePolygon(polygon, descriptor)
+    let polygon = GMSPolygon()
+    polygon.userData = descriptor.id
+    reshapePolygon(polygon, descriptor)
+    restylePolygon(polygon, descriptor)
     return polygon
   }
 
-  private func updatePolygon(_ polygon: GMSPolygon, _ descriptor: PolygonDescriptor) {
+  private func reshapePolygon(_ polygon: GMSPolygon, _ descriptor: PolygonDescriptor) {
     polygon.path = descriptor.coordinates.toGMSPath()
     polygon.holes = descriptor.holes?.map { $0.toGMSPath() }
+  }
+
+  private func restylePolygon(_ polygon: GMSPolygon, _ descriptor: PolygonDescriptor) {
     polygon.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
-    polygon.fillColor = descriptor.fillColor?.toUIColor(
-      fallback: UIColor.systemBlue.withAlphaComponent(0.2)
-    ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
+    polygon.fillColor =
+      descriptor.fillColor?.toUIColor(
+        fallback: UIColor.systemBlue.withAlphaComponent(0.2)
+      ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
     polygon.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
     polygon.zIndex = Self.nativeZIndex(descriptor.zIndex)
     polygon.isTappable = descriptor.tappable ?? false
-    polygon.userData = descriptor.id
   }
 
   private func makeCircle(_ descriptor: CircleDescriptor) -> GMSCircle {
-    let circle = GMSCircle(
-      position: descriptor.center.toCLLocationCoordinate2D(),
-      radius: descriptor.radius
-    )
-    updateCircle(circle, descriptor)
+    let circle = GMSCircle()
+    circle.userData = descriptor.id
+    reshapeCircle(circle, descriptor)
+    restyleCircle(circle, descriptor)
     return circle
   }
 
-  private func updateCircle(_ circle: GMSCircle, _ descriptor: CircleDescriptor) {
+  private func reshapeCircle(_ circle: GMSCircle, _ descriptor: CircleDescriptor) {
     circle.position = descriptor.center.toCLLocationCoordinate2D()
     circle.radius = descriptor.radius
-    circle.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
-    circle.fillColor = descriptor.fillColor?.toUIColor(
-      fallback: UIColor.systemBlue.withAlphaComponent(0.2)
-    ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
-    circle.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
-    circle.isTappable = descriptor.tappable ?? false
-    circle.userData = descriptor.id
   }
 
+  private func restyleCircle(_ circle: GMSCircle, _ descriptor: CircleDescriptor) {
+    circle.strokeColor = descriptor.strokeColor?.toUIColor(fallback: .systemBlue) ?? .systemBlue
+    circle.fillColor =
+      descriptor.fillColor?.toUIColor(
+        fallback: UIColor.systemBlue.withAlphaComponent(0.2)
+      ) ?? UIColor.systemBlue.withAlphaComponent(0.2)
+    circle.strokeWidth = CGFloat(descriptor.strokeWidth ?? 2)
+    circle.isTappable = descriptor.tappable ?? false
+  }
+
+  /// Applies `computeShapeRenderDiff` to one shape kind: an unchanged shape
+  /// costs no SDK call, and a changed one is updated in place - its geometry
+  /// only when that changed, its style only when that did.
   private func reconcile<Descriptor, Overlay: GMSOverlay>(
     current: inout [String: Overlay],
+    versions: inout [String: ShapeRenderVersion],
     next descriptors: [Descriptor],
     make: (Descriptor) -> Overlay,
-    update: (Overlay, Descriptor) -> Void
+    reshape: (Overlay, Descriptor) -> Void,
+    restyle: (Overlay, Descriptor) -> Void
   ) where Descriptor: IdentifiedOverlayDescriptor {
     guard let mapView else {
       return
     }
 
-    var nextIds = Set<String>()
-    for descriptor in descriptors {
-      nextIds.insert(descriptor.id)
-      if let overlay = current[descriptor.id] {
-        update(overlay, descriptor)
-      } else {
-        let overlay = make(descriptor)
-        overlay.map = mapView
-        current[descriptor.id] = overlay
-      }
+    let diff = computeShapeRenderDiff(
+      descriptors,
+      displayed: versions,
+      id: { $0.id },
+      version: { $0.renderVersion() }
+    )
+
+    for id in diff.removedIds {
+      current.removeValue(forKey: id)?.map = nil
+      versions.removeValue(forKey: id)
     }
 
-    for id in Set(current.keys).subtracting(nextIds) {
-      current.removeValue(forKey: id)?.map = nil
+    for change in diff.updated {
+      guard let overlay = current[change.id] else {
+        continue
+      }
+      if change.geometryChanged {
+        reshape(overlay, change.descriptor)
+      }
+      if change.styleChanged {
+        restyle(overlay, change.descriptor)
+      }
+      versions[change.id] = change.version
+    }
+
+    for change in diff.added {
+      let overlay = make(change.descriptor)
+      overlay.map = mapView
+      current[change.id] = overlay
+      versions[change.id] = change.version
     }
   }
 }
 
 private protocol IdentifiedOverlayDescriptor {
   var id: String { get }
+  func renderVersion() -> ShapeRenderVersion
 }
 
 extension PolylineDescriptor: IdentifiedOverlayDescriptor {}
 extension PolygonDescriptor: IdentifiedOverlayDescriptor {}
 extension CircleDescriptor: IdentifiedOverlayDescriptor {}
 
-private extension Array where Element == Coordinate {
-  func toGMSPath() -> GMSPath {
+extension Array where Element == Coordinate {
+  fileprivate func toGMSPath() -> GMSPath {
     let path = GMSMutablePath()
     for coordinate in self {
       path.add(coordinate.toCLLocationCoordinate2D())

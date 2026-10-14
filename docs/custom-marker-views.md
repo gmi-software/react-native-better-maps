@@ -1,92 +1,85 @@
-# Live custom marker views
+# Live JSX markers (`MarkerView`)
 
-`MarkerView` keeps arbitrary React Native content live above the native map. It positions the host using the provider's native coordinate projection, without bitmap snapshots or per-frame JavaScript camera events. Child state, `Pressable`, and Reanimated animations stay in Fabric.
+`MarkerView` draws a marker with live React Native content: state, `Pressable`, Reanimated animations and anything else a view can hold. Its JSX stays in Fabric. The map moves it with its native projection on every camera frame: no bitmap snapshots, and no JavaScript while the camera moves.
 
 ```tsx
 import { MapView, MarkerView } from 'react-native-better-maps';
-import { Pressable, Text } from 'react-native';
 
-<MapView style={{ flex: 1 }}>
-  <MarkerView
-    coordinate={{ latitude: 52.2297, longitude: 21.0122 }}
-    width={96}
-    height={48}
-    anchor={{ x: 0.5, y: 1 }}
-  >
-    <Pressable onPress={() => selectPlace()} style={styles.priceBubble}>
-      <Text>120 zł</Text>
-    </Pressable>
-  </MarkerView>
-</MapView>;
-```
-
-Give every item a stable React key when rendering a list. Direct `MarkerView` children and nested React fragments are supported, as with the library's explicit overlay collection model. Arbitrary wrapper components returning a `MarkerView` are not collected: put the wrapper inside `MarkerView` instead.
-
-## Contract
-
-| Property          | Behavior                                                                                                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`              | Stable identifier for cluster membership and `onClusterPress`; defaults to the scoped React key path. Must be unique across descriptor and live markers. |
-| `clusterable`     | Defaults to true when map clustering is enabled; false keeps this point separate.                                                                        |
-| `coordinate`      | Required finite latitude −90…90 and longitude −180…180. Changes reposition the host and update cluster membership when enabled.                          |
-| `width`, `height` | Required positive finite dimensions in points/dp. They define layout, clipping, hit-testing, and the anchor reference.                                   |
-| `anchor`          | Defaults to bottom-center (`{ x: 0.5, y: 1 }`). Components are finite fractions of the bounds; values outside 0…1 deliberately offset the host.          |
-| `children`        | Live React Native tree. Animate child views inside the fixed bounds; the native host reserves its own transform for geographic position.                 |
-
-Content is screen-aligned and clipped to its bounds and the map viewport. Marker views are composed above the SDK surface, including its annotations and controls. Use map padding/placement to avoid covering controls. Their order follows JSX order. Native clustering is shared with descriptor markers, as described below. Live hosts do not participate in SDK annotation collision, depth occlusion, dragging, callouts, or flat/ground-plane rotation. Use `Marker` descriptors for those SDK marker features and for large static datasets.
-
-The same live-host mechanism is implemented for MapKit, Google iOS, and Google Android. The host stays in Fabric's hierarchy: the library does not steal/reparent RN children into SDK annotation views. On iOS, the generated component explicitly forwards Fabric mount/unmount into the Swift content container. On Android, ViewGroup managers keep the SDK surface out of Fabric child indices. The Nitrogen compatibility script validates its patch targets and fails if the generated shape changes.
-
-Provider camera callbacks update positions synchronously on the native UI thread. Idle maps do not run a projection timer. Empty maps have no marker projection loop. Layout/coordinate changes update affected hosts; provider/map lifecycle tears down the association. Host projection hides offscreen content from drawing/hit-testing. The native clustering/large-dataset pipeline additionally controls which React subtrees are mounted. Unmounting releases their React/Reanimated subscriptions; application-owned external timers still require application cleanup.
-
-The native projection is also exposed through the marker's Fabric shadow transform. Child `measure()` and `measureInWindow()` therefore include the projected position, which lets `Pressable` compare finger movement with its actual screen bounds. A thread-safe native registry shares offsets without per-frame JavaScript updates or Yoga commits. `measureLayout()` retains React Native's layout-relative behavior and excludes transforms.
-
-For touch regression checks, build the example with `EXPO_PUBLIC_MARKER_TOUCH_CHECK=1`. The screen includes direct and nested `Pressable` children, event counters, measured screen bounds, and a map mount toggle. See the [touch validation record](research/custom-marker-touch-validation.md) for the reproduction and platform results.
-
-## Clusters with arbitrary JSX
-
-Enable `clusteringEnabled` to group nearby points. Marker count alone does not enable clustering. Descriptor markers and `MarkerView` children feed the same native engine and can belong to the same cluster. Without a renderer, clusters use the existing SDK badge. Supply `renderCluster` to replace those badges with live JSX:
-
-```tsx
-<MapView
-  clusteringEnabled
-  renderCluster={(cluster) => (
-    <MarkerView coordinate={cluster.coordinate} width={96} height={48}>
-      <Pressable onPress={cluster.onPress} style={styles.priceBubble}>
-        <Animated.View style={animatedGlyphStyle} />
-        <Text>{cluster.count} places</Text>
-      </Pressable>
-    </MarkerView>
-  )}
->
+<MapView style={{ flex: 1 }} clusteringEnabled renderCluster={renderCluster}>
   {places.map((place) => (
     <MarkerView
       key={place.id}
-      id={place.id}
       coordinate={place.coordinate}
-      width={96}
-      height={48}
+      width={76}
+      height={40}
+      anchor={{ x: 0.5, y: 1 }}
     >
-      <PlaceBadge place={place} />
+      <Pressable onPress={() => select(place.id)} style={styles.bubble}>
+        <Text>{place.price} zł</Text>
+      </Pressable>
     </MarkerView>
   ))}
-</MapView>
+</MapView>;
+
+const renderCluster = (cluster: MarkerViewCluster) => (
+  <MarkerView
+    coordinate={cluster.coordinate}
+    width={52}
+    height={52}
+    anchor={{ x: 0.5, y: 0.5 }}
+  >
+    <Pressable onPress={() => cluster.onPress()} style={styles.cluster}>
+      <Text>{cluster.count}</Text>
+    </Pressable>
+  </MarkerView>
+);
 ```
 
-`renderCluster` must return a `MarkerView`. It receives the cluster `id`, `coordinate`, `count`, `markerIds`, and an async `onPress` helper that calls the map's `onClusterPress` and fits its camera to the cluster bounds. Use your own child `Pressable` for interaction; individual live marker presses are application-owned and do not automatically call `MapView.onMarkerPress`. Geographic position and React identity of the returned cluster host are assigned by the map.
+The example app's **Live JSX markers** scenario shows 120 price bubbles with press feedback, Reanimated pulses and JSX cluster badges.
 
-Clustering runs in the existing native pipeline, off the UI thread for the clustered path. React receives a changed display set, rather than per-frame projected coordinates. Camera movement still positions mounted hosts natively. Points inside a cluster are **unmounted**, so hundreds of hidden animated subtrees do not continue running. Keep selection, editable content, and other persistent point state in application data outside the marker; local child state restarts after cluster expansion. A retained cluster keeps its React key while its count/membership updates.
+## Props
 
-The current native grid and badge-merging metrics remain in use; clustering does not measure arbitrary JSX bounds. Very large custom badges can overlap. Expansion/collapse is asynchronous, and coincident points may remain clustered. Benchmark the clustered view, zoom transitions, and fully expanded/sparse views: clustering cannot guarantee that every viewport has only a few rendered elements.
+| Prop              | Behavior                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `coordinate`      | Where the anchor point goes. Changing it moves the marker and its cluster membership.                                                                         |
+| `width`, `height` | Fixed size in points / dp. It bounds layout, clipping and touches, and is what `anchor` refers to. Animate content inside it, not the marker's own size.      |
+| `anchor`          | Point of the marker placed on `coordinate`, as fractions of its size. Default bottom-center, `{ x: 0.5, y: 1 }`. Values outside 0…1 offset the marker.        |
+| `id`              | Identifies it in cluster membership and `onClusterPress`. `Marker` and `MarkerView` share one set of ids; it defaults to the React key, then to the position. |
+| `clusterable`     | Default true: joins clusters when `clusteringEnabled` is set.                                                                                                 |
+| `children`        | Live React Native content.                                                                                                                                    |
 
-## Performance contract and validation status
+Like every overlay, a `MarkerView` must be a direct child of `MapView` (arrays from `.map` are fine). Put your own component inside it, not around it. A marker with an invalid coordinate, size or anchor is skipped with a development warning, as other overlays are.
 
-Removing snapshots eliminates one expensive class of work; it does not remove native view layout, React commits, projection, texture composition, or GPU cost. A simple child transform and an animated layout/text subtree have different costs. No universal 120 FPS guarantee is made for arbitrary JSX or unbounded marker counts.
+## Clusters
 
-The target is no material regression against the same provider and device baseline for a recorded workload. Google Maps iOS documents a 60 FPS maximum for its native map; a 120 Hz JSX overlay or display callback is not evidence of 120 distinct map frames. See [SDK evidence](research/custom-marker-sdk-sources.md).
+`MarkerView` and `Marker` children feed one native clustering pipeline and can share a cluster. Without `renderCluster`, clusters keep the SDK badge. With it, each cluster is drawn by the `MarkerView` it returns. The cluster's `coordinate`, `count` and `markerIds` come from native; its `onPress` calls `onClusterPress` and zooms to its markers, as a press on a default badge does. The map sets the returned marker's `coordinate`, and keeps its React state while the count changes.
 
-The corrected moving-camera [physical iPhone experiment](research/custom-marker-device-results.md) found 118.5–120.0 Hz main-thread callback cadence for 10/50 hosts, 119.3 Hz for 200 static hosts, 117.5–119.5 Hz for 200 transformed hosts, and 51.4–54.8 Hz for 200 animated-width hosts. These are callback diagnostics, not presented-frame proof; unrestricted 120 FPS acceptance remains open. The original duration-error runs are retained separately and excluded from moving-camera acceptance. Run the opt-in example with `EXPO_PUBLIC_MARKER_VIEW_BENCHMARK=1` in a Release build. Its A/B flow compares pins, static JSX, child transform animation, and child layout animation at 10/50/200 mounted hosts, using three passes and alternating mode order. Native callback intervals and memory are diagnostic data; Instruments/Perfetto and functional checks are also required before accepting the feature.
+A live marker exists only while the pipeline shows it. Grouped into a cluster, or left far off screen in a dataset over 500 markers, it is **unmounted**, so hidden animated subtrees cost nothing. Keep selection and other state that has to survive that in your app, not in the marker.
 
-The example reuses the local FrameStats module introduced in PR #66. It is example-only and does not ship in the library. Trace the application without a debugger attached; identify the actual map presentation/animation cadence rather than treating display callback intervals as GPU frames. Record device/OS/SDK, visible count, thermal and power state, route, marker dimensions, and baseline/candidate traces.
+## Touches and gestures
 
-See [snapshot experiment](../experiments/custom-markers/README.md) for the earlier hypothesis test and [research](research/custom-marker-performance.md) for the design alternatives. Those notes predate the live-host implementation; this document describes the implemented API.
+The marker owns touches that start on it: a tap reaches its `Pressable`, not the map's `onPress`, a POI or an SDK marker beneath it. A drag or pinch that starts on a marker still pans or zooms the map, unless a view inside the marker, such as a `ScrollView`, claims it first.
+
+`Pressable` stays pressed through small finger movements: the marker's shadow node reports its projected position, so `measure()` sees it where it is drawn.
+
+## How it stays fast
+
+- **Per camera frame** the native side projects each mounted marker once, snaps it to the pixel grid and sets a translation. One projection snapshot is reused for every marker. Nothing reaches JS; no Yoga layout runs.
+- **Markers off screen** are hidden, which takes them out of drawing and hit-testing.
+- **JS hears only display-set changes**, when markers cluster, uncluster or leave a large dataset's viewport, never per frame. A live marker that only moved does not trigger it either.
+- **Content animations** run in Fabric like anywhere else. Animate `transform` and `opacity` (Reanimated runs those on the UI thread); animating `width`, `height` or text re-runs layout every frame and costs as much as it does outside a map.
+
+Live markers are drawn over the map surface, in children order, above SDK annotations. They are screen-aligned: they do not take part in SDK collision, pitch occlusion, dragging, callouts or flat ground-plane rotation. Use `Marker` for those, and for large static datasets, where an SDK image is much cheaper than a live view.
+
+On Android, Google Maps renders on its own surface and reports each camera frame after drawing it, so during fast pans live markers can trail the map by about a frame. Google Maps on iOS renders at most 60 FPS, whatever the display refresh rate.
+
+## Implementation
+
+| Piece                                      | Role                                                                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MarkerView.nitro.ts`                      | Nitro view with `coordinate` and `anchor`. Fabric lays it out at the map's origin with the fixed size.                                        |
+| `NitroMapContainerView` (iOS, Android)     | The map's Fabric view. Mounts hosts over the SDK view and moves them on every camera callback.                                                |
+| `NitroMarkerContentView` (iOS, Android)    | A marker's native view: projects, culls and publishes its translation.                                                                        |
+| `cpp/MarkerProjectionRegistry`             | Translations by Fabric tag, read by the patched `HybridMarkerViewShadowNode::getTransform()` so `measure()` matches the screen.               |
+| `MarkerViewRenderRegistry` (Swift, Kotlin) | Takes live markers and JSX clusters out of each pipeline diff before the SDK sees it, and publishes the displayed set to JS when it changes.  |
+| `scripts/patch-nitrogen-generated.mjs`     | Lets the generated Nitro views take Fabric children, and installs the shadow-node transform. Fails loudly if Nitrogen's output changes shape. |

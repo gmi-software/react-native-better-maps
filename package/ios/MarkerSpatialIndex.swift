@@ -5,6 +5,9 @@ import MapKit
 /// Built once per dataset so viewport queries cost O(cells in view + markers in
 /// those cells) instead of O(all markers). Immutable after init, so instances
 /// are safe to query from a background queue.
+///
+/// Every coordinate must be placeable: cells come from `Int(_:)`, which traps on
+/// NaN and infinity. `MarkerRenderPipeline.setMarkers` drops those.
 final class MarkerSpatialIndex {
   let count: Int
   private let cellsPerSide: Int

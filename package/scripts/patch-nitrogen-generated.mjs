@@ -11,6 +11,8 @@ function replaceOnce(filePath, from, to) {
   const fromCount = source.split(from).length - 1;
   const toCount = source.split(to).length - 1;
 
+  // Already patched. `to` may itself contain `from` (an inserted line after
+  // an anchor), so only the occurrences outside `to` count as unpatched.
   if (toCount === 1 && fromCount === to.split(from).length - 1) {
     return;
   }
@@ -51,16 +53,22 @@ for (const name of ['MapView', 'MarkerView']) {
   );
 }
 
-// Only MarkerView has a native-projected position. Expose that position through
-// its Fabric shadow transform so DOM.measure() sees the same page coordinates
-// as the native touch target. This is intentionally outside Yoga layout.
+// A live marker is placed by a native transform that Yoga never sees. Its
+// shadow node reports the same translation, read from the projection registry
+// the native host publishes to, so `measure()` - and with it `Pressable`'s
+// press-retention rect - sees the marker where the finger does. No JS and no
+// Yoga commit per camera frame.
+const markerViewComponentHeader = join(
+  packageDir,
+  'nitrogen/generated/shared/c++/views/HybridMarkerViewComponent.hpp',
+);
 replaceOnce(
-  join(packageDir, 'nitrogen/generated/shared/c++/views/HybridMarkerViewComponent.hpp'),
+  markerViewComponentHeader,
   '#include <react/renderer/components/view/ViewProps.h>\n',
   '#include <react/renderer/components/view/ViewProps.h>\n#include "MarkerProjectionRegistry.hpp"\n',
 );
 replaceOnce(
-  join(packageDir, 'nitrogen/generated/shared/c++/views/HybridMarkerViewComponent.hpp'),
+  markerViewComponentHeader,
   `  using HybridMarkerViewShadowNode = react::ConcreteViewShadowNode<HybridMarkerViewComponentName /* "HybridMarkerView" */,
                                                                    HybridMarkerViewProps /* custom props */,
                                                                    react::ViewEventEmitter /* default */,
@@ -77,9 +85,8 @@ replaceOnce(
     using BaseShadowNode::BaseShadowNode;
 
     react::Transform getTransform() const override {
-      const auto base = BaseShadowNode::getTransform();
       const auto offset = markerProjection(getTag());
-      return react::Transform::Translate(offset.x, offset.y, 0) * base;
+      return react::Transform::Translate(offset.x, offset.y, 0) * BaseShadowNode::getTransform();
     }
   };`,
 );
@@ -130,7 +137,9 @@ replaceOnce(
   'coordinates: (0..<Int(coordinates.size())).map({ index in coordinates[index] })',
 );
 
-// Explicit Fabric mount targets: no SDK-driven reparenting of RN children.
+// Nitro views take no children. Both views here do: MapView mounts its live
+// markers, MarkerView its JSX. Fabric hands each child to the Swift content
+// view, which decides where it goes - never the SDK reparenting RN views.
 for (const name of ['MapView', 'MarkerView']) {
   const file = join(
     packageDir,
@@ -139,8 +148,8 @@ for (const name of ['MapView', 'MarkerView']) {
   replaceOnce(
     file,
     `@interface Hybrid${name}Component: RCTViewComponentView`,
-    `// Implemented by both Swift content containers via explicit @objc selectors.
-@interface UIView (NitroMapFabricChildren)
+    `// Implemented by the Swift content views through explicit @objc selectors.
+@interface UIView (NitroMapsFabricChildren)
 - (void)nitroMountChild:(UIView *)child atIndex:(NSInteger)index;
 - (void)nitroUnmountChild:(UIView *)child;
 @end
@@ -150,9 +159,7 @@ for (const name of ['MapView', 'MarkerView']) {
   replaceOnce(
     file,
     '- (void) updateView {',
-    `
-- (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)child index:(NSInteger)index {
-  NSAssert(child.superview == nil, @"Marker child is already mounted");
+    `- (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)child index:(NSInteger)index {
   [self.contentView nitroMountChild:child atIndex:index];
 }
 
@@ -164,49 +171,71 @@ for (const name of ['MapView', 'MarkerView']) {
   );
 }
 
-// Android must expose a ViewGroupManager for Fabric to mount descendants.
+// Fabric on Android mounts children only through a ViewGroupManager. MapView
+// keeps the SDK view out of the child indices Fabric sees.
 for (const name of ['MapView', 'MarkerView']) {
   const file = join(
     packageDir,
     `nitrogen/generated/android/kotlin/com/margelo/nitro/nitromaps/views/Hybrid${name}Manager.kt`,
   );
-  const source = readFileSync(file, 'utf8');
-  if (source.includes('SimpleViewManager<View>()')) {
-    writeFileSync(
-      file,
-      source
-        .replace(
-          'import android.view.View\n',
-          'import android.view.View\nimport android.view.ViewGroup\n',
-        )
-        .replace(
-          'import com.facebook.react.uimanager.SimpleViewManager',
-          'import com.facebook.react.uimanager.ViewGroupManager',
-        )
-        .replace('SimpleViewManager<View>()', 'ViewGroupManager<ViewGroup>()')
-        .replaceAll('view: View', 'view: ViewGroup')
-        .replace(
-          'createViewInstance(reactContext: ThemedReactContext): View',
-          'createViewInstance(reactContext: ThemedReactContext): ViewGroup',
-        )
-        .replace('view: ViewGroup): View?', 'view: ViewGroup): ViewGroup?'),
-    );
-  } else if (!source.includes('ViewGroupManager<ViewGroup>()')) {
-    throw new Error(`Unexpected generated manager shape: ${file}`);
-  }
-  if (name === 'MapView') {
-    replaceOnce(
-      file,
-      '  override fun getName(): String {',
-      `  override fun addView(parent: ViewGroup, child: View, index: Int) {
+  replaceOnce(
+    file,
+    'import android.view.View\n',
+    'import android.view.View\nimport android.view.ViewGroup\n',
+  );
+  replaceOnce(
+    file,
+    'import com.facebook.react.uimanager.SimpleViewManager\n',
+    'import com.facebook.react.uimanager.ViewGroupManager\n',
+  );
+  replaceOnce(
+    file,
+    `public class Hybrid${name}Manager: SimpleViewManager<View>() {`,
+    `public class Hybrid${name}Manager: ViewGroupManager<ViewGroup>() {`,
+  );
+  replaceOnce(
+    file,
+    'override fun createViewInstance(reactContext: ThemedReactContext): View {',
+    'override fun createViewInstance(reactContext: ThemedReactContext): ViewGroup {',
+  );
+  replaceOnce(
+    file,
+    'override fun updateState(view: View, props: ReactStylesDiffMap, stateWrapper: StateWrapper): Any? {',
+    'override fun updateState(view: ViewGroup, props: ReactStylesDiffMap, stateWrapper: StateWrapper): Any? {',
+  );
+  replaceOnce(
+    file,
+    'override fun onDropViewInstance(view: View) {',
+    'override fun onDropViewInstance(view: ViewGroup) {',
+  );
+  replaceOnce(
+    file,
+    'protected override fun prepareToRecycleView(reactContext: ThemedReactContext, view: View): View? {',
+    'protected override fun prepareToRecycleView(reactContext: ThemedReactContext, view: ViewGroup): ViewGroup? {',
+  );
+}
+
+replaceOnce(
+  join(
+    packageDir,
+    'nitrogen/generated/android/kotlin/com/margelo/nitro/nitromaps/views/HybridMapViewManager.kt',
+  ),
+  '  override fun getName(): String {',
+  `  override fun addView(parent: ViewGroup, child: View, index: Int) {
     (parent as NitroMapContainerView).addMarkerView(child, index)
   }
-  override fun getChildCount(parent: ViewGroup): Int = (parent as NitroMapContainerView).markerViewCount()
+
+  override fun getChildCount(parent: ViewGroup): Int = (parent as NitroMapContainerView).markerViewCount
+
   override fun getChildAt(parent: ViewGroup, index: Int): View = (parent as NitroMapContainerView).markerViewAt(index)
-  override fun removeViewAt(parent: ViewGroup, index: Int) { (parent as NitroMapContainerView).removeMarkerViewAt(index) }
-  override fun removeAllViews(parent: ViewGroup) { (parent as NitroMapContainerView).removeAllMarkerViews() }
+
+  override fun removeViewAt(parent: ViewGroup, index: Int) {
+    (parent as NitroMapContainerView).removeMarkerViewAt(index)
+  }
+
+  override fun removeAllViews(parent: ViewGroup) {
+    (parent as NitroMapContainerView).removeAllMarkerViews()
+  }
 
   override fun getName(): String {`,
-    );
-  }
-}
+);

@@ -9,7 +9,9 @@ import com.google.android.gms.maps.MapView
  * Detaching never destroys the map — only an explicit move to
  * [MapViewLifecycleState.DESTROYED] does — because a destroyed map cannot be resumed.
  */
-internal class MapViewLifecycleOwner(private val mapView: MapView) {
+internal class MapViewLifecycleOwner(
+  private val mapView: MapView,
+) {
   private var state = MapViewLifecycleState.CREATED
 
   val isDestroyed: Boolean
@@ -70,7 +72,9 @@ internal class MapViewLifecycleOwner(private val mapView: MapView) {
 
       MapViewLifecycleState.RESUMED,
       MapViewLifecycleState.DESTROYED,
-      -> Unit
+      -> {
+        Unit
+      }
     }
   }
 
@@ -88,7 +92,9 @@ internal class MapViewLifecycleOwner(private val mapView: MapView) {
 
       MapViewLifecycleState.CREATED,
       MapViewLifecycleState.DESTROYED,
-      -> Unit
+      -> {
+        Unit
+      }
     }
   }
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <plurals name="better_maps_cluster_description">
+    <item quantity="one">%d marker in this cluster</item>
+    <item quantity="other">%d markers in this cluster</item>
+  </plurals>
+</resources>

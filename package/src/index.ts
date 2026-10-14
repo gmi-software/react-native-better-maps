@@ -11,11 +11,14 @@ export { geojsonToOverlayDescriptors } from './geojson/geojsonToDescriptors';
 
 export type {
   Coordinate,
+  Point,
   Region,
+  RegionChangeDetails,
   Camera,
   EdgePadding,
   VisibleRegion,
   ApplePoiCategory,
+  ApplePoiDetailPresentation,
   ApplePoiPressEvent,
   GooglePoiPressEvent,
   MapProvider,
@@ -23,13 +26,15 @@ export type {
   MapViewProps,
   MapViewPropsForProvider,
   PoiPressEvent,
-  MarkerViewCluster,
   MarkerAnchor,
   MarkerImage,
   MarkerImageSource,
   MarkerDescriptor,
   MarkerPoint,
   MarkerProps,
+  MarkerViewCluster,
+  MarkerViewProps,
+  RenderMarkerViewCluster,
   OverlayEnteringAnimation,
   OverlayEnteringAnimationConfig,
   OverlayEnteringAnimationPreset,
@@ -48,5 +53,3 @@ export type {
 } from './types';
 
 export { regionFromCoordinate, distanceBetween } from './utils';
-
-export type { MarkerViewProps } from './components/MarkerView';

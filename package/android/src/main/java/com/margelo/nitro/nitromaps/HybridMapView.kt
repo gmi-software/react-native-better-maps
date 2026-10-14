@@ -1,7 +1,7 @@
 package com.margelo.nitro.nitromaps
 
 import android.view.View
-import android.widget.FrameLayout
+import android.view.ViewGroup
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.uimanager.ThemedReactContext
@@ -10,15 +10,26 @@ import com.margelo.nitro.views.RecyclableView
 
 private const val MAP_VIEW_NOT_MOUNTED_MESSAGE = "MapView is not mounted"
 
+/** What a provider adapter is built from; the SDK takes both only when it creates its map. */
+private data class AdapterConfiguration(
+  val provider: MapProvider,
+  val googleMapId: String?,
+)
+
 @Keep
 @DoNotStrip
-class HybridMapView(private val context: ThemedReactContext) :
-  HybridMapViewSpec(),
+class HybridMapView(
+  private val context: ThemedReactContext,
+) : HybridMapViewSpec(),
   RecyclableView {
+  private val adapterSlot =
+    ProviderAdapterSlot<AdapterConfiguration, MapProviderAdapter>(
+      build = ::makeAdapter,
+      destroy = ::destroyAdapter,
+    )
 
-  /** Written on the UI thread, read from the JS thread by the imperative methods. */
-  @Volatile
-  private var adapter: MapProviderAdapter? = null
+  private val adapter: MapProviderAdapter?
+    get() = adapterSlot.adapter
 
   private var _provider = MapProvider.GOOGLE
   private var _mapType = MapType.STANDARD
@@ -32,6 +43,7 @@ class HybridMapView(private val context: ThemedReactContext) :
   private var _followsUserLocation: Boolean? = null
   private var _showsCompass: Boolean? = null
   private var _showsScale: Boolean? = null
+  private var _applePoiDetailPresentation: ApplePoiDetailPresentation? = null
   private var _customMapStyle: String? = null
   private var _googleMapId: String? = null
   private var _clusteringEnabled: Boolean? = null
@@ -45,11 +57,10 @@ class HybridMapView(private val context: ThemedReactContext) :
     get() = _provider
     set(value) {
       val nextProvider = value ?: MapProvider.GOOGLE
-      if (nextProvider == _provider && adapter != null) {
-        return
+      // Rejected before it is recorded, so the map on screen stays as it is.
+      check(nextProvider == MapProvider.GOOGLE) {
+        "Map provider \"$nextProvider\" is not supported on Android."
       }
-
-      installAdapter(nextProvider)
       _provider = nextProvider
     }
 
@@ -106,6 +117,7 @@ class HybridMapView(private val context: ThemedReactContext) :
       adapter?.pitchEnabled = value
     }
 
+  /** Whether a pinch that starts on a live marker is the map's to handle. */
   private fun updateMultiTouchGestures() {
     view.multiTouchGesturesEnabled = _zoomEnabled != false || _rotateEnabled != false || _pitchEnabled != false
   }
@@ -138,6 +150,13 @@ class HybridMapView(private val context: ThemedReactContext) :
       adapter?.showsScale = value
     }
 
+  /** Apple MapKit only; the Google Maps SDK has no native POI detail surface. */
+  override var applePoiDetailPresentation: ApplePoiDetailPresentation?
+    get() = _applePoiDetailPresentation
+    set(value) {
+      _applePoiDetailPresentation = value
+    }
+
   override var customMapStyle: String?
     get() = _customMapStyle
     set(value) {
@@ -148,24 +167,7 @@ class HybridMapView(private val context: ThemedReactContext) :
   override var googleMapId: String?
     get() = _googleMapId
     set(value) {
-      if (_googleMapId == value) {
-        return
-      }
       _googleMapId = value
-      if (_provider == MapProvider.GOOGLE && adapter != null) {
-        installAdapter(_provider)
-      }
-    }
-
-  override var customClusterViews: Boolean? = null
-    set(value) {
-      field = value
-      adapter?.customClusterViews = value
-    }
-  override var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)? = null
-    set(value) {
-      field = value
-      adapter?.onMarkerViewRenderState = value
     }
 
   override var clusteringEnabled: Boolean?
@@ -173,6 +175,18 @@ class HybridMapView(private val context: ThemedReactContext) :
     set(value) {
       _clusteringEnabled = value
       adapter?.clusteringEnabled = value
+    }
+
+  override var customClusterViews: Boolean? = null
+    set(value) {
+      field = value
+      adapter?.customClusterViews = value
+    }
+
+  override var onMarkerViewRenderState: ((state: NativeMarkerViewRenderState) -> Unit)? = null
+    set(value) {
+      field = value
+      adapter?.onMarkerViewRenderState = value
     }
 
   override var mapPadding: EdgePadding?
@@ -196,13 +210,13 @@ class HybridMapView(private val context: ThemedReactContext) :
       adapter?.clusterEnteringAnimation = value
     }
 
-  override var onRegionChange: ((region: Region) -> Unit)? = null
+  override var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
     set(value) {
       field = value
       adapter?.onRegionChange = value
     }
 
-  override var onRegionChangeComplete: ((region: Region) -> Unit)? = null
+  override var onRegionChangeComplete: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
     set(value) {
       field = value
       adapter?.onRegionChangeComplete = value
@@ -292,58 +306,65 @@ class HybridMapView(private val context: ThemedReactContext) :
       adapter?.onClusterPress = value
     }
 
-  override fun fetchCamera(): Promise<Camera> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.fetchCamera()
-  }
+  override fun fetchCamera(): Promise<Camera> = withAdapter { it.fetchCamera() }
 
-  override fun applyCamera(camera: Camera): Promise<Unit> {
-    val mounted = adapter ?: return notMountedRejection()
-    mounted.applyCamera(camera)
-    return Promise.resolved(Unit)
-  }
+  override fun applyCamera(camera: Camera): Promise<Unit> = withAdapter { it.applyCamera(camera) }
 
-  override fun animateCamera(camera: Camera, duration: Double?): Promise<Unit> {
-    val mounted = adapter ?: return notMountedRejection()
-    mounted.animateCamera(camera, duration)
-    return Promise.resolved(Unit)
-  }
+  override fun animateCamera(
+    camera: Camera,
+    duration: Double?,
+  ): Promise<Unit> = withAdapter { it.animateCamera(camera, duration) }
 
-  override fun getVisibleRegion(): Promise<VisibleRegion> {
-    val mounted = adapter ?: return notMountedRejection()
-    return mounted.getVisibleRegion()
-  }
+  override fun animateToRegion(
+    region: Region,
+    duration: Double?,
+  ): Promise<Unit> = withAdapter { it.animateToRegion(region, duration) }
+
+  override fun getVisibleRegion(): Promise<VisibleRegion> = withAdapter { it.getVisibleRegion() }
 
   override fun fitToCoordinates(
     coordinates: Array<Coordinate>,
     padding: EdgePadding?,
     animated: Boolean?,
-  ): Promise<Unit> {
-    val mounted = adapter ?: return notMountedRejection()
-    mounted.fitToCoordinates(coordinates, padding, animated)
-    return Promise.resolved(Unit)
+  ): Promise<Unit> = withAdapter { it.fitToCoordinates(coordinates, padding, animated) }
+
+  override fun pointForCoordinate(coordinate: Coordinate): Promise<Point> = withAdapter { it.pointForCoordinate(coordinate) }
+
+  override fun coordinateForPoint(point: Point): Promise<Coordinate> = withAdapter { it.coordinateForPoint(point) }
+
+  /**
+   * Builds the adapter once per prop transaction. The generated updater sets [provider] before
+   * [googleMapId], and Google takes a map ID only when it creates its map, so a setter that
+   * built it would build it without one.
+   */
+  override fun afterUpdate() {
+    val nextAdapter = adapterSlot.commit(AdapterConfiguration(_provider, _googleMapId)) ?: return
+    attach(nextAdapter.view)
+    attachMarkers(nextAdapter)
+    syncState(nextAdapter)
   }
 
   override fun onDropView() {
-    releaseAdapter()
+    adapterSlot.release()
   }
 
   override fun prepareForRecycle() {
-    releaseAdapter()
+    adapterSlot.release()
     _provider = MapProvider.GOOGLE
     _mapType = MapType.STANDARD
     _region = null
     _camera = null
     _scrollEnabled = true
-    view.scrollGesturesEnabled = true
-    view.multiTouchGesturesEnabled = true
     _zoomEnabled = true
     _rotateEnabled = true
     _pitchEnabled = true
+    view.scrollGesturesEnabled = true
+    view.multiTouchGesturesEnabled = true
     _showsUserLocation = null
     _followsUserLocation = null
     _showsCompass = null
     _showsScale = null
+    _applePoiDetailPresentation = null
     _customMapStyle = null
     _googleMapId = null
     _clusteringEnabled = null
@@ -370,53 +391,69 @@ class HybridMapView(private val context: ThemedReactContext) :
     onClusterPress = null
   }
 
-  private fun <T> notMountedRejection(): Promise<T> =
-    Promise.rejected(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
+  /**
+   * Runs [command] against the adapter. A view that is still mounting has none yet: the
+   * generated updater hands JS the `hybridRef` before [afterUpdate] builds the first adapter, so
+   * such a call waits for that build on the main thread and is rejected only if it left none.
+   */
+  private fun <T> withAdapter(command: (MapProviderAdapter) -> Promise<T>): Promise<T> {
+    adapter?.let { return command(it) }
+
+    val promise = Promise<T>()
+    // Posted even from the main thread: inline, a call made there mid-transaction would find
+    // no adapter before `afterUpdate()` has built it.
+    postOnMain {
+      val mounted = adapter
+      if (mounted == null) {
+        promise.reject(IllegalStateException(MAP_VIEW_NOT_MOUNTED_MESSAGE))
+        return@postOnMain
+      }
+
+      // Caught: on the main thread a throw would take the app down instead of rejecting.
+      runCatching { command(mounted) }
+        .onSuccess { result ->
+          result
+            .then { value -> promise.resolve(value) }
+            .catch { error -> promise.reject(error) }
+        }.onFailure { error -> promise.reject(error) }
+    }
+    return promise
+  }
 
   /**
-   * Detaches and destroys the installed adapter. Both teardown paths land here:
-   * [onDropView] fires on every unmount, while [prepareForRecycle] only fires when
-   * React Native has view recycling enabled.
+   * Detaches and destroys [outgoing]. Every teardown lands here: a rebuild in [afterUpdate],
+   * [onDropView] on every unmount, and [prepareForRecycle], which only fires when React
+   * Native has view recycling enabled.
    */
-  private fun releaseAdapter() {
-    adapter?.release()
-    adapter?.view?.let(view::removeView)
-    adapter = null
-    view.mapSurface = null
-    view.projectCoordinate = null
-    view.updateMarkerPositions()
-  }
-
-  private fun installAdapter(provider: MapProvider) {
-    // Built before the teardown so an unsupported provider leaves the current map intact.
-    val nextAdapter = makeAdapter(provider)
-
-    releaseAdapter()
-    adapter = nextAdapter
-    view.projectCoordinate = nextAdapter::projectMarker
-    nextAdapter.onCameraMoved = view::updateMarkerPositions
-    attach(nextAdapter.view)
-    syncState(nextAdapter)
-  }
-
-  private fun makeAdapter(provider: MapProvider): MapProviderAdapter {
-    return when (provider) {
-      MapProvider.GOOGLE -> GoogleMapProviderAdapter(context, _googleMapId)
-      MapProvider.APPLE,
-      MapProvider.OPENSTREETMAP,
-      MapProvider.MAPBOX,
-      -> error("Map provider \"$provider\" is not supported on Android.")
+  private fun destroyAdapter(outgoing: MapProviderAdapter) {
+    outgoing.onCameraMoved = null
+    if (view.mapSurface === outgoing.view) {
+      view.mapSurface = null
+      view.makeProjection = null
     }
+    outgoing.release()
+    view.removeView(outgoing.view)
   }
 
+  /** Live markers follow the adapter's camera. */
+  private fun attachMarkers(adapter: MapProviderAdapter) {
+    view.mapSurface = adapter.view
+    view.makeProjection = adapter::makeMarkerProjection
+    adapter.onCameraMoved = view::updateMarkerPositions
+  }
+
+  /** Only ever sees [MapProvider.GOOGLE]: the [provider] setter rejects every other one. */
+  private fun makeAdapter(configuration: AdapterConfiguration): MapProviderAdapter =
+    GoogleMapProviderAdapter(context, configuration.googleMapId)
+
+  /** Below the live markers, which are drawn over the map. */
   private fun attach(contentView: View) {
-    view.mapSurface = contentView
     view.addView(
       contentView,
       0,
-      FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.MATCH_PARENT,
-        FrameLayout.LayoutParams.MATCH_PARENT,
+      ViewGroup.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.MATCH_PARENT,
       ),
     )
   }
@@ -436,6 +473,7 @@ class HybridMapView(private val context: ThemedReactContext) :
     adapter.showsScale = _showsScale
     adapter.customMapStyle = _customMapStyle
     adapter.googleMapId = _googleMapId
+    // Before the markers: the first diff must already know what is live.
     adapter.customClusterViews = customClusterViews
     adapter.onMarkerViewRenderState = onMarkerViewRenderState
     adapter.clusteringEnabled = _clusteringEnabled

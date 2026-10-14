@@ -13,7 +13,10 @@ import com.margelo.nitro.nitromaps.views.HybridMarkerViewManager
  * manager and loads the native NitroMaps C++ library.
  */
 class NitroMapsPackage : BaseReactPackage() {
-  override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? {
+  override fun getModule(
+    name: String,
+    reactContext: ReactApplicationContext,
+  ): NativeModule? {
     return null
   }
 

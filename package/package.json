@@ -1,6 +1,6 @@
 {
   "name": "react-native-better-maps",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "High-performance maps for React Native built on Nitro Modules and the New Architecture",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/index.d.ts",
@@ -41,7 +41,8 @@
   ],
   "scripts": {
     "prebuild": "bun run nitrogen",
-    "build": "bob build && bun run build:plugin",
+    "build": "bob build && bun run build:lib-nitrogen && bun run build:plugin",
+    "build:lib-nitrogen": "mkdir -p lib/nitrogen/generated/shared/json && cp nitrogen/generated/shared/json/*.json lib/nitrogen/generated/shared/json/",
     "clean:plugin": "rm -rf plugin/build",
     "build:plugin": "bun run clean:plugin && tsc --project tsconfig.plugin.json",
     "prepack": "cp ../README.md ./README.md && bun run build",
@@ -87,16 +88,16 @@
   },
   "devDependencies": {
     "@expo/config-plugins": "~57.0.0",
-    "@release-it/conventional-changelog": "^12.0.0",
-    "@types/bun": "^1.4.0",
+    "@release-it/conventional-changelog": "^12.0.2",
+    "@types/bun": "^1.4.2",
     "@types/react": "^19.2.15",
     "nitrogen": "^0.35.9",
     "react": "19.2.3",
     "react-native": "0.86.0",
-    "react-native-builder-bob": "^0.43.0",
+    "react-native-builder-bob": "^0.43.1",
     "react-native-nitro-modules": "^0.35.10",
-    "release-it": "^19.0.0",
-    "typescript": "^5.8.3"
+    "release-it": "^21.1.0",
+    "typescript": "^6.0.3"
   },
   "react-native-builder-bob": {
     "source": "src",

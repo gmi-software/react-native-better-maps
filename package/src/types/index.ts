@@ -1,7 +1,16 @@
 export type { Coordinate } from './coordinate';
+export type { Point } from './point';
 export type { Camera } from './camera';
-export type { Region, EdgePadding, VisibleRegion } from './region';
-export type { ApplePoiCategory } from '../native/specs/MapView.nitro';
+export type {
+  Region,
+  EdgePadding,
+  RegionChangeDetails,
+  VisibleRegion,
+} from './region';
+export type {
+  ApplePoiCategory,
+  ApplePoiDetailPresentation,
+} from '../native/specs/MapView.nitro';
 export type {
   ApplePoiPressEvent,
   GooglePoiPressEvent,
@@ -10,7 +19,6 @@ export type {
   MapViewProps,
   MapViewPropsForProvider,
   PoiPressEvent,
-  MarkerViewCluster,
 } from './map';
 export type {
   MarkerAnchor,
@@ -37,3 +45,8 @@ export type {
   GeojsonToOverlayOptions,
 } from './geojson';
 export type { MapViewRef } from './ref';
+export type {
+  MarkerViewCluster,
+  MarkerViewProps,
+  RenderMarkerViewCluster,
+} from './markerView';

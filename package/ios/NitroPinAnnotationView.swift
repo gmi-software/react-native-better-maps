@@ -30,16 +30,21 @@ final class NitroPinAnnotationView: MKMarkerAnnotationView {
     displayPriority = .required
     alpha = marker.opacity
     markerTintColor = marker.markerColor?.toUIColor(fallback: .systemRed)
-    zPriority = marker.zIndex.map {
-      MKAnnotationViewZPriority(rawValue: Float($0))
-    } ?? .defaultUnselected
+    zPriority =
+      marker.zIndex.map {
+        MKAnnotationViewZPriority(rawValue: Float($0))
+      } ?? .defaultUnselected
 
-    layoutIfNeeded()
+    // No forced layout here: this runs inside MapKit's `viewFor` callback for
+    // every pin entering the viewport. The marker view keeps one size across
+    // reuse, so a zero size only happens before the first layout, and the
+    // default covers that.
     let pinSize = bounds.size == .zero ? Self.defaultPinSize : bounds.size
     centerOffset = marker.centerOffset(forImageSize: pinSize)
 
     let rotation = marker.rotation ?? 0
-    transform = marker.flat != true && rotation != 0
+    transform =
+      marker.flat != true && rotation != 0
       ? CGAffineTransform(rotationAngle: rotation * .pi / 180)
       : .identity
   }

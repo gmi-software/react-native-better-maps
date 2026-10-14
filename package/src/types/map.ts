@@ -1,5 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
-import type { MarkerViewProps } from '../components/MarkerView';
+import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import type { Camera } from './camera';
 import type { Coordinate } from './coordinate';
@@ -8,9 +7,13 @@ import type {
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../native/specs/overlays';
-import type { ApplePoiCategory } from '../native/specs/MapView.nitro';
+import type {
+  ApplePoiCategory,
+  ApplePoiDetailPresentation,
+} from '../native/specs/MapView.nitro';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
-import type { EdgePadding, Region } from './region';
+import type { EdgePadding, Region, RegionChangeDetails } from './region';
+import type { RenderMarkerViewCluster } from './markerView';
 
 /**
  * Available map display styles.
@@ -39,24 +42,12 @@ export interface GooglePoiPressEvent {
 
 export type PoiPressEvent = ApplePoiPressEvent | GooglePoiPressEvent;
 
-export interface MarkerViewCluster {
-  id: string;
-  coordinate: Coordinate;
-  markerIds: string[];
-  count: number;
-  /** Calls onClusterPress and fits the native map to the cluster's bounds. */
-  onPress: () => Promise<void>;
-}
-
 /**
  * Props shared by all map providers.
  */
 interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
-
-  /** Render native clusters as a live MarkerView containing arbitrary JSX. */
-  renderCluster?: (cluster: MarkerViewCluster) => ReactElement<MarkerViewProps>;
 
   /** Initial or controlled region. */
   region?: Region;
@@ -76,13 +67,24 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Whether to show the user's current location on the map. */
   showsUserLocation?: boolean;
 
-  /** Whether the map camera should follow the user's location. */
+  /**
+   * Whether the map camera should follow the user's location. Needs
+   * `showsUserLocation` as well.
+   *
+   * Ignored on Android, where Google Maps has no follow mode; debug builds log
+   * a warning. Call `animateCamera` from a location listener instead.
+   */
   followsUserLocation?: boolean;
 
   /** Whether to show the compass control. */
   showsCompass?: boolean;
 
-  /** Padding applied to map edges, in density-independent pixels. */
+  /**
+   * Padding applied to map edges, in density-independent pixels.
+   *
+   * `region` is fitted into the area the padding leaves over, and
+   * `fitToCoordinates` padding is added on top of it.
+   */
   mapPadding?: EdgePadding;
 
   /**
@@ -115,11 +117,28 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   /** Called when any circle is pressed. */
   onCirclePress?: (id: string) => void;
 
-  /** Called once when a user-initiated region change begins. */
-  onRegionChange?: (region: Region) => void;
+  /**
+   * Called once when the camera starts to move, with the region it is leaving -
+   * not on every frame while it moves.
+   *
+   * Fires for gestures and for programmatic moves alike - `setCamera`,
+   * `animateCamera`, `fitToCoordinates` and the `region` / `camera` props.
+   * Use `details.isGesture` to tell the two apart. An update that leaves the
+   * camera where it is fires nothing, and neither does the map settling into
+   * its first position as it appears.
+   */
+  onRegionChange?: (region: Region, details: RegionChangeDetails) => void;
 
-  /** Called once when a user-initiated region change ends. */
-  onRegionChangeComplete?: (region: Region) => void;
+  /**
+   * Called once when the camera comes to rest, with the region it arrived at
+   * and the same `details` as the `onRegionChange` that began the move.
+   *
+   * @see {@linkcode BaseMapViewProps.onRegionChange}
+   */
+  onRegionChangeComplete?: (
+    region: Region,
+    details: RegionChangeDetails,
+  ) => void;
 
   /** Called when the map is ready to use. */
   onMapReady?: () => void;
@@ -150,14 +169,29 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
   /** Google Map IDs require the explicit Google provider. */
   googleMapId?: never;
 
-  /** Whether to show the scale control (supported by Apple MapKit). */
+  /**
+   * Whether to show the scale control. Apple MapKit only: ignored on Android,
+   * where the Google Maps SDK has no scale control; debug builds log a warning.
+   */
   showsScale?: boolean;
+
+  /**
+   * Native MapKit detail presentation for selected points of interest.
+   * Apple MapKit on iOS 18+ only; a no-op elsewhere.
+   */
+  applePoiDetailPresentation?: ApplePoiDetailPresentation;
 
   /** Custom map style as a JSON string (full support on Google Maps; curated subset on Apple MapKit iOS 16+). */
   customMapStyle?: string;
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
+
+  /**
+   * Draws each cluster as a live `MarkerView` instead of the default badge.
+   * Needs `clusteringEnabled`.
+   */
+  renderCluster?: RenderMarkerViewCluster;
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
@@ -172,11 +206,23 @@ interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
   /** Whether to show the scale control. */
   showsScale?: boolean;
 
+  /**
+   * Presents native MapKit details for a selected point of interest on
+   * iOS 18+. Works with or without `onPoiPress`. Omit to disable.
+   */
+  applePoiDetailPresentation?: ApplePoiDetailPresentation;
+
   /** Custom map style as a JSON string. Apple MapKit applies a curated subset on iOS 16+. */
   customMapStyle?: string;
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
+
+  /**
+   * Draws each cluster as a live `MarkerView` instead of the default badge.
+   * Needs `clusteringEnabled`.
+   */
+  renderCluster?: RenderMarkerViewCluster;
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
@@ -191,11 +237,20 @@ interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
   /** Google Maps SDK has no native scale control. */
   showsScale?: never;
 
+  /** Google Maps SDK has no native POI detail surface; POI taps stay event-only. */
+  applePoiDetailPresentation?: never;
+
   /** Custom Google Maps style JSON. */
   customMapStyle?: string;
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
+
+  /**
+   * Draws each cluster as a live `MarkerView` instead of the default badge.
+   * Needs `clusteringEnabled`.
+   */
+  renderCluster?: RenderMarkerViewCluster;
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
@@ -205,8 +260,10 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   provider: 'openstreetmap';
   googleMapId?: never;
   showsScale?: never;
+  applePoiDetailPresentation?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
+  renderCluster?: never;
   clusterEnteringAnimation?: never;
   onPoiPress?: never;
 }
@@ -215,8 +272,10 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   provider: 'mapbox';
   googleMapId?: never;
   showsScale?: never;
+  applePoiDetailPresentation?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
+  renderCluster?: never;
   clusterEnteringAnimation?: never;
   onPoiPress?: never;
 }

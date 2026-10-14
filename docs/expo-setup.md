@@ -104,14 +104,13 @@ expo run:ios
 
 ## Example app
 
-The monorepo example at `example/` uses this plugin. From the repo root:
+The monorepo example at `example/` uses this plugin. Its `prebuild` script runs `expo prebuild` directly, so the config plugin has to be compiled first: the workspace symlink resolves `app.plugin.js` to output under `package/plugin/build`, which is gitignored. From the repo root:
 
 ```bash
+bun run --filter react-native-better-maps build:plugin
 GOOGLE_MAPS_API_KEY=your-key bun example prebuild
 GOOGLE_MAPS_API_KEY=your-key bun example android
 ```
-
-The example's `prebuild` script builds the plugin (`build:plugin`) before running `expo prebuild`, since the workspace symlink requires compiled plugin output.
 
 ## Troubleshooting
 

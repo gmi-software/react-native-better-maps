@@ -22,11 +22,12 @@ internal object MarkerViewportFilter {
     val maxCount = maxMarkersForZoom(latitudeSpan)
     val paddedBounds = bounds.expandBy(0.2)
 
-    val visible = candidates.filter { descriptor ->
-      paddedBounds.contains(
-        LatLng(descriptor.coordinate.latitude, descriptor.coordinate.longitude),
-      )
-    }
+    val visible =
+      candidates.filter { descriptor ->
+        paddedBounds.contains(
+          LatLng(descriptor.coordinate.latitude, descriptor.coordinate.longitude),
+        )
+      }
 
     if (visible.size <= maxCount) {
       return visible

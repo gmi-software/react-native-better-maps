@@ -2,57 +2,45 @@
 
 ## Status
 
-Proposed — live-host implementation available; performance acceptance remains open.
+Accepted — live projected hosts (`MarkerView`).
 
 ## Context
 
-`Marker` elements are serialized descriptors. Their native SDK objects support images, clustering, dragging, and callouts, but their JSX children are not mounted. The requested custom-marker contract includes arbitrary live React Native JSX and internal animations while preserving map smoothness.
+`Marker` elements are serialized descriptors drawn by the SDK: images, clustering, viewport culling, dragging and callouts, for thousands of points. Their `children` are never mounted.
 
-The earlier proposal used live MapKit annotation views and snapshots on Google. That does not preserve interactive animated JSX across providers. Google iOS `iconView` uses snapshots, and Android's advanced-marker view API has separate renderer and performance constraints. A native projected overlay is a distinct alternative to those SDK icon APIs. See the [SDK source investigation](../research/custom-marker-sdk-sources.md).
+Apps migrating from `react-native-maps` need markers drawn by arbitrary JSX: price bubbles, avatars, buttons, and animations inside them. The requirement is live content that stays interactive and animated, without costing the map its frame rate (60 FPS, 120 FPS on ProMotion where the provider renders that fast).
 
-The optimized UIKit experiment exceeded the entire 8.33 ms interval when taking 50 simple layer snapshots in a batch. This is simulator CPU evidence against capturing every animated marker on every frame, not a measured Google SDK cost or a device FPS claim.
+The SDKs disagree on what a marker can be:
 
-## Proposed decision
+| SDK                 | Live view as a marker?                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| Apple MapKit        | `MKAnnotationView` can hold live views, but MapKit owns its lifecycle, reuse and hierarchy.           |
+| Google Maps iOS     | `GMSMarker.iconView` is snapshotted: no interaction, and animation means re-snapshotting every frame. |
+| Google Maps Android | Bitmap icons only; `AdvancedMarker.iconView` is also rendered to a bitmap.                            |
 
-Add `MarkerView` as a separate live Fabric component. Keep `Marker` descriptors for SDK annotation features and large static datasets.
+## Decision
 
-```tsx
-<MapView>
-  <MarkerView coordinate={{ latitude, longitude }} width={96} height={48}>
-    <Pressable onPress={selectPlace}>
-      <Animated.View style={animatedStyle} />
-      <Text>Custom content</Text>
-    </Pressable>
-  </MarkerView>
-</MapView>
-```
+Add `MarkerView`, a separate component, next to `Marker`.
 
-The native spec carries `coordinate` and optional `anchor`; standard Fabric layout receives explicit width and height. Child state and animations remain in React Native. Camera movement projects coordinates and moves the outer native host on the UI thread. It does not serialize child content, capture bitmaps, or send screen positions through JavaScript.
+Its JSX stays a Fabric subtree. The map mounts the host over its SDK view and moves it with the SDK's own projection on every camera callback, on the UI thread. The same mechanism serves all three providers.
 
-- iOS components explicitly forward Fabric mount/unmount into Swift containers. Hosts mount within the SDK surface so SDK map gestures remain ancestors; provider replacement preserves the existing Fabric hosts.
-- Android components use ViewGroup managers with separate Fabric child indexing. Native gesture dispatch gives descendants a chance to claim a gesture before forwarding unclaimed map gestures to the SDK surface.
-- The Nitrogen compatibility script validates generated patch targets and supports repeated execution without duplicate methods.
-- Fixed bounds define anchors, clipping, and touch regions. JSX order defines host order. Offscreen hosts are hidden; the native display set unmounts clustered-away/filtered subtrees. External application timers still need cleanup.
-
-See the [public contract](../custom-marker-views.md) for exact API and limitations.
+- **No snapshots** and **no per-frame JavaScript**: a camera frame is one projection per mounted marker and a translation, pixel-snapped.
+- **One pipeline:** a live marker is a `MarkerDescriptor` with `liveView: true`. Native clustering and viewport filtering place it like any marker. A registry takes live elements out of each diff before the SDK sees it and tells JS which hosts to mount. Clustered or culled markers are unmounted.
+- **JSX clusters:** `renderCluster` replaces SDK badges with live `MarkerView`s.
+- **Correct touches:** the shadow node reports the native translation (`getTransform()`), so `measure()` and `Pressable` see the marker where it is drawn. Taps on a marker do not reach the map, POIs or SDK markers beneath it; drags still pan the map unless the marker's content claims them.
+- **Nitro views with children:** generated Nitro views take no children, so `scripts/patch-nitrogen-generated.mjs` routes Fabric mounts to Swift containers on iOS and makes the Android managers `ViewGroupManager`s. The script fails if the generated code changes shape.
 
 ## Alternatives
 
-- **Snapshot all JSX:** reuses the descriptor/image path, but changes live animation and interaction semantics and introduces repeated capture/upload cost.
-- **SDK annotation hosts / Google icon views:** retain more SDK marker features, but have different ownership, snapshot, and interaction behavior across providers.
-- **Native projected live hosts:** preserve live Fabric content and avoid snapshot work, at the cost of explicit projection, mounting, gestures, and clipping. This is the implemented prototype.
-- **Per-frame JavaScript screen projection:** adds camera events and many JS/native updates to the frame path; excluded from this design.
+- **Snapshot JSX into the image pipeline.** Reuses everything, but freezes content: no interaction, and every animation frame is a capture, an encode and an SDK upload. In an iOS simulator experiment, the layer snapshots alone took about 10 ms for 50 markers and 37 ms for 200, against an 8.3 ms frame at 120 Hz.
+- **SDK view markers** (`MKAnnotationView`, `iconView`). Live only on MapKit; snapshots on Google. Three behaviors behind one API.
+- **Positions from JavaScript per frame.** A JS round trip and a React commit per camera frame cannot hold 120 FPS.
 
-## Consequences and acceptance
+## Consequences
 
-Live descriptors participate in the shared native cluster engine. Their Fabric hosts do not participate in SDK collision, depth occlusion, dragging, callouts, or ground-plane rotation. Their explicit dimensions and finite number are part of the workload. The package cannot remove the intrinsic rendering cost of arbitrary user JSX.
+- Live markers are screen-aligned and drawn above SDK annotations. They do not get SDK collision, pitch occlusion, dragging, callouts or ground-plane rotation; `Marker` keeps those.
+- The library cannot make arbitrary JSX free: each mounted marker is a live view. Clustering and culling bound how many are mounted; layout animations inside markers cost what they cost anywhere.
+- On Android the map draws on its own surface and reports a camera frame after drawing it, so markers can trail fast pans by about a frame.
+- The Nitrogen patch must be revisited on Nitro upgrades; it fails the codegen step rather than shipping a broken view.
 
-The target is no material regression against the same provider/device baseline for an explicitly measured workload. Google iOS documents a 60 FPS maximum for its map renderer; a 120 Hz display callback does not override that limit. Provider acceptance must be separate.
-
-The corrected v3 physical runs retained near-120 Hz callback cadence for static/transform hosts, while 200 animated-width hosts and the same JSX in ordinary overlays both fell to about 51–55 callbacks/s. Earlier duration-error runs are excluded from moving-camera acceptance. Actual surface traces did not establish a sustained 120 FPS map baseline in these device conditions. These are pre-clustering results; custom cluster expansion/collapse needs separate physical validation before accepting the performance condition.
-
-[Experiments and reproduction](../../experiments/custom-markers/README.md) · [Physical device results](../research/custom-marker-device-results.md)
-
-## Cluster integration
-
-Live marker descriptors share the existing native cluster engine with SDK markers. A render registry separates SDK objects from the visible Fabric display set. `renderCluster` supplies a live `MarkerView` for cluster badges; otherwise existing native badges remain available. Clustered-away React subtrees unmount to remove their animation/layout work. Persistent marker state therefore belongs in application data. The performance gate includes cluster expansion/collapse and fully expanded markers, not just a zoomed-out clustered screenshot.
+See [Live JSX markers](../custom-marker-views.md) for the API and its limits.

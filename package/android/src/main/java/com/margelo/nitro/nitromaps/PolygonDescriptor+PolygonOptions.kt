@@ -1,14 +1,17 @@
 package com.margelo.nitro.nitromaps
 
+import android.graphics.Color
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Polygon
 import com.google.android.gms.maps.model.PolygonOptions
 
 fun PolygonDescriptor.toPolygonOptions(): PolygonOptions {
-  val options = PolygonOptions()
-    .addAll(coordinates.map { LatLng(it.latitude, it.longitude) })
-    .strokeWidth((strokeWidth ?: 2.0).toFloat())
-    .zIndex((zIndex ?: 0.0).toFloat())
-    .clickable(tappable == true)
+  val options =
+    PolygonOptions()
+      .addAll(coordinates.map { LatLng(it.latitude, it.longitude) })
+      .strokeWidth((strokeWidth ?: 2.0).toFloat())
+      .zIndex((zIndex ?: 0.0).toFloat())
+      .clickable(tappable == true)
 
   holes?.forEach { hole ->
     options.addHole(hole.map { LatLng(it.latitude, it.longitude) })
@@ -17,4 +20,21 @@ fun PolygonDescriptor.toPolygonOptions(): PolygonOptions {
   fillColor?.let { options.fillColor(it.toColorInt()) }
 
   return options
+}
+
+/** Moves an existing polygon onto this descriptor's outline and holes. */
+fun PolygonDescriptor.applyGeometryTo(polygon: Polygon) {
+  polygon.points = coordinates.map { LatLng(it.latitude, it.longitude) }
+  polygon.holes = holes?.map { hole ->
+    hole.map { LatLng(it.latitude, it.longitude) }
+  } ?: emptyList()
+}
+
+/** Restyles an existing polygon in place, with the same defaults as [toPolygonOptions]. */
+fun PolygonDescriptor.applyStyleTo(polygon: Polygon) {
+  polygon.strokeColor = strokeColor?.toColorInt() ?: Color.BLACK
+  polygon.fillColor = fillColor?.toColorInt() ?: Color.TRANSPARENT
+  polygon.strokeWidth = (strokeWidth ?: 2.0).toFloat()
+  polygon.zIndex = (zIndex ?: 0.0).toFloat()
+  polygon.isClickable = tappable == true
 }

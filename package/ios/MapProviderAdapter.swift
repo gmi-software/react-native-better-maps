@@ -3,8 +3,12 @@ import UIKit
 
 protocol MapProviderAdapter: AnyObject {
   var contentView: UIView { get }
+
+  /// Called on every camera frame, gestures and animations alike, on the main thread.
   var onCameraMoved: (() -> Void)? { get set }
-  func projectMarker(_ coordinate: Coordinate) -> CGPoint?
+
+  /// A projection for the current camera, or nil while there is no map to project with.
+  func makeMarkerProjection() -> MarkerProjection?
 
   var mapType: MapType { get set }
   var region: Region? { get set }
@@ -17,6 +21,7 @@ protocol MapProviderAdapter: AnyObject {
   var followsUserLocation: Bool? { get set }
   var showsCompass: Bool? { get set }
   var showsScale: Bool? { get set }
+  var applePoiDetailPresentation: ApplePoiDetailPresentation? { get set }
   var customMapStyle: String? { get set }
   var googleMapId: String? { get set }
   var clusteringEnabled: Bool? { get set }
@@ -26,8 +31,8 @@ protocol MapProviderAdapter: AnyObject {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
 
-  var onRegionChange: ((Region) -> Void)? { get set }
-  var onRegionChangeComplete: ((Region) -> Void)? { get set }
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)? { get set }
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)? { get set }
   var onMapReady: (() -> Void)? { get set }
   var onPress: ((Coordinate) -> Void)? { get set }
   var onPoiPress: ((NativePoiPressEvent) -> Void)? { get set }
@@ -46,18 +51,41 @@ protocol MapProviderAdapter: AnyObject {
   var onClusterPress: (([String], Coordinate) -> Void)? { get set }
 
   func fetchCamera() throws -> Promise<Camera>
-  func applyCamera(camera: Camera) throws
-  func animateCamera(camera: Camera, duration: Double?) throws
+
+  /// Resolves once the camera has arrived: a non-animated move right away, an animated
+  /// one when it finishes or when a gesture, a later command or ``prepareForRecycle()``
+  /// cuts it short.
+  func applyCamera(camera: Camera) throws -> Promise<Void>
+
+  /// `duration` is in seconds, here and in `animateToRegion`: `HybridMapView`
+  /// converts the milliseconds JS passes.
+  ///
+  /// - SeeAlso: ``applyCamera(camera:)`` for when the Promise settles.
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void>
+
+  /// - SeeAlso: ``applyCamera(camera:)`` for when the Promise settles.
+  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void>
+
   func getVisibleRegion() throws -> Promise<VisibleRegion>
-  func fitToCoordinates(coordinates: [Coordinate], padding: EdgePadding?, animated: Bool?) throws
+
+  /// - SeeAlso: ``applyCamera(camera:)`` for when the Promise settles.
+  func fitToCoordinates(
+    coordinates: [Coordinate],
+    padding: EdgePadding?,
+    animated: Bool?
+  ) throws -> Promise<Void>
+
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point>
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate>
+
   func prepareForRecycle()
 }
 
 final class UnavailableMapProviderAdapter: MapProviderAdapter {
   let contentView: UIView
-  var onCameraMoved: (() -> Void)?
-  func projectMarker(_ coordinate: Coordinate) -> CGPoint? { nil }
   private let error: Error
+
+  var onCameraMoved: (() -> Void)?
 
   var mapType: MapType = .standard
   var region: Region?
@@ -70,6 +98,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var followsUserLocation: Bool?
   var showsCompass: Bool?
   var showsScale: Bool?
+  var applePoiDetailPresentation: ApplePoiDetailPresentation?
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Bool?
@@ -79,8 +108,8 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
 
-  var onRegionChange: ((Region) -> Void)?
-  var onRegionChangeComplete: ((Region) -> Void)?
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)?
   var onPress: ((Coordinate) -> Void)?
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
@@ -126,11 +155,15 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     Promise.rejected(withError: error)
   }
 
-  func applyCamera(camera: Camera) throws {
+  func applyCamera(camera: Camera) throws -> Promise<Void> {
     throw error
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void> {
+    throw error
+  }
+
+  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
     throw error
   }
 
@@ -142,8 +175,20 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     coordinates: [Coordinate],
     padding: EdgePadding?,
     animated: Bool?
-  ) throws {
+  ) throws -> Promise<Void> {
     throw error
+  }
+
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    Promise.rejected(withError: error)
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    Promise.rejected(withError: error)
+  }
+
+  func makeMarkerProjection() -> MarkerProjection? {
+    nil
   }
 
   func prepareForRecycle() {}

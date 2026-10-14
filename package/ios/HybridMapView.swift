@@ -1,14 +1,38 @@
 import NitroModules
 import UIKit
 
+/// What a provider adapter is built from; the SDK takes both only when it
+/// creates its map.
+private struct AdapterConfiguration: Equatable {
+  let provider: MapProvider
+  /// Nil unless `provider` is Google: no other provider reads a map ID, so
+  /// setting one there rebuilds nothing.
+  let googleMapId: String?
+
+  init(_ state: MapViewState) {
+    provider = state.provider
+    googleMapId = state.provider == .google ? state.googleMapId : nil
+  }
+}
+
 final class HybridMapView: HybridMapViewSpec {
   private let containerView = NitroMapContainerView()
   private let lifecycleLock = NSLock()
   private let stateLock = NSLock()
-  private var adapter: MapProviderAdapter?
+  private let adapterSlot = ProviderAdapterSlot<AdapterConfiguration, MapProviderAdapter>(
+    build: HybridMapView.makeAdapter(for:),
+    destroy: { adapter in
+      adapter.prepareForRecycle()
+      adapter.contentView.removeFromSuperview()
+    }
+  )
   private var lifecycleGeneration: UInt64 = 0
   private var isRecycled = false
   private var _state = MapViewState()
+
+  private var adapter: MapProviderAdapter? {
+    adapterSlot.adapter
+  }
 
   lazy var view: UIView = {
     containerView
@@ -16,29 +40,7 @@ final class HybridMapView: HybridMapViewSpec {
 
   var provider: MapProvider? {
     get { getBacked(\.provider) }
-    set {
-      let nextProvider = newValue ?? .apple
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        let shouldInstall = withStateLock { () -> Bool in
-          guard nextProvider != self._state.provider || self.adapter == nil else {
-            return false
-          }
-
-          self._state.provider = nextProvider
-          return true
-        }
-
-        guard shouldInstall else {
-          return
-        }
-
-        installAdapter(for: nextProvider)
-      }
-    }
+    set { withStateLock { self._state.provider = newValue ?? .apple } }
   }
 
   var mapType: MapType {
@@ -100,6 +102,15 @@ final class HybridMapView: HybridMapViewSpec {
     set { setBackedOnMain(newValue, store: \.showsScale) { $0.showsScale = $1 } }
   }
 
+  var applePoiDetailPresentation: ApplePoiDetailPresentation? {
+    get { getBacked(\.applePoiDetailPresentation) }
+    set {
+      setBackedOnMain(newValue, store: \.applePoiDetailPresentation) {
+        $0.applePoiDetailPresentation = $1
+      }
+    }
+  }
+
   var customMapStyle: String? {
     get { getBacked(\.customMapStyle) }
     set { setBackedOnMain(newValue, store: \.customMapStyle) { $0.customMapStyle = $1 } }
@@ -107,45 +118,29 @@ final class HybridMapView: HybridMapViewSpec {
 
   var googleMapId: String? {
     get { getBacked(\.googleMapId) }
-    set {
-      let nextGoogleMapId = newValue
-      runOnMain { [weak self] in
-        guard let self else {
-          return
-        }
-
-        let shouldReinstall = withStateLock { () -> Bool in
-          guard self._state.googleMapId != nextGoogleMapId else {
-            return false
-          }
-
-          self._state.googleMapId = nextGoogleMapId
-          return self._state.provider == .google && self.adapter != nil
-        }
-
-        guard shouldReinstall else {
-          return
-        }
-
-        installAdapter(for: withStateLock { self._state.provider })
-      }
-    }
-  }
-
-  var customClusterViews: Bool? {
-    get { getBacked(\.customClusterViews) }
-    set { setBackedOnMain(newValue, store: \.customClusterViews) { $0.customClusterViews = $1 } }
-  }
-
-  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
-    get { getBacked(\.onMarkerViewRenderState) }
-    set { setBackedOnMain(newValue, store: \.onMarkerViewRenderState) { $0.onMarkerViewRenderState = $1 } }
+    set { withStateLock { self._state.googleMapId = newValue } }
   }
 
   var clusteringEnabled: Bool? {
     get { getBacked(\.clusteringEnabled) }
     set {
       setBackedOnMain(newValue, store: \.clusteringEnabled) { $0.clusteringEnabled = $1 }
+    }
+  }
+
+  var customClusterViews: Bool? {
+    get { getBacked(\.customClusterViews) }
+    set {
+      setBackedOnMain(newValue, store: \.customClusterViews) { $0.customClusterViews = $1 }
+    }
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { getBacked(\.onMarkerViewRenderState) }
+    set {
+      setBackedOnMain(newValue, store: \.onMarkerViewRenderState) {
+        $0.onMarkerViewRenderState = $1
+      }
     }
   }
 
@@ -172,12 +167,12 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
-  var onRegionChange: ((Region) -> Void)? {
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)? {
     get { getBacked(\.onRegionChange) }
     set { setBackedOnMain(newValue, store: \.onRegionChange) { $0.onRegionChange = $1 } }
   }
 
-  var onRegionChangeComplete: ((Region) -> Void)? {
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)? {
     get { getBacked(\.onRegionChangeComplete) }
     set {
       setBackedOnMain(newValue, store: \.onRegionChangeComplete) {
@@ -263,12 +258,21 @@ final class HybridMapView: HybridMapViewSpec {
   }
 
   func applyCamera(camera: Camera) throws -> Promise<Void> {
-    promiseOnMainVoid { try $0.applyCamera(camera: camera) }
+    promiseOnMain { try $0.applyCamera(camera: camera) }
   }
 
   func animateCamera(camera: Camera, duration: Double?) throws -> Promise<Void> {
-    promiseOnMainVoid {
-      try $0.animateCamera(camera: camera, duration: duration)
+    // Milliseconds from JS, seconds for UIKit and Core Animation.
+    let seconds = duration.map { $0 / 1000 }
+    return promiseOnMain {
+      try $0.animateCamera(camera: camera, duration: seconds)
+    }
+  }
+
+  func animateToRegion(region: Region, duration: Double?) throws -> Promise<Void> {
+    let seconds = duration.map { $0 / 1000 }
+    return promiseOnMain {
+      try $0.animateToRegion(region: region, duration: seconds)
     }
   }
 
@@ -281,7 +285,7 @@ final class HybridMapView: HybridMapViewSpec {
     padding: EdgePadding?,
     animated: Bool?
   ) throws -> Promise<Void> {
-    promiseOnMainVoid {
+    promiseOnMain {
       try $0.fitToCoordinates(
         coordinates: coordinates,
         padding: padding,
@@ -290,9 +294,25 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    promiseOnMain { try $0.pointForCoordinate(coordinate: coordinate) }
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    promiseOnMain { try $0.coordinateForPoint(point: point) }
+  }
+
+  /// Builds the adapter once per prop transaction. The generated component sets
+  /// `provider` before `googleMapId`, and Google takes a map ID only when it
+  /// creates its map, so a setter that built it would build it without one.
   func afterUpdate() {
     runOnMain { [weak self] in
-      self?.activateLifecycle()
+      guard let self else {
+        return
+      }
+
+      activateLifecycle()
+      installAdapterIfNeeded()
     }
   }
 
@@ -303,11 +323,8 @@ final class HybridMapView: HybridMapViewSpec {
       }
 
       recycleLifecycle()
-      containerView.projectCoordinate = nil
-      containerView.mapSurface = nil
-      adapter?.prepareForRecycle()
-      adapter?.contentView.removeFromSuperview()
-      adapter = nil
+      detachMarkers()
+      adapterSlot.release()
       withStateLock {
         self._state = MapViewState()
       }
@@ -318,12 +335,7 @@ final class HybridMapView: HybridMapViewSpec {
     matching lifecycle: (generation: UInt64, isRecycled: Bool)? = nil
   ) throws -> MapProviderAdapter {
     try validateActiveLifecycle(matching: lifecycle)
-
-    if let adapter {
-      return adapter
-    }
-
-    installAdapter(for: withStateLock { self._state.provider })
+    installAdapterIfNeeded()
     return adapter!
   }
 
@@ -362,7 +374,8 @@ final class HybridMapView: HybridMapViewSpec {
     }
 
     if let lifecycle,
-       lifecycle.isRecycled || lifecycle.generation != currentGeneration {
+      lifecycle.isRecycled || lifecycle.generation != currentGeneration
+    {
       throw Self.mapViewNotMountedError()
     }
   }
@@ -371,52 +384,62 @@ final class HybridMapView: HybridMapViewSpec {
     RuntimeError.error(withMessage: "MapView is not mounted")
   }
 
-  private func installAdapter(for provider: MapProvider) {
+  private func installAdapterIfNeeded() {
     precondition(Thread.isMainThread)
 
-    containerView.projectCoordinate = nil
-    containerView.mapSurface = nil
-    adapter?.prepareForRecycle()
-    adapter?.contentView.removeFromSuperview()
+    let configuration = withStateLock { AdapterConfiguration(self._state) }
+    guard let nextAdapter = adapterSlot.commit(configuration) else {
+      return
+    }
 
-    let nextAdapter = makeAdapter(for: provider)
-    adapter = nextAdapter
-    containerView.projectCoordinate = { [weak nextAdapter] coordinate in
-      nextAdapter?.projectMarker(coordinate)
-    }
-    nextAdapter.onCameraMoved = { [weak containerView] in
-      containerView?.updateMarkerPositions()
-    }
     attach(contentView: nextAdapter.contentView)
+    attachMarkers(to: nextAdapter)
     syncState(to: nextAdapter)
   }
 
-  private func makeAdapter(for provider: MapProvider) -> MapProviderAdapter {
-    switch provider {
+  /// Live markers move into the adapter's map view and follow its camera.
+  private func attachMarkers(to adapter: MapProviderAdapter) {
+    containerView.mapSurface = adapter.contentView
+    containerView.makeProjection = { [weak adapter] in
+      adapter?.makeMarkerProjection()
+    }
+    adapter.onCameraMoved = { [weak containerView] in
+      containerView?.updateMarkerPositions()
+    }
+  }
+
+  /// Takes the live markers back out of the map view about to go away.
+  private func detachMarkers() {
+    containerView.makeProjection = nil
+    containerView.mapSurface = nil
+  }
+
+  private static func makeAdapter(for configuration: AdapterConfiguration) -> MapProviderAdapter {
+    switch configuration.provider {
     case .apple:
       return AppleMapProviderAdapter()
     case .google:
-#if canImport(GoogleMaps)
+      #if canImport(GoogleMaps)
       do {
-        return try GoogleMapProviderAdapter(googleMapId: withStateLock { self._state.googleMapId })
+        return try GoogleMapProviderAdapter(googleMapId: configuration.googleMapId)
       } catch {
         return UnavailableMapProviderAdapter(error: error)
       }
-#else
+      #else
       return UnavailableMapProviderAdapter(
         error: MapProviderConfigurationError.googleMapsSdkNotLinked
       )
-#endif
+      #endif
     case .openstreetmap, .mapbox:
       return UnavailableMapProviderAdapter(
-        error: MapProviderConfigurationError.unsupportedIOSProvider(provider)
+        error: MapProviderConfigurationError.unsupportedIOSProvider(configuration.provider)
       )
     }
   }
 
   private func attach(contentView: UIView) {
     contentView.translatesAutoresizingMaskIntoConstraints = false
-    containerView.mapSurface = contentView
+    // Below any live marker still waiting for a map view to move into.
     containerView.insertSubview(contentView, at: 0)
     NSLayoutConstraint.activate([
       contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
@@ -462,35 +485,6 @@ final class HybridMapView: HybridMapViewSpec {
     } else {
       DispatchQueue.main.async(execute: work)
     }
-  }
-
-  private func promiseOnMainVoid(
-    _ work: @escaping (MapProviderAdapter) throws -> Void
-  ) -> Promise<Void> {
-    let promise = Promise<Void>()
-    let lifecycle = currentLifecycleSnapshot()
-    let run = { [weak self] in
-      guard let self else {
-        promise.reject(withError: Self.mapViewNotMountedError())
-        return
-      }
-
-      do {
-        let adapter = try self.currentAdapter(matching: lifecycle)
-        try work(adapter)
-        promise.resolve(withResult: ())
-      } catch {
-        promise.reject(withError: error)
-      }
-    }
-
-    if Thread.isMainThread {
-      run()
-    } else {
-      DispatchQueue.main.async(execute: run)
-    }
-
-    return promise
   }
 
   private func promiseOnMain<T>(

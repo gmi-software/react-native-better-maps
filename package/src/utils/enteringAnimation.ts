@@ -18,8 +18,8 @@ export function normalizeEnteringAnimation(
 
   return {
     kind: animation.preset,
-    duration: animation.duration,
-    delay: animation.delay,
-    reduceMotion: animation.reduceMotion,
+    duration: animation.duration ?? undefined,
+    delay: animation.delay ?? undefined,
+    reduceMotion: animation.reduceMotion ?? undefined,
   };
 }

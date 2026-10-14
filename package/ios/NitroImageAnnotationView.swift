@@ -24,9 +24,10 @@ final class NitroImageAnnotationView: MKAnnotationView {
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil
     alpha = marker.opacity
-    zPriority = marker.zIndex.map {
-      MKAnnotationViewZPriority(rawValue: Float($0))
-    } ?? .defaultUnselected
+    zPriority =
+      marker.zIndex.map {
+        MKAnnotationViewZPriority(rawValue: Float($0))
+      } ?? .defaultUnselected
 
     guard let imageDescriptor = marker.image else {
       loadToken = nil
@@ -49,8 +50,9 @@ final class NitroImageAnnotationView: MKAnnotationView {
       guard let self else { return }
 
       guard let marker = self.annotation as? MapMarkerAnnotation,
-            let image = marker.image,
-            MarkerImageLoader.cacheKey(for: image) == token else {
+        let image = marker.image,
+        MarkerImageLoader.cacheKey(for: image) == token
+      else {
         if self.loadToken == token {
           self.loadToken = nil
         }
@@ -70,7 +72,8 @@ final class NitroImageAnnotationView: MKAnnotationView {
     centerOffset = marker.centerOffset(forImageSize: imageSize)
 
     let rotation = marker.rotation ?? 0
-    transform = marker.flat != true && rotation != 0
+    transform =
+      marker.flat != true && rotation != 0
       ? CGAffineTransform(rotationAngle: rotation * .pi / 180)
       : .identity
   }

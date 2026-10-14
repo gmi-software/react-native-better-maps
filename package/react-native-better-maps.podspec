@@ -2,21 +2,30 @@ require 'json'
 
 package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
+# Helpers are lambdas in local variables rather than top-level `def`s: CocoaPods
+# evaluates a podspec with `eval`, and a method defined that way is not visible
+# from inside the `Pod::Spec.new` block on every Ruby / CocoaPods combination
+# (Ruby 4.0 + CocoaPods 1.17 raises `undefined method ... for module Pod`).
 better_maps_podfile_properties = lambda do
   installation_root = Pod::Config.instance.installation_root
-  return {} if installation_root.nil?
+  next {} if installation_root.nil?
 
   podfile_properties_path = File.join(installation_root, 'Podfile.properties.json')
-  return {} unless File.exist?(podfile_properties_path)
+  next {} unless File.exist?(podfile_properties_path)
 
-  JSON.parse(File.read(podfile_properties_path))
-rescue StandardError => e
+  properties = JSON.parse(File.read(podfile_properties_path))
+  next properties if properties.is_a?(Hash)
+
+  Pod::UI.warn "[react-native-better-maps] Podfile.properties.json is not a JSON object. iOS Google Maps provider will be disabled."
+  {}
+# `::` is required: this file is evaluated inside module `Pod`, where a bare
+# `StandardError` resolves to `Pod::StandardError` and would not catch JSON errors.
+rescue ::StandardError => e
   Pod::UI.warn "[react-native-better-maps] Failed to read Podfile.properties.json: #{e.message}. iOS Google Maps provider will be disabled."
   {}
 end
 
-# Local binding survives CocoaPods evaluating the podspec in its module scope.
-# Must match IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY in plugin/src/ios.ts.
+# Must match IOS_GOOGLE_PROVIDER_PODFILE_PROPERTY in plugin/src/ios.ts
 better_maps_ios_google_provider_enabled =
   better_maps_podfile_properties.call['betterMaps.iosGoogleProvider'] == 'true'
 
@@ -39,6 +48,8 @@ Pod::Spec.new do |s|
     'ios/**/*.{m,mm}',
     'cpp/**/*.{hpp,cpp}',
   ]
+  # The C++ headers include React Native's; they must stay out of the Swift
+  # module's umbrella header.
   s.private_header_files = ['cpp/**/*.{h,hpp}']
   s.exclude_files = [
     'ios/Package.swift',

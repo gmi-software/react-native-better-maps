@@ -7,10 +7,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nitromaps.example",
-      "infoPlist": {
-        "CADisableMinimumFrameDurationOnPhone": true
-      }
+      "bundleIdentifier": "com.nitromaps.example"
     },
     "android": {
       "package": "com.nitromaps.example"

@@ -3,10 +3,18 @@ package com.margelo.nitro.nitromaps
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 
-/** Shares native marker positions with Fabric measurement without a JS update. */
+/**
+ * Shares where each live marker host is translated to with Fabric's shadow nodes, without a JS
+ * update. Backed by `cpp/MarkerProjectionRegistry`; values are in dp, keyed by Fabric tag.
+ */
 @Keep
 @DoNotStrip
-object MarkerProjectionRegistry {
-  @JvmStatic external fun publish(tag: Int, x: Float, y: Float)
+internal object MarkerProjectionRegistry {
+  @JvmStatic external fun publish(
+    tag: Int,
+    x: Float,
+    y: Float,
+  )
+
   @JvmStatic external fun clear(tag: Int)
 }

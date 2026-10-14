@@ -28,6 +28,16 @@ extension GMSCameraPosition {
       && abs(viewingAngle - other.viewingAngle) < angleEpsilon
   }
 
+  var placement: CameraPlacement {
+    CameraPlacement(
+      latitude: target.latitude,
+      longitude: target.longitude,
+      scale: Double(zoom),
+      heading: bearing,
+      pitch: viewingAngle
+    )
+  }
+
   func toCamera() -> Camera {
     Camera(
       center: Coordinate(latitude: target.latitude, longitude: target.longitude),

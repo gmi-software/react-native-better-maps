@@ -5,8 +5,12 @@ import com.margelo.nitro.core.Promise
 
 interface MapProviderAdapter {
   val view: View
+
+  /** Called on every camera frame, gestures and animations alike, on the main thread. */
   var onCameraMoved: (() -> Unit)?
-  fun projectMarker(coordinate: Coordinate): android.graphics.Point?
+
+  /** A projection for the current camera, or null while there is no map to project with. */
+  fun makeMarkerProjection(): MarkerProjection?
 
   var mapType: MapType
   var region: Region?
@@ -28,8 +32,8 @@ interface MapProviderAdapter {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
 
-  var onRegionChange: ((region: Region) -> Unit)?
-  var onRegionChangeComplete: ((region: Region) -> Unit)?
+  var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)?
+  var onRegionChangeComplete: ((region: Region, details: RegionChangeDetails) -> Unit)?
   var onMapReady: (() -> Unit)?
   var onPress: ((coordinate: Coordinate) -> Unit)?
   var onPoiPress: ((event: NativePoiPressEvent) -> Unit)?
@@ -48,10 +52,42 @@ interface MapProviderAdapter {
   var onClusterPress: ((markerIds: Array<String>, coordinate: Coordinate) -> Unit)?
 
   fun fetchCamera(): Promise<Camera>
-  fun applyCamera(camera: Camera)
-  fun animateCamera(camera: Camera, duration: Double?)
+
+  /**
+   * Resolves once the camera has arrived: a non-animated move right away, an animated
+   * one when it finishes or when a gesture, a later command or [release] cuts it short.
+   * A call made before the map exists waits for it, and rejects if [release] comes first.
+   */
+  fun applyCamera(camera: Camera): Promise<Unit>
+
+  /**
+   * [duration] is in milliseconds, here and in [animateToRegion], as JS passes it.
+   *
+   * @see applyCamera for when the promise settles.
+   */
+  fun animateCamera(
+    camera: Camera,
+    duration: Double?,
+  ): Promise<Unit>
+
+  /** @see applyCamera for when the promise settles. */
+  fun animateToRegion(
+    region: Region,
+    duration: Double?,
+  ): Promise<Unit>
+
   fun getVisibleRegion(): Promise<VisibleRegion>
-  fun fitToCoordinates(coordinates: Array<Coordinate>, padding: EdgePadding?, animated: Boolean?)
+
+  /** @see applyCamera for when the promise settles. */
+  fun fitToCoordinates(
+    coordinates: Array<Coordinate>,
+    padding: EdgePadding?,
+    animated: Boolean?,
+  ): Promise<Unit>
+
+  fun pointForCoordinate(coordinate: Coordinate): Promise<Point>
+
+  fun coordinateForPoint(point: Point): Promise<Coordinate>
 
   /**
    * Destroys the underlying native map and unregisters everything the adapter owns.

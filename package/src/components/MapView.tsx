@@ -1,54 +1,103 @@
-import { MarkerView } from './MarkerView';
-import { MapChildrenContext } from './MapChildrenContext';
-import { collectMarkerViewEntries } from '../overlays/collectMarkerViews';
-import { markerViewRenderStatesEqual } from '../overlays/markerViewRenderState';
-import { clusterCoordinates } from '../overlays/clusterCoordinates';
 import {
   cloneElement,
-  isValidElement,
-  useState,
   useCallback,
   useImperativeHandle,
   useMemo,
-  useRef,
+  useState,
+  type ReactElement,
   type Ref,
-  type RefObject,
 } from 'react';
-import { callback } from 'react-native-nitro-modules';
+import { runWithValidCamera } from '../camera/runWithValidCamera';
 import { useCollectedOverlays } from '../hooks/useCollectedOverlays';
+import { useMapViewCommands } from '../hooks/useMapViewCommands';
+import { useNitroCallback } from '../hooks/useNitroCallback';
+import { useStableCameraProps } from '../hooks/useStableCameraProps';
+import { useStableValue } from '../hooks/useStableValue';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
-  NativePoiPressEvent,
+  NativeMarkerViewCluster,
   NativeMarkerViewRenderState,
+  NativePoiPressEvent,
 } from '../native/specs/MapView.nitro';
+import type { MarkerDescriptor } from '../native/specs/overlays';
+import {
+  isMarkerViewElement,
+  markerViewPropsProblem,
+} from '../overlays/collectMarkerView';
+import {
+  circleListsEqual,
+  enteringAnimationsEqual,
+  markerListsEqual,
+  polygonListsEqual,
+  polylineListsEqual,
+} from '../overlays/descriptorEquality';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
+import {
+  clusterMemberCoordinates,
+  markerViewRenderStatesEqual,
+} from '../overlays/markerViewRenderState';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
+import type { CollectedMarkerView } from '../overlays/overlayCollect';
+import { warnOverlay } from '../overlays/warnOverlay';
+import {
+  normalizeCircleDescriptors,
+  normalizePolygonDescriptors,
+  normalizePolylineDescriptors,
+} from '../overlays/normalizeShapeDescriptors';
+import {
+  runWithValidCoordinate,
+  runWithValidPoint,
+} from '../projection/runWithValidInput';
 import { resolveMapProvider } from '../providers';
+import { resolveFitCoordinates } from '../region/resolveFitCoordinates';
+import { runWithValidRegion } from '../region/runWithValidRegion';
 import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
+import { MarkerViewHostContext } from './MarkerViewHostContext';
 
-const MAP_VIEW_NOT_MOUNTED_ERROR = 'MapView is not mounted';
+const CLUSTER_FIT_PADDING = { top: 48, right: 48, bottom: 48, left: 48 };
 
-function withHybridRef<T>(
-  hybridRef: RefObject<NativeMapViewHybrid | null>,
-  run: (hybrid: NativeMapViewHybrid) => T,
-): T {
-  const hybrid = hybridRef.current;
-  if (hybrid == null) {
-    return Promise.reject(new Error(MAP_VIEW_NOT_MOUNTED_ERROR)) as T;
+/** The live render state of one native map view; another view starts from none. */
+interface RenderStateOfView {
+  viewKey: string;
+  state: NativeMarkerViewRenderState;
+}
+
+/**
+ * The SDK markers and the live ones, which the native pipeline clusters and
+ * filters as one list. A live marker whose id a bulk `markers` entry already
+ * has is left out: the collector keeps the ids of children unique, not those
+ * of the bulk prop.
+ */
+function withLiveMarkers(
+  markers: MarkerDescriptor[],
+  markerViews: CollectedMarkerView[],
+  isBulk: boolean,
+): MarkerDescriptor[] {
+  if (markerViews.length === 0) {
+    return markers;
   }
-
-  return run(hybrid);
+  const bulkIds = isBulk ? new Set(markers.map((marker) => marker.id)) : null;
+  const combined = markers.slice();
+  for (const markerView of markerViews) {
+    if (bulkIds?.has(markerView.id) === true) {
+      warnOverlay(
+        `MarkerView "${markerView.id}" skipped: a marker in the markers prop has the same id.`,
+      );
+      continue;
+    }
+    combined.push(markerView.descriptor);
+  }
+  return combined;
 }
 
 export function MapView({
   ref,
   style,
   children,
-  renderCluster,
   provider,
   googleMapId,
   region,
@@ -62,8 +111,10 @@ export function MapView({
   followsUserLocation,
   showsCompass,
   showsScale,
+  applePoiDetailPresentation,
   customMapStyle,
   clusteringEnabled,
+  renderCluster,
   mapPadding,
   markerEnteringAnimation,
   clusterEnteringAnimation,
@@ -85,27 +136,13 @@ export function MapView({
   onCirclePress: onCirclePressProp,
 }: MapViewProps & { ref?: Ref<MapViewRef> }) {
   const resolvedProvider = resolveMapProvider(provider);
-  const markerViewEntries = useMemo(
-    () => collectMarkerViewEntries(children),
-    [children],
-  );
-  const [markerViewState, setMarkerViewState] =
-    useState<NativeMarkerViewRenderState | null>(null);
-  const handleMarkerViewRenderState = useCallback(
-    (state: NativeMarkerViewRenderState) => {
-      setMarkerViewState((previous) =>
-        markerViewRenderStatesEqual(previous, state) ? previous : state,
-      );
-    },
-    [],
-  );
-  const markerViewRenderCallback = useMemo(
-    () => callback(handleMarkerViewRenderState),
-    [handleMarkerViewRenderState],
-  );
-  const hybridRef = useRef<NativeMapViewHybrid>(null);
+  // Both are creation-time SDK configuration, so changing either remounts the
+  // native view.
+  const nativeViewKey = `${resolvedProvider}:${googleMapId ?? ''}`;
+  const commands = useMapViewCommands(nativeViewKey);
   const {
     markers: collectedMarkers,
+    markerViews: collectedMarkerViews,
     polylines: collectedPolylines,
     polygons: collectedPolygons,
     circles: collectedCircles,
@@ -121,89 +158,183 @@ export function MapView({
       markersProp != null ? normalizeMarkerDescriptors(markersProp) : null,
     [markersProp],
   );
+  const normalizedBulkPolylines = useMemo(
+    () =>
+      polylinesProp != null
+        ? normalizePolylineDescriptors(polylinesProp)
+        : null,
+    [polylinesProp],
+  );
+  const normalizedBulkPolygons = useMemo(
+    () =>
+      polygonsProp != null ? normalizePolygonDescriptors(polygonsProp) : null,
+    [polygonsProp],
+  );
+  const normalizedBulkCircles = useMemo(
+    () =>
+      circlesProp != null ? normalizeCircleDescriptors(circlesProp) : null,
+    [circlesProp],
+  );
 
-  const markers =
-    normalizedBulkMarkers != null ? normalizedBulkMarkers : collectedMarkers;
-  const nativeMarkers = useMemo(() => {
-    if (markerViewEntries.length === 0) return markers;
-    const ids = new Set(markers.map((marker) => marker.id));
-    const liveDescriptors = markerViewEntries.map(
-      ({ markerId, viewId, element }) => {
-        if (ids.has(markerId))
-          throw new Error(`Duplicate map marker id: ${markerId}`);
-        ids.add(markerId);
-        return {
-          id: markerId,
-          customViewId: viewId,
-          coordinate: element.props.coordinate,
-          clusterable: element.props.clusterable,
-        };
-      },
-    );
-    return [...markers, ...liveDescriptors];
-  }, [markers, markerViewEntries]);
-  const visibleMarkerViews = useMemo(() => {
-    const ids = new Set(markerViewState?.markerViewIds);
-    return markerViewEntries
-      .filter((entry) => ids.has(entry.viewId))
-      .map((entry) => entry.element);
-  }, [markerViewState, markerViewEntries]);
-  const clusterViews = useMemo(() => {
-    if (!renderCluster || clusteringEnabled !== true) return [];
-    return (markerViewState?.clusters ?? []).map((cluster) => {
-      const element = renderCluster({
-        id: cluster.id,
-        coordinate: cluster.coordinate,
-        markerIds: cluster.markerIds,
-        count: cluster.markerIds.length,
-        onPress: () => {
-          onClusterPress?.(cluster.markerIds, cluster.coordinate);
-          // The SDK cluster region has a minimum span that can prevent dense
-          // clusters from expanding. Fit the actual members on a user press.
-          return withHybridRef(hybridRef, (hybrid) =>
-            hybrid.fitToCoordinates(
-              clusterCoordinates(cluster.markerIds, nativeMarkers),
-              { top: 32, right: 32, bottom: 32, left: 32 },
-              true,
-            ),
-          );
-        },
-      });
-      if (!isValidElement(element) || element.type !== MarkerView) {
-        throw new Error('renderCluster must return a MarkerView');
-      }
-      return cloneElement(element, {
-        key: `cluster:${cluster.id}`,
-        coordinate: cluster.coordinate,
-      });
-    });
-  }, [
-    renderCluster,
-    clusteringEnabled,
-    markerViewState,
-    onClusterPress,
-    nativeMarkers,
-  ]);
+  // Everything below is rebuilt whenever `children`, a bulk prop or an animation
+  // prop changes identity - which for inline JSX is every render. Nitro would
+  // re-serialize each one across JSI, so hand back the previous value when
+  // nothing actually changed.
+  const markers = useStableValue(
+    withLiveMarkers(
+      normalizedBulkMarkers ?? collectedMarkers,
+      collectedMarkerViews,
+      normalizedBulkMarkers != null,
+    ),
+    markerListsEqual,
+  );
+  const polylines = useStableValue(
+    normalizedBulkPolylines ?? collectedPolylines,
+    polylineListsEqual,
+  );
+  const polygons = useStableValue(
+    normalizedBulkPolygons ?? collectedPolygons,
+    polygonListsEqual,
+  );
+  const circles = useStableValue(
+    normalizedBulkCircles ?? collectedCircles,
+    circleListsEqual,
+  );
+  const markerEntering = useStableValue(
+    normalizeEnteringAnimation(markerEnteringAnimation),
+    enteringAnimationsEqual,
+  );
+  const clusterEntering = useStableValue(
+    normalizeEnteringAnimation(clusterEnteringAnimation),
+    enteringAnimationsEqual,
+  );
+  const cameraProps = useStableCameraProps({ region, camera, mapPadding });
 
-  const polylines = polylinesProp != null ? polylinesProp : collectedPolylines;
-  const polygons = polygonsProp != null ? polygonsProp : collectedPolygons;
-  const circles = circlesProp != null ? circlesProp : collectedCircles;
-
-  const hasMarkerPress = onMarkerPressProp != null || hasCollectedMarkerPress;
+  const hasMarkerPress =
+    onMarkerPressProp != null || hasCollectedMarkerPress;
   const hasMarkerDragEnd =
     onMarkerDragEndProp != null || hasCollectedMarkerDragEnd;
   const hasPolylinePressHandler =
     onPolylinePressProp != null || hasPolylinePress;
-  const hasPolygonPressHandler = onPolygonPressProp != null || hasPolygonPress;
-  const hasCirclePressHandler = onCirclePressProp != null || hasCirclePress;
+  const hasPolygonPressHandler =
+    onPolygonPressProp != null || hasPolygonPress;
+  const hasCirclePressHandler =
+    onCirclePressProp != null || hasCirclePress;
   const onPoiPressCallback = onPoiPress as
-    ((event: PoiPressEvent) => void) | undefined;
+    | ((event: PoiPressEvent) => void)
+    | undefined;
+
+  // Which live markers and JSX clusters native shows. It changes as markers
+  // cluster, uncluster or leave the viewport, never per camera frame: the
+  // native side moves mounted markers on its own.
+  const [renderStateOfView, setRenderStateOfView] =
+    useState<RenderStateOfView | null>(null);
+  const renderState =
+    renderStateOfView?.viewKey === nativeViewKey
+      ? renderStateOfView.state
+      : null;
+  const usesMarkerViews =
+    collectedMarkerViews.length > 0 ||
+    (renderCluster != null && clusteringEnabled === true);
+  const handleMarkerViewRenderState = useCallback(
+    (state: NativeMarkerViewRenderState) => {
+      setRenderStateOfView((previous) =>
+        previous?.viewKey === nativeViewKey &&
+        markerViewRenderStatesEqual(previous.state, state)
+          ? previous
+          : { viewKey: nativeViewKey, state },
+      );
+    },
+    [nativeViewKey],
+  );
+
+  const pressCluster = useCallback(
+    (cluster: NativeMarkerViewCluster) => {
+      onClusterPress?.(cluster.markerIds, cluster.coordinate);
+      const coordinates = clusterMemberCoordinates(cluster.markerIds, markers);
+      if (coordinates.length === 0) {
+        return Promise.resolve();
+      }
+      return commands.run((hybrid) =>
+        hybrid.fitToCoordinates(coordinates, CLUSTER_FIT_PADDING, true),
+      );
+    },
+    [commands, markers, onClusterPress],
+  );
+
+  const mountedMarkerViews = useMemo(() => {
+    if (renderState == null || renderState.markerIds.length === 0) {
+      return null;
+    }
+    const shown = new Set(renderState.markerIds);
+    const elements: ReactElement[] = [];
+    // In children order, which is also the order they are drawn in.
+    for (const markerView of collectedMarkerViews) {
+      if (!shown.has(markerView.id)) {
+        continue;
+      }
+      // Keyed by marker id, so React keeps each subtree as others come and go.
+      elements.push(
+        markerView.element.key === markerView.id
+          ? markerView.element
+          : cloneElement(markerView.element, { key: markerView.id }),
+      );
+    }
+    return elements;
+  }, [collectedMarkerViews, renderState]);
+
+  const clusterViews = useMemo(() => {
+    if (
+      renderCluster == null ||
+      clusteringEnabled !== true ||
+      renderState == null ||
+      renderState.clusters.length === 0
+    ) {
+      return null;
+    }
+    const elements: ReactElement[] = [];
+    for (const cluster of renderState.clusters) {
+      const element = renderCluster({
+        id: cluster.id,
+        coordinate: cluster.coordinate,
+        count: cluster.markerIds.length,
+        markerIds: cluster.markerIds,
+        onPress: () => pressCluster(cluster),
+      });
+      if (element == null) {
+        continue;
+      }
+      if (!isMarkerViewElement(element)) {
+        warnOverlay('renderCluster must return a MarkerView or null.');
+        continue;
+      }
+      const props = { ...element.props, coordinate: cluster.coordinate };
+      const problem = markerViewPropsProblem(props);
+      if (problem != null) {
+        warnOverlay(`cluster "${cluster.id}" skipped: ${problem}`);
+        continue;
+      }
+      // Kept under one key while its count and members change.
+      elements.push(
+        cloneElement(element, {
+          key: `cluster:${cluster.id}`,
+          coordinate: cluster.coordinate,
+        }),
+      );
+    }
+    return elements;
+  }, [clusteringEnabled, pressCluster, renderCluster, renderState]);
+
+  const handleHybridRef = useCallback(
+    (nativeRef: NativeMapViewHybrid) => {
+      commands.attach(nativeRef);
+    },
+    [commands],
+  );
 
   const handleMarkerPress = useCallback(
     (id: string) => {
-      callbackRegistry.current
-        .get(overlayCallbackKey(OverlayType.Marker, id))
-        ?.onPress?.();
+      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Marker, id))?.onPress?.();
       onMarkerPressProp?.(id);
     },
     [callbackRegistry, onMarkerPressProp],
@@ -211,9 +342,7 @@ export function MapView({
 
   const handleMarkerDragEnd = useCallback(
     (id: string, coordinate: Coordinate) => {
-      callbackRegistry.current
-        .get(overlayCallbackKey(OverlayType.Marker, id))
-        ?.onDragEnd?.(coordinate);
+      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Marker, id))?.onDragEnd?.(coordinate);
       onMarkerDragEndProp?.(id, coordinate);
     },
     [callbackRegistry, onMarkerDragEndProp],
@@ -221,9 +350,7 @@ export function MapView({
 
   const handlePolylinePress = useCallback(
     (id: string) => {
-      callbackRegistry.current
-        .get(overlayCallbackKey(OverlayType.Polyline, id))
-        ?.onPress?.();
+      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Polyline, id))?.onPress?.();
       onPolylinePressProp?.(id);
     },
     [callbackRegistry, onPolylinePressProp],
@@ -231,9 +358,7 @@ export function MapView({
 
   const handlePolygonPress = useCallback(
     (id: string) => {
-      callbackRegistry.current
-        .get(overlayCallbackKey(OverlayType.Polygon, id))
-        ?.onPress?.();
+      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Polygon, id))?.onPress?.();
       onPolygonPressProp?.(id);
     },
     [callbackRegistry, onPolygonPressProp],
@@ -241,9 +366,7 @@ export function MapView({
 
   const handleCirclePress = useCallback(
     (id: string) => {
-      callbackRegistry.current
-        .get(overlayCallbackKey(OverlayType.Circle, id))
-        ?.onPress?.();
+      callbackRegistry.current.get(overlayCallbackKey(OverlayType.Circle, id))?.onPress?.();
       onCirclePressProp?.(id);
     },
     [callbackRegistry, onCirclePressProp],
@@ -263,11 +386,7 @@ export function MapView({
         return;
       }
 
-      if (
-        event.provider === 'google' &&
-        event.name != null &&
-        event.placeId != null
-      ) {
+      if (event.provider === 'google' && event.name != null && event.placeId != null) {
         const poiEvent: PoiPressEvent = {
           provider: 'google',
           coordinate: event.coordinate,
@@ -280,99 +399,129 @@ export function MapView({
     [onPoiPressCallback],
   );
 
+  // Nitro's `callback(...)` envelope is a fresh object per call, so each of
+  // these is memoized on the handler it wraps. An inline arrow passed by the
+  // caller still changes identity every render - that part is theirs to hoist.
+  const hybridRefCallback = useNitroCallback(handleHybridRef);
+  const onRegionChangeCallback = useNitroCallback(onRegionChange);
+  const onRegionChangeCompleteCallback = useNitroCallback(
+    onRegionChangeComplete,
+  );
+  const onMapReadyCallback = useNitroCallback(onMapReady);
+  const onPressCallback = useNitroCallback(onPress);
+  const onPoiPressNativeCallback = useNitroCallback(
+    onPoiPress == null ? undefined : handlePoiPress,
+  );
+  const onLongPressCallback = useNitroCallback(onLongPress);
+  const onClusterPressCallback = useNitroCallback(onClusterPress);
+  const onMarkerViewRenderStateCallback = useNitroCallback(
+    usesMarkerViews ? handleMarkerViewRenderState : undefined,
+  );
+  const onMarkerPressCallback = useNitroCallback(
+    hasMarkerPress ? handleMarkerPress : undefined,
+  );
+  const onMarkerDragEndCallback = useNitroCallback(
+    hasMarkerDragEnd ? handleMarkerDragEnd : undefined,
+  );
+  const onPolylinePressCallback = useNitroCallback(
+    hasPolylinePressHandler ? handlePolylinePress : undefined,
+  );
+  const onPolygonPressCallback = useNitroCallback(
+    hasPolygonPressHandler ? handlePolygonPress : undefined,
+  );
+  const onCirclePressCallback = useNitroCallback(
+    hasCirclePressHandler ? handleCirclePress : undefined,
+  );
+
   useImperativeHandle(
     ref,
     () => ({
-      getCamera: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.fetchCamera()),
+      getCamera: () => commands.run((hybrid) => hybrid.fetchCamera()),
       setCamera: (nextCamera) =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.applyCamera(nextCamera)),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.applyCamera(nextCamera)),
+        ),
       animateCamera: (nextCamera, duration) =>
-        withHybridRef(hybridRef, (hybrid) =>
-          hybrid.animateCamera(nextCamera, duration),
+        runWithValidCamera(nextCamera, () =>
+          commands.run((hybrid) => hybrid.animateCamera(nextCamera, duration)),
+        ),
+      animateToRegion: (nextRegion, duration) =>
+        runWithValidRegion(nextRegion, () =>
+          commands.run((hybrid) =>
+            hybrid.animateToRegion(nextRegion, duration),
+          ),
         ),
       getVisibleRegion: () =>
-        withHybridRef(hybridRef, (hybrid) => hybrid.getVisibleRegion()),
+        commands.run((hybrid) => hybrid.getVisibleRegion()),
       fitToCoordinates: (coordinates, padding, animated) =>
-        withHybridRef(hybridRef, (hybrid) =>
-          hybrid.fitToCoordinates(coordinates, padding, animated),
+        commands.run((hybrid) =>
+          hybrid.fitToCoordinates(
+            resolveFitCoordinates(coordinates),
+            padding,
+            animated,
+          ),
+        ),
+      pointForCoordinate: (coordinate) =>
+        runWithValidCoordinate(coordinate, () =>
+          commands.run((hybrid) => hybrid.pointForCoordinate(coordinate)),
+        ),
+      coordinateForPoint: (point) =>
+        runWithValidPoint(point, () =>
+          commands.run((hybrid) => hybrid.coordinateForPoint(point)),
         ),
     }),
-    [],
+    [commands],
   );
 
   return (
-    <MapChildrenContext.Provider value={true}>
-      <NativeMapView
-        key={`${resolvedProvider}:${googleMapId ?? ''}`}
-        style={style}
-        hybridRef={callback((nativeRef) => {
-          hybridRef.current = nativeRef;
-        })}
-        provider={resolvedProvider}
-        googleMapId={googleMapId}
-        mapType={mapType}
-        region={region}
-        camera={camera}
-        scrollEnabled={scrollEnabled}
-        zoomEnabled={zoomEnabled}
-        rotateEnabled={rotateEnabled}
-        pitchEnabled={pitchEnabled}
-        showsUserLocation={showsUserLocation}
-        followsUserLocation={followsUserLocation}
-        showsCompass={showsCompass}
-        showsScale={showsScale}
-        customMapStyle={customMapStyle}
-        clusteringEnabled={clusteringEnabled}
-        customClusterViews={renderCluster != null}
-        onMarkerViewRenderState={
-          markerViewEntries.length > 0 || renderCluster != null
-            ? markerViewRenderCallback
-            : undefined
-        }
-        mapPadding={mapPadding}
-        markerEnteringAnimation={normalizeEnteringAnimation(
-          markerEnteringAnimation,
-        )}
-        clusterEnteringAnimation={normalizeEnteringAnimation(
-          clusterEnteringAnimation,
-        )}
-        markers={nativeMarkers}
-        polylines={polylines}
-        polygons={polygons}
-        circles={circles}
-        onRegionChange={
-          onRegionChange == null ? undefined : callback(onRegionChange)
-        }
-        onRegionChangeComplete={
-          onRegionChangeComplete == null
-            ? undefined
-            : callback(onRegionChangeComplete)
-        }
-        onMapReady={onMapReady == null ? undefined : callback(onMapReady)}
-        onPress={onPress == null ? undefined : callback(onPress)}
-        onPoiPress={onPoiPress == null ? undefined : callback(handlePoiPress)}
-        onLongPress={onLongPress == null ? undefined : callback(onLongPress)}
-        onClusterPress={
-          onClusterPress == null ? undefined : callback(onClusterPress)
-        }
-        onMarkerPress={hasMarkerPress ? callback(handleMarkerPress) : undefined}
-        onMarkerDragEnd={
-          hasMarkerDragEnd ? callback(handleMarkerDragEnd) : undefined
-        }
-        onPolylinePress={
-          hasPolylinePressHandler ? callback(handlePolylinePress) : undefined
-        }
-        onPolygonPress={
-          hasPolygonPressHandler ? callback(handlePolygonPress) : undefined
-        }
-        onCirclePress={
-          hasCirclePressHandler ? callback(handleCirclePress) : undefined
-        }
-      >
-        {visibleMarkerViews}
-        {clusterViews}
-      </NativeMapView>
-    </MapChildrenContext.Provider>
+    <NativeMapView
+      key={nativeViewKey}
+      style={style}
+      hybridRef={hybridRefCallback}
+      provider={resolvedProvider}
+      googleMapId={googleMapId}
+      mapType={mapType}
+      region={cameraProps.region}
+      camera={cameraProps.camera}
+      scrollEnabled={scrollEnabled}
+      zoomEnabled={zoomEnabled}
+      rotateEnabled={rotateEnabled}
+      pitchEnabled={pitchEnabled}
+      showsUserLocation={showsUserLocation}
+      followsUserLocation={followsUserLocation}
+      showsCompass={showsCompass}
+      showsScale={showsScale}
+      applePoiDetailPresentation={applePoiDetailPresentation}
+      customMapStyle={customMapStyle}
+      clusteringEnabled={clusteringEnabled}
+      customClusterViews={renderCluster != null}
+      onMarkerViewRenderState={onMarkerViewRenderStateCallback}
+      mapPadding={cameraProps.mapPadding}
+      markerEnteringAnimation={markerEntering}
+      clusterEnteringAnimation={clusterEntering}
+      markers={markers}
+      polylines={polylines}
+      polygons={polygons}
+      circles={circles}
+      onRegionChange={onRegionChangeCallback}
+      onRegionChangeComplete={onRegionChangeCompleteCallback}
+      onMapReady={onMapReadyCallback}
+      onPress={onPressCallback}
+      onPoiPress={onPoiPressNativeCallback}
+      onLongPress={onLongPressCallback}
+      onClusterPress={onClusterPressCallback}
+      onMarkerPress={onMarkerPressCallback}
+      onMarkerDragEnd={onMarkerDragEndCallback}
+      onPolylinePress={onPolylinePressCallback}
+      onPolygonPress={onPolygonPressCallback}
+      onCirclePress={onCirclePressCallback}
+    >
+      {mountedMarkerViews != null || clusterViews != null ? (
+        <MarkerViewHostContext.Provider value={true}>
+          {mountedMarkerViews}
+          {clusterViews}
+        </MarkerViewHostContext.Provider>
+      ) : null}
+    </NativeMapView>
   );
 }

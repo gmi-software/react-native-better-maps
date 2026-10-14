@@ -7,11 +7,12 @@ package com.margelo.nitro.nitromaps
 fun String.toColorInt(fallback: Int = 0xFF000000.toInt()): Int {
   val digits = trim().removePrefix("#")
 
-  val expanded = when (digits.length) {
-    3, 4 -> digits.map { "$it$it" }.joinToString("")
-    6, 8 -> digits
-    else -> return fallback
-  }
+  val expanded =
+    when (digits.length) {
+      3, 4 -> digits.map { "$it$it" }.joinToString("")
+      6, 8 -> digits
+      else -> return fallback
+    }
 
   val rgba = if (expanded.length == 6) "${expanded}FF" else expanded
   if (!rgba.all { it.digitToIntOrNull(16) != null }) {

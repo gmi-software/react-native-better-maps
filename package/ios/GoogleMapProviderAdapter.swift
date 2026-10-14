@@ -9,15 +9,31 @@ import UIKit
 final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private static let liveGestureRefreshInterval: CFTimeInterval = 0.18
   private static let liveGestureAnimationBudget = 24
+  private static let defaultAnimationDuration: TimeInterval = 0.25
+
+  private let cameraMoves = CameraMoveTracker()
+  private lazy var regionChanges = RegionChangeTracker<CameraPlacement, Region>(
+    position: { [unowned self] in view.camera.placement },
+    region: { [unowned self] in view.currentNitroRegion() },
+    onBegin: { [unowned self] region, isGesture in
+      onRegionChange?(region, RegionChangeDetails(isGesture: isGesture))
+    },
+    onComplete: { [unowned self] region, isGesture in
+      onRegionChangeComplete?(region, RegionChangeDetails(isGesture: isGesture))
+    }
+  )
 
   private var isMapReady = false
   private var hasDeliveredMapReady = false
-  private var isUserRegionChange = false
   private var isUserGestureMoving = false
   private var lastLiveMarkerRefreshTime: CFTimeInterval = 0
   private var myLocationObservation: NSKeyValueObservation?
   private weak var followedLocationMapView: GMSMapView?
   private var _googleMapId: String?
+  private var lastAppliedRegion: Region?
+  private var lastAppliedRegionCamera: GMSCameraPosition?
+  /// Projections waiting for the map's first idle, in call order - see `promiseAfterFirstIdle`.
+  private var projectionsAwaitingFirstIdle: [(Result<GMSMapView, Error>) -> Void] = []
 
   fileprivate lazy var overlayController: GoogleMapOverlayController = {
     let controller = GoogleMapOverlayController(mapView: view)
@@ -32,18 +48,22 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   lazy var view: GMSMapView = {
-    let camera = self.camera?.toGMSCameraPosition()
+    // The map is created from the stored prop directly, so it is checked here
+    // too: `updateMapCamera` never runs for the camera the map starts with.
+    let initialCamera =
+      self.camera.flatMap { $0.isValid ? $0.toGMSCameraPosition() : nil }
       ?? GMSCameraPosition(latitude: 0, longitude: 0, zoom: 10)
     let mapView: GMSMapView
     if let googleMapId = _googleMapId?.trimmingCharacters(in: .whitespacesAndNewlines),
-       !googleMapId.isEmpty {
+      !googleMapId.isEmpty
+    {
       mapView = GMSMapView(
         frame: .zero,
         mapID: GMSMapID(identifier: googleMapId),
-        camera: camera
+        camera: initialCamera
       )
     } else {
-      mapView = GMSMapView(frame: .zero, camera: camera)
+      mapView = GMSMapView(frame: .zero, camera: initialCamera)
     }
 
     mapView.delegate = self
@@ -64,6 +84,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   deinit {
     stopFollowingUserLocation()
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
   }
 
   var mapType: MapType = .standard {
@@ -134,6 +155,9 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   var showsScale: Bool?
 
+  /// Apple MapKit only; the Google Maps SDK has no native POI detail surface.
+  var applePoiDetailPresentation: ApplePoiDetailPresentation?
+
   var customMapStyle: String? {
     didSet {
       applyCustomMapStyle(to: view)
@@ -145,21 +169,40 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     set { _googleMapId = newValue }
   }
 
-  var customClusterViews: Bool? {
-    didSet { overlayController.setCustomClusterViews(customClusterViews == true) }
-  }
-  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
-    didSet { overlayController.onMarkerViewRenderState = onMarkerViewRenderState }
-  }
-
   var clusteringEnabled: Bool? {
     didSet {
       overlayController.setClusteringEnabled(clusteringEnabled == true)
     }
   }
 
+  var customClusterViews: Bool? {
+    didSet {
+      overlayController.setCustomClusterViews(customClusterViews == true)
+    }
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    didSet {
+      overlayController.onMarkerViewRenderState = onMarkerViewRenderState
+    }
+  }
+
+  var onCameraMoved: (() -> Void)?
+
+  /// One `GMSProjection` per camera frame, shared by every live marker.
+  func makeMarkerProjection() -> MarkerProjection? {
+    let projection = view.projection
+    return { coordinate in
+      projection.point(for: coordinate.toCLLocationCoordinate2D())
+    }
+  }
+
   var mapPadding: EdgePadding? {
     didSet {
+      // Padding changes the camera that a region fit produces, so drop the
+      // skip-cache and let the next same-region apply recompute.
+      lastAppliedRegion = nil
+      lastAppliedRegionCamera = nil
       applyMapPadding(to: view)
     }
   }
@@ -176,14 +219,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
-  var onCameraMoved: (() -> Void)?
-
-  func projectMarker(_ coordinate: Coordinate) -> CGPoint? {
-    view.projection.point(for: coordinate.toCLLocationCoordinate2D())
-  }
-
-  var onRegionChange: ((Region) -> Void)?
-  var onRegionChangeComplete: ((Region) -> Void)?
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)? {
     didSet {
       deliverMapReadyIfPossible()
@@ -240,12 +277,29 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     Promise.resolved(withResult: view.camera.toCamera())
   }
 
-  func applyCamera(camera: Camera) throws {
+  func applyCamera(camera: Camera) throws -> Promise<Void> {
     updateMapCamera(camera, animated: false)
+    return Promise.resolved()
   }
 
-  func animateCamera(camera: Camera, duration: Double?) throws {
-    updateMapCamera(camera, animated: true, duration: duration ?? 0.25)
+  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void> {
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    let animated = animationDuration > 0
+    guard updateMapCamera(camera, animated: animated, duration: animationDuration), animated else {
+      return Promise.resolved()
+    }
+
+    return trackCameraMove(duration: animationDuration)
+  }
+
+  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
+    let animationDuration = duration ?? Self.defaultAnimationDuration
+    let animated = animationDuration > 0
+    guard applyRegion(region, animated: animated, duration: animationDuration), animated else {
+      return Promise.resolved()
+    }
+
+    return trackCameraMove(duration: animationDuration)
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {
@@ -256,29 +310,54 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     coordinates: [Coordinate],
     padding: EdgePadding?,
     animated: Bool?
-  ) throws {
-    guard !coordinates.isEmpty else {
-      return
+  ) throws -> Promise<Void> {
+    let validCoordinates = coordinates.filter { $0.isValid }
+    guard !validCoordinates.isEmpty else {
+      return Promise.resolved()
     }
 
     var bounds = GMSCoordinateBounds()
-    for coordinate in coordinates {
+    for coordinate in validCoordinates {
       bounds = bounds.includingCoordinate(coordinate.toCLLocationCoordinate2D())
     }
     let edgePadding = padding?.toUIEdgeInsets() ?? .zero
     let update = GMSCameraUpdate.fit(bounds, with: edgePadding)
-    applyCameraUpdate(update, animated: animated ?? true, duration: nil)
+    let shouldAnimate = animated ?? true
+    applyCameraUpdate(update, animated: shouldAnimate, duration: nil)
+
+    guard shouldAnimate else {
+      return Promise.resolved()
+    }
+
+    return trackCameraMove(duration: Self.defaultAnimationDuration)
+  }
+
+  func pointForCoordinate(coordinate: Coordinate) throws -> Promise<Point> {
+    promiseAfterFirstIdle { mapView in
+      try MapProjection.point(for: coordinate) { mapView.projection.point(for: $0) }
+    }
+  }
+
+  func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
+    promiseAfterFirstIdle { mapView in
+      try MapProjection.coordinate(at: point) { mapView.projection.coordinate(for: $0) }
+    }
   }
 
   func prepareForRecycle() {
-    isUserRegionChange = false
+    cameraMoves.settleAll()
+    regionChanges.reset()
     isUserGestureMoving = false
     lastLiveMarkerRefreshTime = 0
+    lastAppliedRegion = nil
+    lastAppliedRegionCamera = nil
     isMapReady = false
     hasDeliveredMapReady = false
     view.delegate = nil
-    overlayController.reset()
+    settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
     onCameraMoved = nil
+    onMarkerViewRenderState = nil
+    overlayController.reset()
     onRegionChange = nil
     onRegionChangeComplete = nil
     onMapReady = nil
@@ -291,7 +370,6 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     onPolygonPress = nil
     onCirclePress = nil
     onClusterPress = nil
-    onMarkerViewRenderState = nil
     markers = nil
     polylines = nil
     polygons = nil
@@ -307,6 +385,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     followsUserLocation = nil
     showsCompass = nil
     showsScale = nil
+    applePoiDetailPresentation = nil
     customMapStyle = nil
     googleMapId = nil
     clusteringEnabled = nil
@@ -316,22 +395,78 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     clusterEnteringAnimation = nil
   }
 
-  private func applyRegion(_ region: Region, animated: Bool = false) {
+  /// Frames `region`, and reports whether anything was handed to the Google SDK: nothing
+  /// is for an invalid region, or for one the map already shows.
+  @discardableResult
+  private func applyRegion(
+    _ region: Region,
+    animated: Bool = false,
+    duration: TimeInterval? = nil
+  ) -> Bool {
+    guard region.isValid else {
+      return false
+    }
+
+    if let lastAppliedRegion,
+       let lastAppliedRegionCamera,
+       region.approximatelyEquals(lastAppliedRegion),
+       view.camera.approximatelyEquals(lastAppliedRegionCamera) {
+      // Same region as last time and the camera has not moved since, so the
+      // fit would land on the camera the map already shows.
+      return false
+    }
+
+    // What the map already shows is exactly what an `onRegionChangeComplete` consumer
+    // hands back as the next `region` prop. Fitting it again must not move the camera,
+    // or the echo would answer every move with another one.
+    guard !view.currentNitroRegion().approximatelyEquals(region) else {
+      return false
+    }
+
+    // No insets of its own: Google Maps already fits bounds inside the area
+    // `GMSMapView.padding` leaves over, so passing `mapPadding` here as well would
+    // inset the region twice. `.zero` rather than `fit(_:)`, which pads by 64 pt.
     applyCameraUpdate(
-      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: mapPadding?.toUIEdgeInsets() ?? .zero),
+      GMSCameraUpdate.fit(region.toGMSCoordinateBounds(), with: .zero),
       animated: animated,
-      duration: nil
+      duration: duration
     )
+    self.lastAppliedRegion = region
+    // `moveCamera` updates `camera` synchronously; an animation does not, so
+    // there is nothing reliable to remember until it settles.
+    lastAppliedRegionCamera = animated ? nil : view.camera
+    return true
   }
 
-  private func updateMapCamera(_ camera: Camera, animated: Bool, duration: Double? = nil) {
+  /// Moves the camera, and reports whether anything was handed to the Google SDK:
+  /// nothing is for an invalid camera, or for the one the map is already at.
+  @discardableResult
+  private func updateMapCamera(
+    _ camera: Camera,
+    animated: Bool,
+    duration: Double? = nil
+  ) -> Bool {
+    guard camera.isValid else {
+      return false
+    }
+
     let target = camera.toGMSCameraPosition(current: view.camera)
     guard !view.camera.approximatelyEquals(target) else {
-      return
+      return false
     }
 
     let update = GMSCameraUpdate.setCamera(target)
     applyCameraUpdate(update, animated: animated, duration: duration)
+    return true
+  }
+
+  /// `GMSMapView.animate(with:)` takes no completion handler, so an animated move is
+  /// settled by `mapView(_:idleAt:)`. Called after the hand-over, as
+  /// `CameraMoveTracker` requires.
+  private func trackCameraMove(duration: TimeInterval) -> Promise<Void> {
+    let promise = Promise<Void>()
+    cameraMoves.track(promise, duration: duration)
+    return promise
   }
 
   private func applyCameraUpdate(
@@ -353,31 +488,6 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
-  private func handleRegionWillChange(userInteracting: Bool) {
-    guard userInteracting, !isUserRegionChange else {
-      return
-    }
-    isUserRegionChange = true
-    emitRegionChange(complete: false)
-  }
-
-  private func handleRegionDidChange() {
-    guard isUserRegionChange else {
-      return
-    }
-    emitRegionChange(complete: true)
-    isUserRegionChange = false
-  }
-
-  private func emitRegionChange(complete: Bool) {
-    let region = view.currentNitroRegion()
-    if complete {
-      onRegionChangeComplete?(region)
-    } else {
-      onRegionChange?(region)
-    }
-  }
-
   private func refreshVisibleMarkers() {
     overlayController.scheduleViewportRefresh(immediate: true)
   }
@@ -392,7 +502,6 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   private func startGestureMarkerRefresh() {
     isUserGestureMoving = true
     lastLiveMarkerRefreshTime = 0
-    onCameraMoved?()
     refreshGestureMarkersIfNeeded()
   }
 
@@ -425,7 +534,47 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
   private func notifyMapReadyIfNeeded() {
     isMapReady = true
+    settleProjectionsAwaitingFirstIdle(with: .success(view))
     deliverMapReadyIfPossible()
+  }
+
+  /// Resolves with what `work` returns once the map has been idle once, and rejects if the
+  /// adapter is released before that.
+  ///
+  /// Until then the SDK can still be showing the camera the map was created with: the `region`
+  /// prop's fit and the safe-area padding that shifts the camera both land later, a few hundred
+  /// milliseconds after mount. A projection taken in between describes a map that never appears
+  /// on screen. MapKit applies both at once, so the Apple adapter converts straight away.
+  private func promiseAfterFirstIdle<T>(
+    _ work: @escaping (GMSMapView) throws -> T
+  ) -> Promise<T> {
+    let promise = Promise<T>()
+    let settle: (Result<GMSMapView, Error>) -> Void = { mapView in
+      do {
+        promise.resolve(withResult: try work(mapView.get()))
+      } catch {
+        promise.reject(withError: error)
+      }
+    }
+
+    if isMapReady {
+      settle(.success(view))
+    } else {
+      projectionsAwaitingFirstIdle.append(settle)
+    }
+    return promise
+  }
+
+  private func settleProjectionsAwaitingFirstIdle(with mapView: Result<GMSMapView, Error>) {
+    let waiting = projectionsAwaitingFirstIdle
+    projectionsAwaitingFirstIdle = []
+    for settle in waiting {
+      settle(mapView)
+    }
+  }
+
+  private static func releasedBeforeFirstIdleError() -> Error {
+    RuntimeError.error(withMessage: "MapView was released before the map was first idle")
   }
 
   private func deliverMapReadyIfPossible() {
@@ -471,10 +620,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     followedLocationMapView = mapView
     myLocationObservation = mapView.observe(\.myLocation, options: [.new]) { [weak self, weak mapView] _, change in
       guard let self,
-            self.followsUserLocation == true,
-            self.showsUserLocation == true,
-            let mapView,
-            let location = change.newValue ?? mapView.myLocation else {
+        self.followsUserLocation == true,
+        self.showsUserLocation == true,
+        let mapView,
+        let location = change.newValue ?? mapView.myLocation
+      else {
         return
       }
 
@@ -520,7 +670,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
 
 extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   func mapView(_ mapView: GMSMapView, willMove gesture: Bool) {
-    handleRegionWillChange(userInteracting: gesture)
+    regionChanges.moveStarted(isGesture: gesture)
     if gesture {
       startGestureMarkerRefresh()
     }
@@ -529,18 +679,22 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
     onCameraMoved?()
     refreshGestureMarkersIfNeeded()
+    regionChanges.cameraMoved()
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
     onCameraMoved?()
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
-    handleRegionDidChange()
+    cameraMoves.settleAll()
+    regionChanges.cameraStopped()
     notifyMapReadyIfNeeded()
   }
 
   func mapView(_ mapView: GMSMapView, didTapAt coordinate: CLLocationCoordinate2D) {
-    if (mapView.superview as? NitroMapContainerView)?.containsMarker(at: mapView.projection.point(for: coordinate)) == true { return }
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     onPress?(Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
   }
 
@@ -550,6 +704,9 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
     name: String,
     location: CLLocationCoordinate2D
   ) {
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     onPoiPress?(
       NativePoiPressEvent(
         provider: .google,
@@ -563,12 +720,18 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didLongPressAt coordinate: CLLocationCoordinate2D) {
-    if (mapView.superview as? NitroMapContainerView)?.containsMarker(at: mapView.projection.point(for: coordinate)) == true { return }
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     onLongPress?(Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
   }
 
   func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
-    overlayController.handleMarkerTap(marker)
+    // True also keeps the SDK from selecting the marker under a live one.
+    guard !mapView.touchStartedOnLiveMarker else {
+      return true
+    }
+    return overlayController.handleMarkerTap(marker)
   }
 
   func mapView(_ mapView: GMSMapView, didEndDragging marker: GMSMarker) {
@@ -576,6 +739,9 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didTap overlay: GMSOverlay) {
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     overlayController.handleOverlayTap(overlay)
   }
 

@@ -1,9 +1,10 @@
 {
-  "extends": "../tsconfig.base.json",
+  "extends": "../config/tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/typescript",
-    "noEmit": true
+    "noEmit": true,
+    "types": ["bun"]
   },
   "include": ["src"]
 }

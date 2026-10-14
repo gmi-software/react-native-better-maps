@@ -1,8 +1,9 @@
+import QuartzCore
+import UIKit
+
 #if canImport(GoogleMaps)
 import GoogleMaps
 #endif
-import QuartzCore
-import UIKit
 
 enum ResolvedOverlayEnteringAnimationKind: Equatable {
   case none
@@ -81,7 +82,7 @@ enum OverlayEnteringAnimationResolver {
     }
   }
 
-#if canImport(GoogleMaps)
+  #if canImport(GoogleMaps)
   static func prepareGoogleMarker(_ marker: GMSMarker, animation: ResolvedOverlayEnteringAnimation) {
     marker.appearAnimation = .none
     marker.iconView = nil
@@ -176,7 +177,7 @@ enum OverlayEnteringAnimationResolver {
     }
   }
 
-#endif
+  #endif
 
   private static func seconds(
     fromMilliseconds value: Double?,

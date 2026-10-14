@@ -66,8 +66,8 @@ enum MarkerViewportFilter {
   }
 }
 
-private extension MKCoordinateRegion {
-  func contains(_ coordinate: Coordinate, padding: Double) -> Bool {
+extension MKCoordinateRegion {
+  fileprivate func contains(_ coordinate: Coordinate, padding: Double) -> Bool {
     let latPadding = span.latitudeDelta * padding
     let lonPadding = span.longitudeDelta * padding
     let minLat = center.latitude - span.latitudeDelta / 2 - latPadding

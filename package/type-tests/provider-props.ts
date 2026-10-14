@@ -2,11 +2,13 @@ import type {
   ApplePoiCategory,
   MapViewProps,
   MapViewPropsForProvider,
+  Region,
 } from '../src';
 
 export const appleProps: MapViewPropsForProvider<'apple'> = {
   provider: 'apple',
   showsScale: true,
+  applePoiDetailPresentation: 'callout',
   clusteringEnabled: true,
   markerEnteringAnimation: { preset: 'fade-scale', duration: 180 },
   clusterEnteringAnimation: 'system',
@@ -32,6 +34,7 @@ export const googleProps: MapViewPropsForProvider<'google'> = {
 
 export const defaultProviderProps: MapViewProps = {
   showsScale: true,
+  applePoiDetailPresentation: 'sheet',
   customMapStyle: '[]',
   markerEnteringAnimation: false,
   onPoiPress: (event) => {
@@ -53,6 +56,18 @@ export const defaultProviderProps: MapViewProps = {
 // @ts-expect-error Google Map IDs require the explicit Google provider.
 export const defaultProviderGoogleMapIdProps: MapViewProps = {
   googleMapId: 'google-map-id',
+};
+
+export const regionChangeProps: MapViewProps = {
+  onRegionChange: (region, details) => {
+    region satisfies Region;
+    details.isGesture satisfies boolean;
+  },
+  onRegionChangeComplete: (region, details) => {
+    region satisfies Region;
+    // @ts-expect-error The details carry the gesture flag, not the region.
+    details.latitude satisfies number;
+  },
 };
 
 export const plannedProviderProps: MapViewProps = {
@@ -102,4 +117,23 @@ export const mapboxPoiPressProps: MapViewPropsForProvider<'mapbox'> = {
   provider: 'mapbox',
   // @ts-expect-error Planned Mapbox support has no native POI press capability yet.
   onPoiPress: () => {},
+};
+
+export const googleApplePoiDetailProps: MapViewPropsForProvider<'google'> = {
+  provider: 'google',
+  // @ts-expect-error Google Maps has no native POI detail surface; POI taps stay event-only.
+  applePoiDetailPresentation: 'callout',
+};
+
+export const openStreetMapApplePoiDetailProps: MapViewPropsForProvider<'openstreetmap'> =
+  {
+    provider: 'openstreetmap',
+    // @ts-expect-error Planned OpenStreetMap support has no native POI detail surface.
+    applePoiDetailPresentation: 'callout',
+  };
+
+export const mapboxApplePoiDetailProps: MapViewPropsForProvider<'mapbox'> = {
+  provider: 'mapbox',
+  // @ts-expect-error Planned Mapbox support has no native POI detail surface.
+  applePoiDetailPresentation: 'callout',
 };

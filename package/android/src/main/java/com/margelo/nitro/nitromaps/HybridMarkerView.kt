@@ -4,16 +4,27 @@ import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.uimanager.ThemedReactContext
 
+/** Native host of a live `MarkerView`. The map it is mounted in positions it. */
 @Keep
 @DoNotStrip
-class HybridMarkerView(context: ThemedReactContext) : HybridMarkerViewSpec() {
+class HybridMarkerView(
+  context: ThemedReactContext,
+) : HybridMarkerViewSpec() {
   override val view = NitroMarkerContentView(context)
 
   override var coordinate = Coordinate(0.0, 0.0)
-    set(value) { field = value; view.coordinate = value }
+    set(value) {
+      field = value
+      view.coordinate = value
+    }
 
   override var anchor: MarkerAnchor? = null
-    set(value) { field = value; view.anchor = value }
+    set(value) {
+      field = value
+      view.anchor = value
+    }
 
-  override fun afterUpdate() { view.updatePosition() }
+  override fun afterUpdate() {
+    view.updatePosition((view.parent as? NitroMapContainerView)?.makeProjection?.invoke())
+  }
 }

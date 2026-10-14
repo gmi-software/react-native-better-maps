@@ -1,3 +1,4 @@
+#if canImport(GoogleMaps)
 import GoogleMaps
 import UIKit
 import XCTest
@@ -16,7 +17,8 @@ final class GoogleMarkerVisualApplierTests: XCTestCase {
       uri: "https://example.test/pin.png",
       width: 40,
       height: 40,
-      scale: 1
+      scale: 1,
+      origin: nil
     )
 
     applier.apply(markerDescriptor(image: image, anchor: MarkerAnchor(x: 0, y: 0)), to: marker)
@@ -45,13 +47,15 @@ final class GoogleMarkerVisualApplierTests: XCTestCase {
       uri: "https://example.test/a.png",
       width: 40,
       height: 40,
-      scale: 1
+      scale: 1,
+      origin: nil
     )
     let imageB = MarkerImage(
       uri: "https://example.test/b.png",
       width: 40,
       height: 40,
-      scale: 1
+      scale: 1,
+      origin: nil
     )
     let applier = GoogleMarkerVisualApplier(
       cachedImage: { image in image.uri.hasSuffix("a.png") ? iconA : nil },
@@ -95,3 +99,4 @@ private func markerDescriptor(image: MarkerImage, anchor: MarkerAnchor) -> Marke
 private func makeIcon() -> UIImage {
   UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).image { _ in }
 }
+#endif

@@ -1,11 +1,15 @@
 {
   "$schema": "https://nitro.margelo.com/nitro.schema.json",
-  "cxxNamespace": ["nitromaps"],
+  "cxxNamespace": [
+    "nitromaps"
+  ],
   "ios": {
     "iosModuleName": "NitroMaps"
   },
   "android": {
-    "androidNamespace": ["nitromaps"],
+    "androidNamespace": [
+      "nitromaps"
+    ],
     "androidCxxLibName": "NitroMaps"
   },
   "autolinking": {

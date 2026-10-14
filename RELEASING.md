@@ -8,24 +8,22 @@ developer machine, and no long-lived npm token exists anywhere.
 Publishing is triggered by pushing a version tag. CI never writes to git: `main`
 requires pull request reviews with `enforce_admins` enabled, so nothing — not
 even `github-actions[bot]` — can push a release commit to it. The version bump
-goes through a normal reviewed pull request instead, which has the useful side
-effect of putting the changelog in front of a reviewer.
+goes through a normal reviewed pull request instead.
 
 ## Cutting a release
 
-**1. Open a release pull request.** Bump the version and write the notes:
+**1. Open a release pull request.** Bump the version:
 
 ```bash
 cd package
 npm version 1.1.0 --no-git-tag-version
 ```
 
-Then add a matching `## 1.1.0` section to `CHANGELOG.md`, and open a pull request
-with both changes. Review and merge it as usual.
+Open a pull request with that change, then review and merge it as usual.
 
 **2. Rehearse (optional).** Run the **Release** workflow manually from the
-Actions tab. A manual run is always a dry run: it validates the version, the
-changelog and the full gate without publishing.
+Actions tab. A manual run is always a dry run: it validates the version and the
+full gate without publishing.
 
 **3. Push the tag.**
 
@@ -35,10 +33,10 @@ git tag -a v1.1.0 -m 'v1.1.0'
 git push origin v1.1.0
 ```
 
-The workflow then verifies the tag matches `package/package.json`, that
-`CHANGELOG.md` has a section for it, and that the version is not already on npm;
-runs the full gate; publishes to npm with provenance; and creates the GitHub
-Release with notes generated from the conventional commits since the last tag.
+The workflow then verifies the tag matches `package/package.json` and that the
+version is not already on npm; runs the full gate; publishes to npm with
+provenance; and creates the GitHub Release with notes generated from the
+conventional commits since the last tag.
 
 The iOS podspec reads its version from `package.json`, so there is no second
 version to keep in sync.
@@ -50,11 +48,13 @@ usual rules apply — `fix:` is a patch, `feat:` a minor, an incompatible API
 change a major — but two cases are easy to get wrong:
 
 - A commit that is not conventional (for example `Fix threading issues on ios`)
-  is invisible to the generated release notes. Add it to the changelog by hand.
+  is invisible to the generated release notes. Edit the GitHub Release body by
+  hand after the workflow creates it.
 - A change in runtime behavior that keeps the same types — such as a callback
   that starts firing once per gesture instead of continuously — breaks consumers
   even though their code still compiles. Either take the major, or ship it as a
-  minor with a prominent **Behavior changes** section, as 1.1.0 did.
+  minor and add a prominent **Behavior changes** section to the GitHub Release
+  body, as 1.1.0 did.
 
 ## Pre-releases
 
@@ -69,15 +69,16 @@ Consumers opt in explicitly:
 npm install react-native-better-maps@rc
 ```
 
-## Changelog
+## Release notes
 
-`CHANGELOG.md` is written by hand, not generated. This is deliberate: the parts
-of a release that matter most — behavior changes, migration snippets, the reason
-a fix exists — cannot be derived from commit subjects. The workflow **fails** if
-there is no `## <version>` section, so the notes cannot be forgotten.
+There is no `CHANGELOG.md`. The release notes are the GitHub Release body,
+generated from the conventional commits since the previous tag by
+`@release-it/conventional-changelog`.
 
-Notes generated from conventional commits still go into the GitHub Release body,
-so commit-level detail is not lost.
+Commit subjects cannot carry the parts of a release that matter most — behavior
+changes, migration snippets, the reason a fix exists. Nothing enforces those any
+more, so when a release needs them, edit the GitHub Release body by hand once the
+workflow has created it.
 
 ## One-time setup: npm trusted publishing
 

@@ -9,8 +9,9 @@ enum GoogleMapsAPIKey {
   static func configureIfNeeded() throws {
     let key = Bundle.main.object(forInfoDictionaryKey: "GoogleMapsIosApiKey") as? String
     guard let key = key?.trimmingCharacters(in: .whitespacesAndNewlines),
-          !key.isEmpty,
-          !key.hasPrefix("$(") else {
+      !key.isEmpty,
+      !key.hasPrefix("$(")
+    else {
       throw MapProviderConfigurationError.missingGoogleMapsIosApiKey
     }
 
@@ -34,8 +35,9 @@ enum MapProviderConfigurationError: LocalizedError {
     case .missingGoogleMapsIosApiKey:
       return "react-native-better-maps: provider=\"google\" on iOS requires GoogleMapsIosApiKey in the host app Info.plist."
     case .googleMapsSdkNotLinked:
-      return "react-native-better-maps: provider=\"google\" on iOS requires the Google Maps SDK to be linked. Configure iosGoogleMapsApiKey or googleMapsApiKey in the config plugin, or set betterMaps.iosGoogleProvider=true in Podfile.properties.json, then run pod install."
-    case let .unsupportedIOSProvider(provider):
+      return
+        "react-native-better-maps: provider=\"google\" on iOS requires the Google Maps SDK to be linked. Configure iosGoogleMapsApiKey or googleMapsApiKey in the config plugin, or set betterMaps.iosGoogleProvider=true in Podfile.properties.json, then run pod install."
+    case .unsupportedIOSProvider(let provider):
       return "Map provider \"\(provider)\" is not supported on iOS."
     }
   }

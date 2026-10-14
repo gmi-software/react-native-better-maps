@@ -56,17 +56,21 @@ internal class MarkerSpatialIndex(
   }
 
   /** Markers whose grid cells overlap the padded bounds. */
-  fun candidates(bounds: LatLngBounds, padding: Double = 0.2): List<MarkerDescriptor> {
+  fun candidates(
+    bounds: LatLngBounds,
+    padding: Double = 0.2,
+  ): List<MarkerDescriptor> {
     if (count == 0) {
       return emptyList()
     }
 
     val latSpan = bounds.northeast.latitude - bounds.southwest.latitude
-    val lonSpan = if (bounds.northeast.longitude < bounds.southwest.longitude) {
-      bounds.northeast.longitude - bounds.southwest.longitude + 360.0
-    } else {
-      bounds.northeast.longitude - bounds.southwest.longitude
-    }
+    val lonSpan =
+      if (bounds.northeast.longitude < bounds.southwest.longitude) {
+        bounds.northeast.longitude - bounds.southwest.longitude + 360.0
+      } else {
+        bounds.northeast.longitude - bounds.southwest.longitude
+      }
     val latPad = latSpan * padding
     val lonPad = lonSpan * padding
 
@@ -88,7 +92,10 @@ internal class MarkerSpatialIndex(
     return result
   }
 
-  private fun longitudeColumns(minLon: Double, maxLon: Double): List<Int> {
+  private fun longitudeColumns(
+    minLon: Double,
+    maxLon: Double,
+  ): List<Int> {
     if (maxLon - minLon >= 360.0) {
       return (0 until side).toList()
     }
@@ -113,7 +120,10 @@ internal class MarkerSpatialIndex(
     return wrapped
   }
 
-  private fun cellIndex(lat: Double, lon: Double): Int {
+  private fun cellIndex(
+    lat: Double,
+    lon: Double,
+  ): Int {
     return clampedRow(lat) * side + clampedColumn(lon)
   }
 

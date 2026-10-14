@@ -39,6 +39,16 @@ extension MKMapCamera {
       && abs(pitch - other.pitch) < angleEpsilon
   }
 
+  var placement: CameraPlacement {
+    CameraPlacement(
+      latitude: centerCoordinate.latitude,
+      longitude: centerCoordinate.longitude,
+      scale: centerCoordinateDistance,
+      heading: heading,
+      pitch: Double(pitch)
+    )
+  }
+
   func toCamera() -> Camera {
     let centerCoordinate = Coordinate(
       latitude: centerCoordinate.latitude,

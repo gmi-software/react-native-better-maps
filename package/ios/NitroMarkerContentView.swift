@@ -4,31 +4,30 @@ import UIKit
 private func publishMarkerProjection(_ tag: Int32, _ x: Float, _ y: Float)
 
 @_silgen_name("NitroMapsClearMarkerProjection")
-private func clearMarkerProjectionNative(_ tag: Int32)
+private func clearMarkerProjection(_ tag: Int32)
 
-/// Owns Fabric children for their entire lifetime. Only the outer host moves.
+/// Content view of a live `MarkerView`. Fabric mounts the marker's JSX here and
+/// keeps owning it; only the outer component view is moved, by a transform.
 final class NitroMarkerContentView: UIView {
   var coordinate: Coordinate?
   var anchor: MarkerAnchor?
-  weak var mapContainer: NitroMapContainerView?
-  weak var fabricHost: UIView?
-  private var publishedTag: Int32 = 0
-  private var publishedX: CGFloat = .nan
-  private var publishedY: CGFloat = .nan
 
-  func clearProjection() {
-    if publishedTag > 0 { clearMarkerProjectionNative(publishedTag) }
-    publishedTag = 0
-    publishedX = .nan
-    publishedY = .nan
-  }
+  /// The Fabric component view this content belongs to; set while mounted in a map.
+  weak var host: UIView?
+  weak var container: NitroMapContainerView?
+
+  private var publishedTag: Int32 = 0
+  private var publishedOrigin = CGPoint(x: CGFloat.nan, y: CGFloat.nan)
 
   override init(frame: CGRect) {
     super.init(frame: frame)
     clipsToBounds = true
   }
 
-  required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) is not supported")
+  }
 
   @objc(nitroMountChild:atIndex:)
   func mountFabricChild(_ child: UIView, at index: Int) {
@@ -42,38 +41,86 @@ final class NitroMarkerContentView: UIView {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    updatePosition()
+    // Fabric resized the host; its anchor point moved with it.
+    updatePosition(projection: container?.makeProjection?())
   }
 
-  func updatePosition() {
-    guard let host = fabricHost, let map = mapContainer else { return }
-    guard let coordinate, let point = map.projectCoordinate?(coordinate),
-          point.x.isFinite, point.y.isFinite,
-          host.bounds.width > 0, host.bounds.height > 0 else {
-      host.isHidden = true
-      clearProjection()
+  /// Places the host for `projection`, the camera's current one. A marker off
+  /// screen is hidden, which also takes it out of hit-testing and drawing.
+  func updatePosition(projection: MarkerProjection?) {
+    guard let host, let container else {
       return
     }
-    let x = point.x - host.bounds.width * CGFloat(anchor?.x ?? 0.5)
-    let y = point.y - host.bounds.height * CGFloat(anchor?.y ?? 1)
-    let projectedFrame = CGRect(origin: CGPoint(x: x, y: y), size: host.bounds.size)
-    let visible = projectedFrame.intersects(map.bounds)
-    host.isHidden = !visible
-    if visible {
-      let transform = CGAffineTransform(translationX: x, y: y)
-      if host.transform != transform { host.transform = transform }
-      let tag = Int32(truncatingIfNeeded: host.tag)
-      if tag > 0 && (tag != publishedTag || x != publishedX || y != publishedY) {
-        if publishedTag > 0 && publishedTag != tag {
-          clearMarkerProjectionNative(publishedTag)
-        }
-        publishMarkerProjection(tag, Float(x), Float(y))
-        publishedTag = tag
-        publishedX = x
-        publishedY = y
-      }
-    } else {
-      clearProjection()
+    let size = host.bounds.size
+    guard let coordinate,
+      let point = projection?(coordinate),
+      point.x.isFinite, point.y.isFinite,
+      size.width > 0, size.height > 0
+    else {
+      setHidden(true, host: host)
+      return
     }
+
+    // Snapped to the pixel grid, as MapKit does for annotation views: a
+    // fractional origin resamples the layer and blurs text in the marker.
+    let scale = max(1, traitCollection.displayScale)
+    let origin = CGPoint(
+      x: ((point.x - size.width * CGFloat(anchor?.x ?? 0.5)) * scale).rounded() / scale,
+      y: ((point.y - size.height * CGFloat(anchor?.y ?? 1)) * scale).rounded() / scale
+    )
+    let isOnScreen = CGRect(origin: origin, size: size).intersects(container.bounds)
+    setHidden(!isOnScreen, host: host)
+    guard isOnScreen else {
+      return
+    }
+
+    let offset = container.hostOffset
+    let transform = CGAffineTransform(translationX: origin.x + offset.x, y: origin.y + offset.y)
+    if host.transform != transform {
+      host.transform = transform
+    }
+    publish(origin, tag: Int32(truncatingIfNeeded: host.tag))
+  }
+
+  /// Unmounted from the map: forget the projection and leave the component
+  /// view as Fabric laid it out.
+  func detach() {
+    clearPublishedProjection()
+    host?.transform = .identity
+    host?.isHidden = false
+    host = nil
+    container = nil
+  }
+
+  private func setHidden(_ hidden: Bool, host: UIView) {
+    if host.isHidden != hidden {
+      host.isHidden = hidden
+    }
+    if hidden {
+      clearPublishedProjection()
+    }
+  }
+
+  /// Hands the translation to the shadow node, so `measure()` reports the
+  /// marker where it is drawn. Written only when it changed.
+  private func publish(_ origin: CGPoint, tag: Int32) {
+    guard tag > 0, tag != publishedTag || origin != publishedOrigin else {
+      return
+    }
+    if publishedTag > 0 && publishedTag != tag {
+      clearMarkerProjection(publishedTag)
+    }
+    publishMarkerProjection(tag, Float(origin.x), Float(origin.y))
+    publishedTag = tag
+    publishedOrigin = origin
+  }
+
+  private func clearPublishedProjection() {
+    guard publishedTag > 0 else {
+      return
+    }
+    clearMarkerProjection(publishedTag)
+    publishedTag = 0
+    publishedOrigin = CGPoint(x: CGFloat.nan, y: CGFloat.nan)
   }
 }

@@ -25,7 +25,7 @@
 - [x] Add MapKit framework dependency
 - [x] Render MKMapView in HybridMapView
 - [x] Support `mapType` (standard, satellite, hybrid; `terrain` falls back to standard on iOS)
-- [x] Camera control (setCamera, animateCamera)
+- [x] Camera control (setCamera, animateCamera, animateToRegion)
 - [x] Region change events
 - [x] Press and long-press events
 
@@ -80,22 +80,21 @@ Delivered incrementally during Phases 3–5; polished for platform consistency i
 
 ## Open decisions
 
-| Decision              | Options                                    | Status                                                            |
-| --------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
-| Overlay architecture  | Per-view native vs data-driven descriptors | Data-driven (Option B)                                            |
-| Clustering library    | Custom vs platform-native                  | Platform-native (MKClusterAnnotation / maps-utils)                |
-| Provider architecture | In-place SDK switching vs adapter remount  | Provider adapter + React remount                                  |
-| Overlay animations    | Reanimated core path vs native descriptors | Native descriptor animations; Reanimated optional                 |
-| Custom view markers   | Snapshot-only vs live/hybrid native views  | Native projected live Fabric hosts; validation pending (ADR 0004) |
-| Offline support       | Tile caching strategy                      | Future consideration                                              |
+| Decision              | Options                                    | Status                                             |
+| --------------------- | ------------------------------------------ | -------------------------------------------------- |
+| Overlay architecture  | Per-view native vs data-driven descriptors | Data-driven (Option B)                             |
+| Clustering library    | Custom vs platform-native                  | Platform-native (MKClusterAnnotation / maps-utils) |
+| Provider architecture | In-place SDK switching vs adapter remount  | Provider adapter + React remount                   |
+| Overlay animations    | Reanimated core path vs native descriptors | Native descriptor animations; Reanimated optional  |
+| Custom view markers   | Snapshot-only vs live/hybrid native views  | Live projected hosts on every provider (ADR 0004)  |
+| Offline support       | Tile caching strategy                      | Future consideration                               |
 
 ## Custom view markers (ADR 0004)
 
 - [x] Phase 0: apply `MarkerDescriptor` image, anchor, centerOffset, rotation, flat, and opacity on iOS Google
-- [x] Implement separate `MarkerView` with live Fabric content and native camera projection
-- [x] Integrate live markers with native clustering and expose JSX cluster renderers
-- [ ] Validate custom cluster expansion/collapse and performance on physical devices
-- [ ] Accept provider-specific performance and gesture behavior on physical devices; see [results](research/custom-marker-device-results.md)
+- [x] `<MarkerView>` — live JSX hosts placed by native projection on MapKit, Google iOS and Google Android
+- [x] Live markers in native clustering; `renderCluster` for JSX cluster badges
+- [ ] Physical-device frame traces per provider for the live marker example
 
 ## Future provider work
 

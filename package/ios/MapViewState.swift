@@ -13,16 +13,17 @@ struct MapViewState {
   var followsUserLocation: Bool?
   var showsCompass: Bool?
   var showsScale: Bool?
+  var applePoiDetailPresentation: ApplePoiDetailPresentation?
   var customMapStyle: String?
   var googleMapId: String?
+  var clusteringEnabled: Bool?
   var customClusterViews: Bool?
   var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)?
-  var clusteringEnabled: Bool?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
-  var onRegionChange: ((Region) -> Void)?
-  var onRegionChangeComplete: ((Region) -> Void)?
+  var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
+  var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)?
   var onPress: ((Coordinate) -> Void)?
   var onPoiPress: ((NativePoiPressEvent) -> Void)?
@@ -50,8 +51,10 @@ struct MapViewState {
     adapter.followsUserLocation = followsUserLocation
     adapter.showsCompass = showsCompass
     adapter.showsScale = showsScale
+    adapter.applePoiDetailPresentation = applePoiDetailPresentation
     adapter.customMapStyle = customMapStyle
     adapter.googleMapId = googleMapId
+    // Before the markers: the first diff must already know what is live.
     adapter.customClusterViews = customClusterViews
     adapter.onMarkerViewRenderState = onMarkerViewRenderState
     adapter.clusteringEnabled = clusteringEnabled

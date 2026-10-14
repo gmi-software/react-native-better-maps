@@ -1,7 +1,10 @@
 import {
+  cloneElement,
   useCallback,
   useImperativeHandle,
   useMemo,
+  useState,
+  type ReactElement,
   type Ref,
 } from 'react';
 import { runWithValidCamera } from '../camera/runWithValidCamera';
@@ -13,8 +16,15 @@ import { useStableValue } from '../hooks/useStableValue';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
+  NativeMarkerViewCluster,
+  NativeMarkerViewRenderState,
   NativePoiPressEvent,
 } from '../native/specs/MapView.nitro';
+import type { MarkerDescriptor } from '../native/specs/overlays';
+import {
+  isMarkerViewElement,
+  markerViewPropsProblem,
+} from '../overlays/collectMarkerView';
 import {
   circleListsEqual,
   enteringAnimationsEqual,
@@ -23,7 +33,13 @@ import {
   polylineListsEqual,
 } from '../overlays/descriptorEquality';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
+import {
+  clusterMemberCoordinates,
+  markerViewRenderStatesEqual,
+} from '../overlays/markerViewRenderState';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
+import type { CollectedMarkerView } from '../overlays/overlayCollect';
+import { warnOverlay } from '../overlays/warnOverlay';
 import {
   normalizeCircleDescriptors,
   normalizePolygonDescriptors,
@@ -40,6 +56,43 @@ import type { Coordinate } from '../types/coordinate';
 import type { MapViewProps, PoiPressEvent } from '../types/map';
 import type { MapViewRef } from '../types/ref';
 import { normalizeEnteringAnimation } from '../utils/enteringAnimation';
+import { MarkerViewHostContext } from './MarkerViewHostContext';
+
+const CLUSTER_FIT_PADDING = { top: 48, right: 48, bottom: 48, left: 48 };
+
+/** The live render state of one native map view; another view starts from none. */
+interface RenderStateOfView {
+  viewKey: string;
+  state: NativeMarkerViewRenderState;
+}
+
+/**
+ * The SDK markers and the live ones, which the native pipeline clusters and
+ * filters as one list. A live marker whose id a bulk `markers` entry already
+ * has is left out: the collector keeps the ids of children unique, not those
+ * of the bulk prop.
+ */
+function withLiveMarkers(
+  markers: MarkerDescriptor[],
+  markerViews: CollectedMarkerView[],
+  isBulk: boolean,
+): MarkerDescriptor[] {
+  if (markerViews.length === 0) {
+    return markers;
+  }
+  const bulkIds = isBulk ? new Set(markers.map((marker) => marker.id)) : null;
+  const combined = markers.slice();
+  for (const markerView of markerViews) {
+    if (bulkIds?.has(markerView.id) === true) {
+      warnOverlay(
+        `MarkerView "${markerView.id}" skipped: a marker in the markers prop has the same id.`,
+      );
+      continue;
+    }
+    combined.push(markerView.descriptor);
+  }
+  return combined;
+}
 
 export function MapView({
   ref,
@@ -61,6 +114,7 @@ export function MapView({
   applePoiDetailPresentation,
   customMapStyle,
   clusteringEnabled,
+  renderCluster,
   mapPadding,
   markerEnteringAnimation,
   clusterEnteringAnimation,
@@ -88,6 +142,7 @@ export function MapView({
   const commands = useMapViewCommands(nativeViewKey);
   const {
     markers: collectedMarkers,
+    markerViews: collectedMarkerViews,
     polylines: collectedPolylines,
     polygons: collectedPolygons,
     circles: collectedCircles,
@@ -126,7 +181,11 @@ export function MapView({
   // re-serialize each one across JSI, so hand back the previous value when
   // nothing actually changed.
   const markers = useStableValue(
-    normalizedBulkMarkers ?? collectedMarkers,
+    withLiveMarkers(
+      normalizedBulkMarkers ?? collectedMarkers,
+      collectedMarkerViews,
+      normalizedBulkMarkers != null,
+    ),
     markerListsEqual,
   );
   const polylines = useStableValue(
@@ -164,6 +223,107 @@ export function MapView({
   const onPoiPressCallback = onPoiPress as
     | ((event: PoiPressEvent) => void)
     | undefined;
+
+  // Which live markers and JSX clusters native shows. It changes as markers
+  // cluster, uncluster or leave the viewport, never per camera frame: the
+  // native side moves mounted markers on its own.
+  const [renderStateOfView, setRenderStateOfView] =
+    useState<RenderStateOfView | null>(null);
+  const renderState =
+    renderStateOfView?.viewKey === nativeViewKey
+      ? renderStateOfView.state
+      : null;
+  const usesMarkerViews =
+    collectedMarkerViews.length > 0 ||
+    (renderCluster != null && clusteringEnabled === true);
+  const handleMarkerViewRenderState = useCallback(
+    (state: NativeMarkerViewRenderState) => {
+      setRenderStateOfView((previous) =>
+        previous?.viewKey === nativeViewKey &&
+        markerViewRenderStatesEqual(previous.state, state)
+          ? previous
+          : { viewKey: nativeViewKey, state },
+      );
+    },
+    [nativeViewKey],
+  );
+
+  const pressCluster = useCallback(
+    (cluster: NativeMarkerViewCluster) => {
+      onClusterPress?.(cluster.markerIds, cluster.coordinate);
+      const coordinates = clusterMemberCoordinates(cluster.markerIds, markers);
+      if (coordinates.length === 0) {
+        return Promise.resolve();
+      }
+      return commands.run((hybrid) =>
+        hybrid.fitToCoordinates(coordinates, CLUSTER_FIT_PADDING, true),
+      );
+    },
+    [commands, markers, onClusterPress],
+  );
+
+  const mountedMarkerViews = useMemo(() => {
+    if (renderState == null || renderState.markerIds.length === 0) {
+      return null;
+    }
+    const shown = new Set(renderState.markerIds);
+    const elements: ReactElement[] = [];
+    // In children order, which is also the order they are drawn in.
+    for (const markerView of collectedMarkerViews) {
+      if (!shown.has(markerView.id)) {
+        continue;
+      }
+      // Keyed by marker id, so React keeps each subtree as others come and go.
+      elements.push(
+        markerView.element.key === markerView.id
+          ? markerView.element
+          : cloneElement(markerView.element, { key: markerView.id }),
+      );
+    }
+    return elements;
+  }, [collectedMarkerViews, renderState]);
+
+  const clusterViews = useMemo(() => {
+    if (
+      renderCluster == null ||
+      clusteringEnabled !== true ||
+      renderState == null ||
+      renderState.clusters.length === 0
+    ) {
+      return null;
+    }
+    const elements: ReactElement[] = [];
+    for (const cluster of renderState.clusters) {
+      const element = renderCluster({
+        id: cluster.id,
+        coordinate: cluster.coordinate,
+        count: cluster.markerIds.length,
+        markerIds: cluster.markerIds,
+        onPress: () => pressCluster(cluster),
+      });
+      if (element == null) {
+        continue;
+      }
+      if (!isMarkerViewElement(element)) {
+        warnOverlay('renderCluster must return a MarkerView or null.');
+        continue;
+      }
+      const props = { ...element.props, coordinate: cluster.coordinate };
+      const problem = markerViewPropsProblem(props);
+      if (problem != null) {
+        warnOverlay(`cluster "${cluster.id}" skipped: ${problem}`);
+        continue;
+      }
+      // Kept under one key while its count and members change.
+      elements.push(
+        cloneElement(element, {
+          key: `cluster:${cluster.id}`,
+          coordinate: cluster.coordinate,
+        }),
+      );
+    }
+    return elements;
+  }, [clusteringEnabled, pressCluster, renderCluster, renderState]);
 
   const handleHybridRef = useCallback(
     (nativeRef: NativeMapViewHybrid) => {
@@ -254,6 +414,9 @@ export function MapView({
   );
   const onLongPressCallback = useNitroCallback(onLongPress);
   const onClusterPressCallback = useNitroCallback(onClusterPress);
+  const onMarkerViewRenderStateCallback = useNitroCallback(
+    usesMarkerViews ? handleMarkerViewRenderState : undefined,
+  );
   const onMarkerPressCallback = useNitroCallback(
     hasMarkerPress ? handleMarkerPress : undefined,
   );
@@ -331,6 +494,8 @@ export function MapView({
       applePoiDetailPresentation={applePoiDetailPresentation}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
+      customClusterViews={renderCluster != null}
+      onMarkerViewRenderState={onMarkerViewRenderStateCallback}
       mapPadding={cameraProps.mapPadding}
       markerEnteringAnimation={markerEntering}
       clusterEnteringAnimation={clusterEntering}
@@ -350,6 +515,13 @@ export function MapView({
       onPolylinePress={onPolylinePressCallback}
       onPolygonPress={onPolygonPressCallback}
       onCirclePress={onCirclePressCallback}
-    />
+    >
+      {mountedMarkerViews != null || clusterViews != null ? (
+        <MarkerViewHostContext.Provider value={true}>
+          {mountedMarkerViews}
+          {clusterViews}
+        </MarkerViewHostContext.Provider>
+      ) : null}
+    </NativeMapView>
   );
 }

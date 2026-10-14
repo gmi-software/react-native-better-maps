@@ -4,6 +4,8 @@ import type {
   PolygonDescriptor,
   PolylineDescriptor,
 } from '../native/specs/overlays';
+import type { ReactElement } from 'react';
+import type { MarkerViewProps } from '../types/markerView';
 import type { MarkerProps } from '../types/overlays';
 import { createOverlayIdState, type OverlayIdState } from './overlayIds';
 
@@ -12,9 +14,17 @@ export interface OverlayCallbacks {
   onDragEnd?: (coordinate: MarkerProps['coordinate']) => void;
 }
 
+/** A `MarkerView` child: its JSX, mounted while the map shows it, and what the pipeline places. */
+export interface CollectedMarkerView {
+  id: string;
+  element: ReactElement<MarkerViewProps>;
+  descriptor: MarkerDescriptor;
+}
+
 export interface OverlayCollectorState {
   registry: Map<string, OverlayCallbacks>;
   markers: MarkerDescriptor[];
+  markerViews: CollectedMarkerView[];
   polylines: PolylineDescriptor[];
   polygons: PolygonDescriptor[];
   circles: CircleDescriptor[];
@@ -30,6 +40,7 @@ export function createOverlayCollectorState(): OverlayCollectorState {
   return {
     registry: new Map(),
     markers: [],
+    markerViews: [],
     polylines: [],
     polygons: [],
     circles: [],

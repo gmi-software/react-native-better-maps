@@ -190,7 +190,8 @@ const markerFields = {
   opacity: 0.9,
   enteringAnimation: { ...animation, ...animationFields },
 } satisfies EveryOptionalField<MarkerDescriptor> &
-  Record<OptionalKey<NativeMarkerDescriptor>, unknown>;
+  // `liveView` is set by the MarkerView collector, never by app input.
+  Record<Exclude<OptionalKey<NativeMarkerDescriptor>, 'liveView'>, unknown>;
 
 const markerPropsFields = {
   ...markerFields,

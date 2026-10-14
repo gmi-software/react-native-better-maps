@@ -38,6 +38,7 @@ final class GoogleMapOverlayController {
   private var polygonVersions: [String: ShapeRenderVersion] = [:]
   private var circleVersions: [String: ShapeRenderVersion] = [:]
   private let markerPipeline: MarkerRenderPipeline
+  private let markerViews = MarkerViewRenderRegistry()
   private let visualApplier = GoogleMarkerVisualApplier()
 
   var onMarkerPress: ((String) -> Void)?
@@ -57,6 +58,26 @@ final class GoogleMapOverlayController {
 
   private var usesViewportPipeline: Bool {
     markerPipeline.usesViewportPipeline
+  }
+
+  /// What the pipeline diffs against: the SDK markers and the live hosts.
+  private var displayedVersions: [String: Int] {
+    markerViews.displayedVersions(merging: markerVersions)
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { markerViews.onChange }
+    set { markerViews.onChange = newValue }
+  }
+
+  /// Switching who draws clusters redraws every marker: a cluster on screen
+  /// belongs to the SDK or to JS, and the diff cannot move it between them.
+  func setCustomClusterViews(_ enabled: Bool) {
+    guard markerViews.setCustomClusters(enabled) else {
+      return
+    }
+    clearMarkers()
+    reapplyMarkers()
   }
 
   func reset() {
@@ -88,7 +109,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.refreshNow(
-      displayedVersions: markerVersions,
+      displayedVersions: displayedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -111,7 +132,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.scheduleViewportRefresh(
-      displayedVersions: markerVersions,
+      displayedVersions: displayedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       immediate: immediate,
@@ -206,7 +227,7 @@ final class GoogleMapOverlayController {
     }
 
     markerPipeline.reapply(
-      displayedVersions: markerVersions,
+      displayedVersions: displayedVersions,
       region: mapView.currentNitroRegion().toMKCoordinateRegion(),
       viewSize: mapView.bounds.size,
       apply: { [weak self] diff in
@@ -216,13 +237,15 @@ final class GoogleMapOverlayController {
   }
 
   private func applyDiff(
-    _ diff: MarkerRenderDiff,
+    _ pipelineDiff: MarkerRenderDiff,
     animateEntering: Bool = true,
     animationBudget: Int = maximumAnimatedMarkersPerDiff
   ) {
     guard let mapView else {
       return
     }
+
+    let diff = markerViews.consume(pipelineDiff)
 
     for key in diff.removedKeys {
       markers.removeValue(forKey: key)?.map = nil
@@ -320,6 +343,7 @@ final class GoogleMapOverlayController {
   }
 
   private func clearMarkers() {
+    markerViews.reset()
     for marker in markers.values {
       marker.map = nil
     }

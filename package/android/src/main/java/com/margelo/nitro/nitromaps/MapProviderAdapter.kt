@@ -6,6 +6,12 @@ import com.margelo.nitro.core.Promise
 interface MapProviderAdapter {
   val view: View
 
+  /** Called on every camera frame, gestures and animations alike, on the main thread. */
+  var onCameraMoved: (() -> Unit)?
+
+  /** A projection for the current camera, or null while there is no map to project with. */
+  fun makeMarkerProjection(): MarkerProjection?
+
   var mapType: MapType
   var region: Region?
   var camera: Camera?
@@ -20,6 +26,8 @@ interface MapProviderAdapter {
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Boolean?
+  var customClusterViews: Boolean?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?

@@ -78,6 +78,12 @@ export interface MarkerDescriptor {
   /** Whether the marker participates in clustering when enabled on the map. */
   clusterable?: boolean;
 
+  /**
+   * Drawn by a live `MarkerView` host instead of the SDK. Native clustering and
+   * viewport filtering still place it; the SDK draws nothing for it.
+   */
+  liveView?: boolean;
+
   /** Custom marker image. */
   image?: MarkerImage;
 

@@ -10,6 +10,7 @@ internal fun MarkerDescriptor.displayedIdentityVersion(): Long =
     subtitle,
     draggable,
     clusterable,
+    liveView,
     image?.uri,
     image?.width,
     image?.height,

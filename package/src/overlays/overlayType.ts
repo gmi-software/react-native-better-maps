@@ -6,6 +6,7 @@
  */
 export const OverlayType = {
   Marker: 'NitroMaps.Marker',
+  MarkerView: 'NitroMaps.MarkerView',
   Polyline: 'NitroMaps.Polyline',
   Polygon: 'NitroMaps.Polygon',
   Circle: 'NitroMaps.Circle',

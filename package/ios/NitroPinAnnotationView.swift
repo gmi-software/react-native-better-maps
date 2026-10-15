@@ -24,6 +24,9 @@ final class NitroPinAnnotationView: MKMarkerAnnotationView {
     alpha = 1
     transform = .identity
     annotation = marker
+    isAccessibilityElement = true
+    accessibilityIdentifier = "react-native-better-maps.marker.\(marker.id)"
+    accessibilityLabel = marker.title ?? marker.id
     animatesWhenAdded = marker.enteringAnimation.kind == .system
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil

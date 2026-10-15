@@ -21,6 +21,9 @@ final class NitroImageAnnotationView: MKAnnotationView {
 
   func configure(for marker: MapMarkerAnnotation) {
     annotation = marker
+    isAccessibilityElement = true
+    accessibilityIdentifier = "react-native-better-maps.marker.\(marker.id)"
+    accessibilityLabel = marker.title ?? marker.id
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil
     alpha = marker.opacity

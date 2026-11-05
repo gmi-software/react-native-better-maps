@@ -9,6 +9,7 @@ final class MarkerDragUITests: XCTestCase {
     app.launch()
   }
 
+  /// Verifies pin and image marker drags trigger drag-end without map long-press events.
   func testDraggingPinAndImageMarkersOnlyFiresDragEnd() throws {
     let scenarioButton = app.buttons["Marker drag regression"]
     XCTAssertTrue(scenarioButton.waitForExistence(timeout: 30))
@@ -60,6 +61,7 @@ final class MarkerDragUITests: XCTestCase {
     waitForStatus(result, containing: ["pin=1", "image=1", "long=\(initialLongPressCount)"])
   }
 
+  /// Extracts the map long-press counter from the verification status label.
   private func longPressCount(from status: String) -> Int {
     let marker = "long="
     guard
@@ -72,6 +74,7 @@ final class MarkerDragUITests: XCTestCase {
     return count
   }
 
+  /// Waits until every expected fragment appears in the accessibility status label.
   private func waitForStatus(_ element: XCUIElement, containing fragments: [String]) {
     let predicate = NSPredicate { _, _ in
       fragments.allSatisfy { element.label.contains($0) }

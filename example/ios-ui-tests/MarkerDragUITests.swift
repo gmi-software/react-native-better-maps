@@ -64,7 +64,7 @@ final class MarkerDragUITests: XCTestCase {
     let marker = "long="
     guard
       let range = status.range(of: marker),
-      let count = Int(status[range.upperBound...].prefix(while: \\.isNumber))
+      let count = Int(status[range.upperBound...].prefix(while: \.isNumber))
     else {
       XCTFail("The verification status must include the map long-press count: \(status)")
       return -1

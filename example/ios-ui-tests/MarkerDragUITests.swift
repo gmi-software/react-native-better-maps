@@ -60,7 +60,7 @@ final class MarkerDragUITests: XCTestCase {
   }
 
   private func waitForStatus(_ element: XCUIElement, containing fragments: [String]) {
-    let format = fragments.map { "label CONTAINS %@" }.joined(separator: " AND ")
+    let format = fragments.map { _ in "label CONTAINS %@" }.joined(separator: " AND ")
     let predicate = NSPredicate(format: format, argumentArray: fragments)
     let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
     XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 20), .completed, element.label)

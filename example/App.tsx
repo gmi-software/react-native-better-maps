@@ -897,6 +897,7 @@ export default function App() {
     setStatus(PROVIDER_LABELS[SUPPORTED_MAP_PROVIDERS[next] ?? provider]);
   }, [provider, providerIndex]);
 
+  /** Selects a scenario and resets map readiness and marker-drag verification counters. */
   const selectScenario = useCallback(
     (index: number) => {
       if (index === scenarioIndex) {
@@ -935,6 +936,7 @@ export default function App() {
     setStatus(`Marker · ${id}`);
   }, []);
 
+  /** Records a marker drag-end event and updates the visible coordinate status. */
   const handleMarkerDragEnd = useCallback(
     (id: string, coordinate: Coordinate) => {
       setMarkerDragEndCounts((counts) => ({
@@ -965,6 +967,7 @@ export default function App() {
     setStatus(result);
   }, []);
 
+  /** Marks the map ready and applies any scenario-specific camera fitting. */
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     // The mount-effect result is the point of that scenario; do not bury it.
@@ -992,6 +995,7 @@ export default function App() {
     );
   }, []);
 
+  /** Formats provider-specific point-of-interest details for the status header. */
   const handlePoiPress = useCallback((event: PoiPressEvent) => {
     if (event.provider === 'google') {
       setStatus(`POI · Google · ${event.name} · ${event.placeId}`);
@@ -1003,6 +1007,7 @@ export default function App() {
     );
   }, []);
 
+  /** Counts map-level long presses and displays the pressed coordinate. */
   const handleMapLongPress = useCallback((coordinate: Coordinate) => {
     setMapLongPressCount((count) => count + 1);
     setStatus(

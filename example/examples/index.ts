@@ -16,6 +16,10 @@ import { deliveryZoneScenario } from './deliveryZone';
 import { geojsonScenario } from './geojson';
 import { landmarksScenario } from './landmarks';
 import { mountEffectCameraScenario } from './mountEffectCamera';
+import {
+  MARKER_DRAG_REGRESSION_SCENARIO_ID,
+  markerDragRegressionScenario,
+} from './markerDragRegression';
 import { createScenarioOverlayProps } from './overlaySource';
 import { riverRouteScenario } from './riverRoute';
 import type { MapScenario } from './types';
@@ -28,6 +32,7 @@ export {
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
+  MARKER_DRAG_REGRESSION_SCENARIO_ID,
   nextApplePoiDetailPresentation,
 };
 
@@ -41,4 +46,5 @@ export const MAP_SCENARIOS: MapScenario[] = [
   advancedFeaturesScenario,
   applePoiDetailsScenario,
   mountEffectCameraScenario,
+  markerDragRegressionScenario,
 ];

@@ -615,6 +615,10 @@ type MapSceneProps = {
   ) => void;
 };
 
+/**
+ * Renders the selected map provider and wires scenario callbacks to the native map.
+ * The marker-drag regression scenario adds a stable container for simulator UI tests.
+ */
 const MapScene = memo(function MapScene({
   ref,
   scenario,
@@ -770,6 +774,10 @@ const StatusHeader = memo(function StatusHeader({
   );
 });
 
+/**
+ * Hosts the interactive map examples and their scenario controls.
+ * Tracks marker drag and map long-press events for the regression test scenario.
+ */
 export default function App() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapViewRef>(null);

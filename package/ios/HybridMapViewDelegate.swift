@@ -7,6 +7,15 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   private var handledMapFeatureSelections = Set<ObjectIdentifier>()
   private var shouldSuppressNextBackgroundPress = false
 
+  private let hitTest: (UIView, CGPoint) -> UIView?
+
+  init(hitTest: @escaping (UIView, CGPoint) -> UIView? = { view, point in
+    view.hitTest(point, with: nil)
+  }) {
+    self.hitTest = hitTest
+    super.init()
+  }
+
   func installGestureRecognizers(on mapView: MKMapView) {
     let tapRecognizer = UITapGestureRecognizer(
       target: self,
@@ -63,13 +72,28 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
 
   func gestureRecognizer(
     _ gestureRecognizer: UIGestureRecognizer,
+    shouldReceive touch: UITouch
+  ) -> Bool {
+    guard gestureRecognizer is UILongPressGestureRecognizer, let parent else {
+      return true
+    }
+
+    return shouldReceiveLongPress(at: touch.location(in: parent.view), in: parent.view)
+  }
+
+  func shouldReceiveLongPress(at point: CGPoint, in view: UIView) -> Bool {
+    !isAnnotationView(at: point, in: view)
+  }
+
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
     shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
   ) -> Bool {
     true
   }
 
-  private func isAnnotationView(at point: CGPoint, in mapView: MKMapView) -> Bool {
-    var view: UIView? = mapView.hitTest(point, with: nil)
+  private func isAnnotationView(at point: CGPoint, in view: UIView) -> Bool {
+    var view: UIView? = hitTest(view, point)
     while let current = view {
       if current is MKAnnotationView {
         return true

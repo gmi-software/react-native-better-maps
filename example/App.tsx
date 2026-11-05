@@ -59,6 +59,7 @@ import {
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
+  MARKER_DRAG_REGRESSION_SCENARIO_ID,
   nextApplePoiDetailPresentation,
 } from './examples';
 
@@ -272,6 +273,8 @@ const ScenarioChip = memo(function ScenarioChip({
     >
       <ScalePressable
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
         style={[styles.scenarioChip, active && styles.scenarioChipActive]}
       >
         <Text
@@ -612,6 +615,10 @@ type MapSceneProps = {
   ) => void;
 };
 
+/**
+ * Renders the selected map provider and wires scenario callbacks to the native map.
+ * The marker-drag regression scenario adds a stable container for simulator UI tests.
+ */
 const MapScene = memo(function MapScene({
   ref,
   scenario,
@@ -667,8 +674,8 @@ const MapScene = memo(function MapScene({
     onRegionChangeComplete,
   };
 
-  if (provider === 'apple') {
-    return (
+  const mapView =
+    provider === 'apple' ? (
       <MapView
         ref={ref}
         {...commonMapProps}
@@ -678,10 +685,19 @@ const MapScene = memo(function MapScene({
           scenario.advanced?.applePoiDetailPresentation
         }
       />
+    ) : (
+      <MapView ref={ref} {...commonMapProps} provider="google" />
+    );
+
+  if (scenario.id === MARKER_DRAG_REGRESSION_SCENARIO_ID) {
+    return (
+      <View style={styles.map} testID="marker-drag-regression-map">
+        {mapView}
+      </View>
     );
   }
 
-  return <MapView ref={ref} {...commonMapProps} provider="google" />;
+  return mapView;
 });
 
 type StatusHeaderProps = {
@@ -689,6 +705,7 @@ type StatusHeaderProps = {
   scenarioIndex: number;
   mapReady: boolean;
   showsScale: boolean;
+  verificationStatus?: string;
 };
 
 const StatusHeader = memo(function StatusHeader({
@@ -696,6 +713,7 @@ const StatusHeader = memo(function StatusHeader({
   scenarioIndex,
   mapReady,
   showsScale,
+  verificationStatus,
 }: StatusHeaderProps) {
   const badgeScale = useSharedValue(1);
 
@@ -743,11 +761,23 @@ const StatusHeader = memo(function StatusHeader({
             </Text>
           </Animated.View>
         </View>
+        {verificationStatus != null ? (
+          <Text
+            testID="marker-drag-verification-status"
+            style={styles.verificationStatus}
+          >
+            {verificationStatus}
+          </Text>
+        ) : null}
       </View>
     </Animated.View>
   );
 });
 
+/**
+ * Hosts the interactive map examples and their scenario controls.
+ * Tracks marker drag and map long-press events for the regression test scenario.
+ */
 export default function App() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapViewRef>(null);
@@ -757,6 +787,10 @@ export default function App() {
   const [animationOptionIndex, setAnimationOptionIndex] = useState(0);
   const [status, setStatus] = useState('Waiting for map...');
   const [mapReady, setMapReady] = useState(false);
+  const [markerDragEndCounts, setMarkerDragEndCounts] = useState<
+    Record<string, number>
+  >({});
+  const [mapLongPressCount, setMapLongPressCount] = useState(0);
   const [dockExpanded, setDockExpanded] = useState(false);
   const [customMarkerRotation, setCustomMarkerRotation] = useState(45);
   const [customMarkerFlat, setCustomMarkerFlat] = useState(true);
@@ -788,6 +822,7 @@ export default function App() {
   const animationOption = ANIMATION_OPTIONS[animationOptionIndex];
   const showsScale = scenario.advanced?.showsScale === true;
   const showsCompass = scenario.advanced?.showsCompass === true;
+  const markerDragVerificationStatus = `Drag ends: pin=${markerDragEndCounts.pin ?? 0}, image=${markerDragEndCounts.image ?? 0}; long=${mapLongPressCount}; ready=${mapReady}`;
   const mapPadding = useMemo(
     () =>
       mergeMapPadding(scenario.advanced?.mapPadding, showsScale, showsCompass),
@@ -862,6 +897,7 @@ export default function App() {
     setStatus(PROVIDER_LABELS[SUPPORTED_MAP_PROVIDERS[next] ?? provider]);
   }, [provider, providerIndex]);
 
+  /** Selects a scenario and resets map readiness and marker-drag verification counters. */
   const selectScenario = useCallback(
     (index: number) => {
       if (index === scenarioIndex) {
@@ -869,6 +905,8 @@ export default function App() {
       }
       setScenarioIndex(index);
       setMapReady(false);
+      setMarkerDragEndCounts({});
+      setMapLongPressCount(0);
       setStatus(MAP_SCENARIOS[index].name);
     },
     [scenarioIndex],
@@ -898,8 +936,13 @@ export default function App() {
     setStatus(`Marker · ${id}`);
   }, []);
 
+  /** Records a marker drag-end event and updates the visible coordinate status. */
   const handleMarkerDragEnd = useCallback(
     (id: string, coordinate: Coordinate) => {
+      setMarkerDragEndCounts((counts) => ({
+        ...counts,
+        [id]: (counts[id] ?? 0) + 1,
+      }));
       setStatus(
         `${id} → ${coordinate.latitude.toFixed(4)}, ${coordinate.longitude.toFixed(4)}`,
       );
@@ -924,6 +967,7 @@ export default function App() {
     setStatus(result);
   }, []);
 
+  /** Marks the map ready and applies any scenario-specific camera fitting. */
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     // The mount-effect result is the point of that scenario; do not bury it.
@@ -951,6 +995,7 @@ export default function App() {
     );
   }, []);
 
+  /** Formats provider-specific point-of-interest details for the status header. */
   const handlePoiPress = useCallback((event: PoiPressEvent) => {
     if (event.provider === 'google') {
       setStatus(`POI · Google · ${event.name} · ${event.placeId}`);
@@ -962,7 +1007,9 @@ export default function App() {
     );
   }, []);
 
+  /** Counts map-level long presses and displays the pressed coordinate. */
   const handleMapLongPress = useCallback((coordinate: Coordinate) => {
+    setMapLongPressCount((count) => count + 1);
     setStatus(
       `Long · ${coordinate.latitude.toFixed(4)}, ${coordinate.longitude.toFixed(4)}`,
     );
@@ -1010,6 +1057,11 @@ export default function App() {
         scenarioIndex={scenarioIndex}
         mapReady={mapReady}
         showsScale={showsScale}
+        verificationStatus={
+          scenario.id === MARKER_DRAG_REGRESSION_SCENARIO_ID
+            ? markerDragVerificationStatus
+            : undefined
+        }
       />
 
       <ScenarioDock
@@ -1130,6 +1182,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: palette.text,
+    fontVariant: ['tabular-nums'],
+  },
+  verificationStatus: {
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: palette.surface,
+    color: palette.text,
+    fontSize: 11,
     fontVariant: ['tabular-nums'],
   },
   dock: {

@@ -161,6 +161,24 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             | xcbeautify --renderer github-actions
 
+      - name: Run marker drag UI test
+        if: matrix.provider == 'apple'
+        run: |
+          ruby example/scripts/configure-marker-drag-ui-tests.rb example/ios/NitroMapsExample.xcodeproj
+          simulator_id="$(xcrun simctl list devices available -j | ruby -rjson -e 'devices = JSON.parse(STDIN.read).fetch("devices").values.flatten; device = devices.find { |entry| entry["isAvailable"] && entry["name"].start_with?("iPhone") }; abort "No available iPhone simulator was found." unless device; puts device.fetch("udid")')"
+          set -o pipefail
+          NSUnbufferedIO=YES xcodebuild test \
+            -workspace example/ios/NitroMapsExample.xcworkspace \
+            -scheme NitroMapsExample \
+            -configuration Release \
+            -destination "platform=iOS Simulator,id=${simulator_id}" \
+            -derivedDataPath "$RUNNER_TEMP/MarkerDragUITests" \
+            -resultBundlePath "$RUNNER_TEMP/MarkerDragUITests.xcresult" \
+            -parallel-testing-enabled NO \
+            -only-testing:NitroMapsExampleUITests/MarkerDragUITests/testDraggingPinAndImageMarkersOnlyFiresDragEnd \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | xcbeautify --renderer github-actions
+
   android:
     name: Android
     # Pinned: the Android SDK and NDK contents differ between runner images.

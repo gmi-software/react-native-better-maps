@@ -34,6 +34,11 @@ on:
       - 'package/tsconfig.plugin.json'
       - 'example/app.config.js'
       - 'example/app.json'
+      - 'example/App.tsx'
+      - 'example/assets/markerred.png'
+      - 'example/examples/**'
+      - 'example/ios-ui-tests/**'
+      - 'example/scripts/**'
       - 'example/package.json'
       - 'bun.lock'
   pull_request:
@@ -54,6 +59,11 @@ on:
       - 'package/tsconfig.plugin.json'
       - 'example/app.config.js'
       - 'example/app.json'
+      - 'example/App.tsx'
+      - 'example/assets/markerred.png'
+      - 'example/examples/**'
+      - 'example/ios-ui-tests/**'
+      - 'example/scripts/**'
       - 'example/package.json'
       - 'bun.lock'
 

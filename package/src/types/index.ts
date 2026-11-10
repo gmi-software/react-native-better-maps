@@ -10,6 +10,7 @@ export type {
 export type {
   ApplePoiCategory,
   ApplePoiDetailPresentation,
+  ClusterPressBehavior,
 } from '../native/specs/MapView.nitro';
 export type {
   ApplePoiPressEvent,

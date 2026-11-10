@@ -836,6 +836,21 @@ The `google` provider accepts `googleMapId` for Google Cloud Map ID styling:
 
 `googleMapId` is creation-time configuration for native SDK views. Changing it remounts the native map view, matching provider changes.
 
+## Cluster press
+
+With `clusteringEnabled`, pressing a cluster calls `onClusterPress` with the ids of its markers and the cluster's coordinate, then zooms the camera to fit those markers. Set `clusterPressBehavior="none"` to keep the camera still, for example when the app opens a list or bottom sheet for the cluster instead:
+
+```tsx
+<MapView
+  style={{ flex: 1 }}
+  clusteringEnabled
+  clusterPressBehavior="none"
+  onClusterPress={(markerIds) => openClusterSheet(markerIds)}
+/>
+```
+
+`'zoom'` is the default. It fits the markers' bounds padded by 1.6× on each axis, with a span of at least 0.01°, so markers stacked on one coordinate do not zoom the map all the way in. The Google providers also keep 72 points (dp on Android) clear around the fit.
+
 ## Marker entering animations
 
 `MapView` can configure native entering animations for markers and marker clusters:
@@ -984,6 +999,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Marker entering animation  | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Cluster entering animation | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Clustering                 | Supported                                                   | Supported                                  | Supported                                  |
+| Cluster press behavior     | `zoom`, `none`                                              | `zoom`, `none`                             | `zoom`, `none`                             |
 | Custom styles              | Curated subset on iOS 16+                                   | Google Maps JSON styles                    | Google Maps JSON styles                    |
 | Google Map ID              | Unsupported                                                 | Supported                                  | Supported                                  |
 

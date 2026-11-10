@@ -350,8 +350,8 @@ enum MarkerClusterEngine {
       longitude: (minLon + maxLon) / 2
     )
     let span = MKCoordinateSpan(
-      latitudeDelta: max((maxLat - minLat) * 1.6, 0.01),
-      longitudeDelta: max((maxLon - minLon) * 1.6, 0.01)
+      latitudeDelta: ClusterZoomSpan.delta(min: minLat, max: maxLat),
+      longitudeDelta: ClusterZoomSpan.delta(min: minLon, max: maxLon)
     )
     return MKCoordinateRegion(center: center, span: span)
   }

@@ -18,6 +18,7 @@ struct MapViewState {
   var applePoiFilter: NativePoiFilter?
   var googleMapId: String?
   var clusteringEnabled: Bool?
+  var clusterPressBehavior: ClusterPressBehavior?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
@@ -55,6 +56,7 @@ struct MapViewState {
     adapter.applePoiFilter = applePoiFilter
     adapter.googleMapId = googleMapId
     adapter.clusteringEnabled = clusteringEnabled
+    adapter.clusterPressBehavior = clusterPressBehavior
     adapter.mapPadding = mapPadding
     adapter.markerEnteringAnimation = markerEnteringAnimation
     adapter.clusterEnteringAnimation = clusterEnteringAnimation

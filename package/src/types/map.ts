@@ -10,6 +10,7 @@ import type {
 import type {
   ApplePoiCategory,
   ApplePoiDetailPresentation,
+  ClusterPressBehavior,
 } from '../native/specs/MapView.nitro';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
 import type { EdgePadding, Region, RegionChangeDetails } from './region';
@@ -238,6 +239,13 @@ interface ExistingDefaultProviderProps
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
+
+  /**
+   * What a cluster press does after `onClusterPress` fires. `'zoom'` (the
+   * default) fits the camera to the cluster's markers; `'none'` keeps the
+   * camera still, for apps that open a list or sheet for the cluster instead.
+   */
+  clusterPressBehavior?: ClusterPressBehavior;
 }
 
 interface AppleMapViewProps
@@ -264,6 +272,13 @@ interface AppleMapViewProps
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
+
+  /**
+   * What a cluster press does after `onClusterPress` fires. `'zoom'` (the
+   * default) fits the camera to the cluster's markers; `'none'` keeps the
+   * camera still, for apps that open a list or sheet for the cluster instead.
+   */
+  clusterPressBehavior?: ClusterPressBehavior;
 }
 
 interface GoogleMapViewProps
@@ -287,6 +302,13 @@ interface GoogleMapViewProps
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
+
+  /**
+   * What a cluster press does after `onClusterPress` fires. `'zoom'` (the
+   * default) fits the camera to the cluster's markers; `'none'` keeps the
+   * camera still, for apps that open a list or sheet for the cluster instead.
+   */
+  clusterPressBehavior?: ClusterPressBehavior;
 }
 
 interface OpenStreetMapViewProps extends BaseMapViewProps {
@@ -298,6 +320,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   pointsOfInterest?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
+  clusterPressBehavior?: never;
   onPoiPress?: never;
 }
 
@@ -310,6 +333,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   pointsOfInterest?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
+  clusterPressBehavior?: never;
   onPoiPress?: never;
 }
 

@@ -178,6 +178,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
+  var clusterPressBehavior: ClusterPressBehavior?
+
   var mapPadding: EdgePadding? {
     didSet {
       // Padding changes the camera that a region fit produces, so drop the
@@ -367,6 +369,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     applePoiFilter = nil
     googleMapId = nil
     clusteringEnabled = nil
+    clusterPressBehavior = nil
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil
@@ -505,6 +508,11 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
   }
 
   private func animateToClusterRegion(_ region: MKCoordinateRegion) {
+    // Spelled out: a bare `.none` would compare against `nil`, the default.
+    guard clusterPressBehavior != ClusterPressBehavior.none else {
+      return
+    }
+
     let bounds = region.toRegion().toGMSCoordinateBounds()
     view.animate(with: GMSCameraUpdate.fit(bounds, withPadding: 72))
   }

@@ -169,6 +169,8 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
+  var clusterPressBehavior: ClusterPressBehavior?
+
   var mapPadding: EdgePadding? {
     didSet {
       applyMapPadding(to: view)
@@ -495,6 +497,11 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   }
 
   func animateToClusterRegion(_ region: MKCoordinateRegion) {
+    // Spelled out: a bare `.none` would compare against `nil`, the default.
+    guard clusterPressBehavior != ClusterPressBehavior.none else {
+      return
+    }
+
     view.setRegion(view.regionThatFits(region), animated: true)
   }
 
@@ -659,6 +666,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     applePoiFilter = nil
     googleMapId = nil
     clusteringEnabled = nil
+    clusterPressBehavior = nil
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil

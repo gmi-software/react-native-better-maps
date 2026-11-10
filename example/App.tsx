@@ -40,6 +40,7 @@ import Animated, {
 import {
   MapView,
   type ApplePoiDetailPresentation,
+  type ClusterPressBehavior,
   type Coordinate,
   type EdgePadding,
   type MapProvider,
@@ -334,6 +335,8 @@ type ScenarioDockProps = {
   onTimeAnimateCamera: (duration: number) => void;
   onTimeDefaultFit: () => void;
   onCyclePointsOfInterest: () => void;
+  clusterPressBehavior: ClusterPressBehavior;
+  onToggleClusterPressBehavior: () => void;
 };
 
 const ScenarioDock = memo(function ScenarioDock({
@@ -360,6 +363,8 @@ const ScenarioDock = memo(function ScenarioDock({
   onTimeAnimateCamera,
   onTimeDefaultFit,
   onCyclePointsOfInterest,
+  clusterPressBehavior,
+  onToggleClusterPressBehavior,
 }: ScenarioDockProps) {
   const applePoiDetailPresentation =
     scenario.advanced?.applePoiDetailPresentation;
@@ -548,6 +553,17 @@ const ScenarioDock = memo(function ScenarioDock({
                 <Text style={styles.actionButtonIcon}>◌</Text>
                 <Text style={styles.actionButtonText}>
                   POIs · {pointsOfInterestLabel(pointsOfInterest)}
+          {scenario.advanced?.clusteringEnabled ? (
+            <View style={styles.actionRow}>
+              <ScalePressable
+                onPress={onToggleClusterPressBehavior}
+                accessibilityRole="button"
+                accessibilityLabel={`Cluster press: ${clusterPressBehavior}`}
+                style={[styles.actionButton, styles.actionButtonAccent]}
+              >
+                <Text style={styles.actionButtonIcon}>⊕</Text>
+                <Text style={styles.actionButtonText}>
+                  Cluster press · {clusterPressBehavior}
                 </Text>
               </ScalePressable>
             </View>
@@ -652,6 +668,7 @@ type MapSceneProps = {
   mapType: MapType;
   mapPadding?: EdgePadding;
   animationOption: AnimationOption;
+  clusterPressBehavior: ClusterPressBehavior;
   onMapReady: () => void;
   onMountFitResult: (result: string) => void;
   onClusterPress: (markerIds: string[], coordinate: Coordinate) => void;
@@ -675,6 +692,7 @@ const MapScene = memo(function MapScene({
   mapType,
   mapPadding,
   animationOption,
+  clusterPressBehavior,
   onMapReady,
   onMountFitResult,
   onClusterPress,
@@ -699,6 +717,7 @@ const MapScene = memo(function MapScene({
     mapType,
     region: scenario.region,
     clusteringEnabled: scenario.advanced?.clusteringEnabled,
+    clusterPressBehavior,
     showsUserLocation: scenario.advanced?.showsUserLocation,
     followsUserLocation: scenario.advanced?.followsUserLocation,
     showsCompass: scenario.advanced?.showsCompass,
@@ -820,6 +839,8 @@ export default function App() {
   const [selectedCustomMarkerId, setSelectedCustomMarkerId] = useState<
     string | null
   >(null);
+  const [clusterPressBehavior, setClusterPressBehavior] =
+    useState<ClusterPressBehavior>('zoom');
   const [applePoiDetailPresentation, setApplePoiDetailPresentation] =
     useState<ApplePoiDetailPresentation>(
       APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
@@ -949,6 +970,12 @@ export default function App() {
     setCustomMarkerFlat((current) => !current);
   }, []);
 
+  const toggleClusterPressBehavior = useCallback(() => {
+    const next = clusterPressBehavior === 'zoom' ? 'none' : 'zoom';
+    setClusterPressBehavior(next);
+    setStatus(`Cluster press · ${next}`);
+  }, [clusterPressBehavior]);
+
   const cycleApplePoiDetailMode = useCallback(() => {
     const next = nextApplePoiDetailPresentation(applePoiDetailPresentation);
     setApplePoiDetailPresentation(next);
@@ -1033,8 +1060,10 @@ export default function App() {
 
   const handleClusterPress = useCallback(
     (markerIds: string[], coordinate: Coordinate) => {
+      const shownIds = markerIds.slice(0, 3).join(', ');
+      const moreIds = markerIds.length > 3 ? ', …' : '';
       setStatus(
-        `Cluster (${markerIds.length}) · ${coordinate.latitude.toFixed(4)}, ${coordinate.longitude.toFixed(4)}`,
+        `Cluster (${markerIds.length}) · ${shownIds}${moreIds} · ${coordinate.latitude.toFixed(4)}, ${coordinate.longitude.toFixed(4)}`,
       );
     },
     [],
@@ -1119,6 +1148,7 @@ export default function App() {
         mapType={MAP_TYPES[mapTypeIndex]}
         mapPadding={mapPadding}
         animationOption={animationOption}
+        clusterPressBehavior={clusterPressBehavior}
         onMapReady={handleMapReady}
         onMountFitResult={handleMountFitResult}
         onClusterPress={handleClusterPress}
@@ -1163,6 +1193,8 @@ export default function App() {
         onTimeAnimateCamera={handleTimeAnimateCamera}
         onTimeDefaultFit={handleTimeDefaultFit}
         onCyclePointsOfInterest={cyclePointsOfInterest}
+        clusterPressBehavior={clusterPressBehavior}
+        onToggleClusterPressBehavior={toggleClusterPressBehavior}
       />
       <StatusBar style="light" />
     </View>

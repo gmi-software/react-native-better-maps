@@ -20,6 +20,7 @@ protocol MapProviderAdapter: AnyObject {
   var applePoiFilter: NativePoiFilter? { get set }
   var googleMapId: String? { get set }
   var clusteringEnabled: Bool? { get set }
+  var clusterPressBehavior: ClusterPressBehavior? { get set }
   var mapPadding: EdgePadding? { get set }
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
@@ -94,6 +95,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var applePoiFilter: NativePoiFilter?
   var googleMapId: String?
   var clusteringEnabled: Bool?
+  var clusterPressBehavior: ClusterPressBehavior?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?

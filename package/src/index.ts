@@ -19,6 +19,7 @@ export type {
   ApplePoiCategory,
   ApplePoiDetailPresentation,
   ApplePoiPressEvent,
+  ClusterPressBehavior,
   GooglePoiPressEvent,
   MapProvider,
   MapType,

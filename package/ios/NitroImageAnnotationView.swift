@@ -20,6 +20,7 @@ final class NitroImageAnnotationView: MKAnnotationView {
   }
 
   func configure(for marker: MapMarkerAnnotation) {
+    let isSameAnnotation = annotation === marker
     annotation = marker
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil
@@ -43,8 +44,18 @@ final class NitroImageAnnotationView: MKAnnotationView {
     }
 
     loadToken = token
-    self.image = nil
-    applyLayout(for: marker, imageSize: .zero)
+    if let cached = MarkerImageLoader.cachedImage(for: imageDescriptor) {
+      self.image = cached
+      applyLayout(for: marker, imageSize: cached.size)
+      return
+    }
+
+    // A swap on the same marker keeps the current image until the new one is ready, so it does
+    // not blink. A reused view must not show the previous marker's image.
+    if !isSameAnnotation {
+      self.image = nil
+    }
+    applyLayout(for: marker, imageSize: self.image?.size ?? .zero)
 
     MarkerImageLoader.load(imageDescriptor) { [weak self] uiImage in
       guard let self else { return }

@@ -30,7 +30,7 @@ final class GoogleMarkerVisualApplierTests: XCTestCase {
     let latestIcon = makeIcon()
     completions[0](staleIcon)
 
-    XCTAssertNil(marker.icon)
+    XCTAssertTrue(marker.icon === GoogleMarkerVisualApplier.placeholderIcon)
 
     completions[1](latestIcon)
 
@@ -74,9 +74,89 @@ final class GoogleMarkerVisualApplierTests: XCTestCase {
     XCTAssertEqual(marker.groundAnchor.x, 0, accuracy: 0.0001)
     XCTAssertEqual(marker.groundAnchor.y, 0, accuracy: 0.0001)
   }
+
+  func testUncachedImageShowsThePlaceholderInsteadOfTheDefaultPin() {
+    var completions: [(UIImage?) -> Void] = []
+    let applier = GoogleMarkerVisualApplier(
+      cachedImage: { _ in nil },
+      loadImage: { _, completion in completions.append(completion) }
+    )
+    let marker = GMSMarker()
+
+    applier.apply(markerDescriptor(image: remoteImage("a.png"), anchor: nil), to: marker)
+
+    XCTAssertTrue(marker.icon === GoogleMarkerVisualApplier.placeholderIcon)
+
+    let icon = makeIcon()
+    completions[0](icon)
+
+    XCTAssertTrue(marker.icon === icon)
+  }
+
+  func testSwapToAnUncachedImageKeepsTheCurrentImageUntilItLoads() {
+    let iconA = makeIcon()
+    let iconB = makeIcon()
+    var completions: [(UIImage?) -> Void] = []
+    let applier = GoogleMarkerVisualApplier(
+      cachedImage: { image in image.uri.hasSuffix("a.png") ? iconA : nil },
+      loadImage: { _, completion in completions.append(completion) }
+    )
+    let marker = GMSMarker()
+
+    applier.apply(markerDescriptor(image: remoteImage("a.png"), anchor: nil), to: marker)
+    applier.apply(markerDescriptor(image: remoteImage("b.png"), anchor: nil), to: marker)
+
+    XCTAssertTrue(marker.icon === iconA)
+
+    completions[0](iconB)
+
+    XCTAssertTrue(marker.icon === iconB)
+  }
+
+  func testFailedLoadShowsThePlaceholderAndTheNextApplyRetries() {
+    var completions: [(UIImage?) -> Void] = []
+    let applier = GoogleMarkerVisualApplier(
+      cachedImage: { _ in nil },
+      loadImage: { _, completion in completions.append(completion) }
+    )
+    let marker = GMSMarker()
+    let descriptor = markerDescriptor(image: remoteImage("a.png"), anchor: nil)
+
+    applier.apply(descriptor, to: marker)
+    completions[0](nil)
+
+    XCTAssertTrue(marker.icon === GoogleMarkerVisualApplier.placeholderIcon)
+
+    applier.apply(descriptor, to: marker)
+
+    XCTAssertEqual(completions.count, 2)
+  }
+
+  func testRemovingTheImageAfterThePlaceholderRestoresTheDefaultPin() {
+    let applier = GoogleMarkerVisualApplier(
+      cachedImage: { _ in nil },
+      loadImage: { _, _ in }
+    )
+    let marker = GMSMarker()
+
+    applier.apply(markerDescriptor(image: remoteImage("a.png"), anchor: nil), to: marker)
+    applier.apply(markerDescriptor(image: nil, anchor: nil), to: marker)
+
+    XCTAssertNil(marker.icon)
+  }
 }
 
-private func markerDescriptor(image: MarkerImage, anchor: MarkerAnchor) -> MarkerDescriptor {
+private func remoteImage(_ name: String) -> MarkerImage {
+  MarkerImage(
+    uri: "https://example.test/\(name)",
+    width: 40,
+    height: 40,
+    scale: 1,
+    origin: nil
+  )
+}
+
+private func markerDescriptor(image: MarkerImage?, anchor: MarkerAnchor?) -> MarkerDescriptor {
   MarkerDescriptor(
     id: "marker",
     coordinate: Coordinate(latitude: 0, longitude: 0),

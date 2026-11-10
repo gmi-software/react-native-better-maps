@@ -68,6 +68,18 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
     true
   }
 
+  /// A touch on a live marker belongs to its JSX. Turned away before
+  /// recognition: a recognized map tap would cancel the marker's own touches.
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldReceive touch: UITouch
+  ) -> Bool {
+    guard let container = parent?.view.superview as? NitroMapContainerView else {
+      return true
+    }
+    return !container.containsMarker(at: touch.location(in: container))
+  }
+
   private func isAnnotationView(at point: CGPoint, in mapView: MKMapView) -> Bool {
     var view: UIView? = mapView.hitTest(point, with: nil)
     while let current = view {
@@ -167,6 +179,12 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   }
 
   func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+    // MapKit selects whatever is under a tap, including beneath a live marker.
+    if mapView.touchStartedOnLiveMarker, let annotation = view.annotation {
+      mapView.deselectAnnotation(annotation, animated: false)
+      return
+    }
+
     if #available(iOS 16.0, *),
       let mapFeature = view.annotation as? MKMapFeatureAnnotation,
       handleMapFeatureSelection(mapFeature, in: mapView)
@@ -196,6 +214,11 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
   }
 
   func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
+    if mapView.touchStartedOnLiveMarker {
+      mapView.deselectAnnotation(annotation, animated: false)
+      return
+    }
+
     if #available(iOS 16.0, *),
       let mapFeature = annotation as? MKMapFeatureAnnotation
     {

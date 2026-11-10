@@ -29,6 +29,7 @@ internal class MapOverlayController(
   private val density: Float = context.resources.displayMetrics.density
   private val markerIconFactory = MarkerIconFactory(context, density) { markers }
   private val markerVersions = HashMap<String, Long>()
+  private val markerViews = MarkerViewRenderRegistry()
   private val clusterByKey = HashMap<String, ClusterElement.Cluster>()
   private val polylines = LinkedHashMap<String, Polyline>()
   private val polygons = LinkedHashMap<String, Polygon>()
@@ -102,6 +103,37 @@ internal class MapOverlayController(
     }
   }
 
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Unit)?
+    get() = markerViews.onChange
+    set(value) {
+      markerViews.onChange = value
+    }
+
+  /**
+   * Switching who draws clusters redraws every marker: a cluster on screen belongs to the SDK or to
+   * JS, and the diff cannot move it between them.
+   */
+  fun setCustomClusterViews(enabled: Boolean) {
+    if (!markerViews.setCustomClusters(enabled)) {
+      return
+    }
+    removeAllMarkers()
+    reapplyMarkers()
+  }
+
+  private fun removeAllMarkers() {
+    markerEnterAnimators.values.toSet().forEach { it.cancel() }
+    markerEnterAnimators.clear()
+    markers.values.forEach { it.remove() }
+    markers.clear()
+    markerVersions.clear()
+    clusterByKey.clear()
+    markerViews.reset()
+  }
+
+  /** What the pipeline diffs against: the SDK markers and the live hosts. */
+  private fun displayedVersions(): HashMap<String, Long> = HashMap(markerViews.displayedVersions(markerVersions))
+
   fun setMarkerPressHandlers(
     onMarkerPress: ((String) -> Unit)?,
     onClusterPress: ((List<String>, Coordinate) -> Unit)?,
@@ -111,6 +143,7 @@ internal class MapOverlayController(
   }
 
   fun clear() {
+    markerViews.reset()
     markerEnterAnimators.values.toSet().forEach { it.cancel() }
     cancelIdleRefresh()
     cancelLiveRefresh()
@@ -181,7 +214,7 @@ internal class MapOverlayController(
       clustering = renderState.clusteringEnabled,
       widthPx = viewWidthPx,
       heightPx = viewHeightPx,
-      displayedVersions = HashMap(markerVersions),
+      displayedVersions = displayedVersions(),
       animateEntering = animateEntering,
       maxAnimatedMarkers = maxAnimatedMarkers,
     )
@@ -264,11 +297,12 @@ internal class MapOverlayController(
   }
 
   private fun applyDiff(
-    diff: MarkerRenderDiff,
+    pipelineDiff: MarkerRenderDiff,
     animateEntering: Boolean = true,
     maxAnimatedMarkers: Int = MAX_ANIMATED_MARKERS_PER_DIFF,
   ) {
     val map = googleMap ?: return
+    val diff = markerViews.consume(pipelineDiff)
 
     for (key in diff.removedKeys) {
       cancelEnteringAnimation(key)
@@ -466,6 +500,11 @@ internal class MapOverlayController(
     refreshGeneration += 1
     cancelIdleRefresh()
     cancelLiveRefresh()
+    if (markerViews.hasEntries || descriptors.any { it.liveView == true }) {
+      // Live markers go through the diff, which takes them out before the SDK sees it.
+      applyDiff(computeMarkerRenderDiff(descriptors.map { ClusterElement.Single(it) }, displayedVersions()))
+      return
+    }
     markerVersions.clear()
     clusterByKey.clear()
     reconcile(

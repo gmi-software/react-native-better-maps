@@ -4,6 +4,12 @@ import UIKit
 protocol MapProviderAdapter: AnyObject {
   var contentView: UIView { get }
 
+  /// Called on every camera frame, gestures and animations alike, on the main thread.
+  var onCameraMoved: (() -> Void)? { get set }
+
+  /// A projection for the current camera, or nil while there is no map to project with.
+  func makeMarkerProjection() -> MarkerProjection?
+
   var mapType: MapType { get set }
   var region: Region? { get set }
   var camera: Camera? { get set }
@@ -19,6 +25,8 @@ protocol MapProviderAdapter: AnyObject {
   var customMapStyle: String? { get set }
   var googleMapId: String? { get set }
   var clusteringEnabled: Bool? { get set }
+  var customClusterViews: Bool? { get set }
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? { get set }
   var mapPadding: EdgePadding? { get set }
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? { get set }
@@ -77,6 +85,8 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   let contentView: UIView
   private let error: Error
 
+  var onCameraMoved: (() -> Void)?
+
   var mapType: MapType = .standard
   var region: Region?
   var camera: Camera?
@@ -92,6 +102,8 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Bool?
+  var customClusterViews: Bool?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
@@ -173,6 +185,10 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
 
   func coordinateForPoint(point: Point) throws -> Promise<Coordinate> {
     Promise.rejected(withError: error)
+  }
+
+  func makeMarkerProjection() -> MarkerProjection? {
+    nil
   }
 
   func prepareForRecycle() {}

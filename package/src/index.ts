@@ -1,6 +1,7 @@
 export {
   MapView,
   Marker,
+  MarkerView,
   Polyline,
   Polygon,
   Circle,
@@ -31,6 +32,9 @@ export type {
   MarkerDescriptor,
   MarkerPoint,
   MarkerProps,
+  MarkerViewCluster,
+  MarkerViewProps,
+  RenderMarkerViewCluster,
   OverlayEnteringAnimation,
   OverlayEnteringAnimationConfig,
   OverlayEnteringAnimationPreset,

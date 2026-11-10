@@ -175,6 +175,28 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
+  var customClusterViews: Bool? {
+    didSet {
+      overlayController.setCustomClusterViews(customClusterViews == true)
+    }
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    didSet {
+      overlayController.onMarkerViewRenderState = onMarkerViewRenderState
+    }
+  }
+
+  var onCameraMoved: (() -> Void)?
+
+  /// One `GMSProjection` per camera frame, shared by every live marker.
+  func makeMarkerProjection() -> MarkerProjection? {
+    let projection = view.projection
+    return { coordinate in
+      projection.point(for: coordinate.toCLLocationCoordinate2D())
+    }
+  }
+
   var mapPadding: EdgePadding? {
     didSet {
       // Padding changes the camera that a region fit produces, so drop the
@@ -333,6 +355,8 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     hasDeliveredMapReady = false
     view.delegate = nil
     settleProjectionsAwaitingFirstIdle(with: .failure(Self.releasedBeforeFirstIdleError()))
+    onCameraMoved = nil
+    onMarkerViewRenderState = nil
     overlayController.reset()
     onRegionChange = nil
     onRegionChangeComplete = nil
@@ -365,6 +389,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     customMapStyle = nil
     googleMapId = nil
     clusteringEnabled = nil
+    customClusterViews = nil
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil
@@ -652,11 +677,13 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
+    onCameraMoved?()
     refreshGestureMarkersIfNeeded()
     regionChanges.cameraMoved()
   }
 
   func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
+    onCameraMoved?()
     refreshVisibleMarkers()
     stopGestureMarkerRefresh()
     cameraMoves.settleAll()
@@ -665,6 +692,9 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didTapAt coordinate: CLLocationCoordinate2D) {
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     onPress?(Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
   }
 
@@ -674,6 +704,9 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
     name: String,
     location: CLLocationCoordinate2D
   ) {
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     onPoiPress?(
       NativePoiPressEvent(
         provider: .google,
@@ -687,11 +720,18 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didLongPressAt coordinate: CLLocationCoordinate2D) {
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     onLongPress?(Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
   }
 
   func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
-    overlayController.handleMarkerTap(marker)
+    // True also keeps the SDK from selecting the marker under a live one.
+    guard !mapView.touchStartedOnLiveMarker else {
+      return true
+    }
+    return overlayController.handleMarkerTap(marker)
   }
 
   func mapView(_ mapView: GMSMapView, didEndDragging marker: GMSMarker) {
@@ -699,6 +739,9 @@ extension GoogleMapProviderAdapter: GMSMapViewDelegate {
   }
 
   func mapView(_ mapView: GMSMapView, didTap overlay: GMSOverlay) {
+    guard !mapView.touchStartedOnLiveMarker else {
+      return
+    }
     overlayController.handleOverlayTap(overlay)
   }
 

@@ -16,7 +16,7 @@ private struct AdapterConfiguration: Equatable {
 }
 
 final class HybridMapView: HybridMapViewSpec {
-  private let containerView = UIView()
+  private let containerView = NitroMapContainerView()
   private let lifecycleLock = NSLock()
   private let stateLock = NSLock()
   private let adapterSlot = ProviderAdapterSlot<AdapterConfiguration, MapProviderAdapter>(
@@ -125,6 +125,22 @@ final class HybridMapView: HybridMapViewSpec {
     get { getBacked(\.clusteringEnabled) }
     set {
       setBackedOnMain(newValue, store: \.clusteringEnabled) { $0.clusteringEnabled = $1 }
+    }
+  }
+
+  var customClusterViews: Bool? {
+    get { getBacked(\.customClusterViews) }
+    set {
+      setBackedOnMain(newValue, store: \.customClusterViews) { $0.customClusterViews = $1 }
+    }
+  }
+
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)? {
+    get { getBacked(\.onMarkerViewRenderState) }
+    set {
+      setBackedOnMain(newValue, store: \.onMarkerViewRenderState) {
+        $0.onMarkerViewRenderState = $1
+      }
     }
   }
 
@@ -307,6 +323,7 @@ final class HybridMapView: HybridMapViewSpec {
       }
 
       recycleLifecycle()
+      detachMarkers()
       adapterSlot.release()
       withStateLock {
         self._state = MapViewState()
@@ -376,7 +393,25 @@ final class HybridMapView: HybridMapViewSpec {
     }
 
     attach(contentView: nextAdapter.contentView)
+    attachMarkers(to: nextAdapter)
     syncState(to: nextAdapter)
+  }
+
+  /// Live markers move into the adapter's map view and follow its camera.
+  private func attachMarkers(to adapter: MapProviderAdapter) {
+    containerView.mapSurface = adapter.contentView
+    containerView.makeProjection = { [weak adapter] in
+      adapter?.makeMarkerProjection()
+    }
+    adapter.onCameraMoved = { [weak containerView] in
+      containerView?.updateMarkerPositions()
+    }
+  }
+
+  /// Takes the live markers back out of the map view about to go away.
+  private func detachMarkers() {
+    containerView.makeProjection = nil
+    containerView.mapSurface = nil
   }
 
   private static func makeAdapter(for configuration: AdapterConfiguration) -> MapProviderAdapter {
@@ -404,7 +439,8 @@ final class HybridMapView: HybridMapViewSpec {
 
   private func attach(contentView: UIView) {
     contentView.translatesAutoresizingMaskIntoConstraints = false
-    containerView.addSubview(contentView)
+    // Below any live marker still waiting for a map view to move into.
+    containerView.insertSubview(contentView, at: 0)
     NSLayoutConstraint.activate([
       contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
       contentView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),

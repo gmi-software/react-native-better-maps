@@ -1,15 +1,7 @@
 # C++ shared code
 
-This directory will contain shared C++ code for cross-platform map logic once needed.
+Code shared by the iOS and Android builds.
 
-## Planned structure
-
-```
-cpp/
-├── HybridMapView.hpp
-└── HybridMapView.cpp
-```
-
-Nitrogen can generate C++ bindings alongside Swift and Kotlin. Use C++ for shared geometry calculations, tile caching, or other hot-path code that benefits from a single implementation.
+- `MarkerProjectionRegistry` — the screen translation of every live `MarkerView` host, written by the native host as the camera moves and read by the patched `HybridMarkerViewShadowNode` (see `scripts/patch-nitrogen-generated.mjs`) so Fabric measures a marker where it is drawn.
 
 See [src/native/README.md](../src/native/README.md) for the JS ↔ native architecture.

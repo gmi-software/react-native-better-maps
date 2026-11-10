@@ -7,6 +7,7 @@ import type {
   PolylineDescriptor,
 } from '../native/specs/overlays';
 import { collectOverlayChildren } from '../overlays/collectOverlayChild';
+import type { CollectedMarkerView } from '../overlays/overlayCollect';
 import {
   createPositionalIdTracker,
   trackPositionalIds,
@@ -16,6 +17,7 @@ import type { OverlayCallbacks } from '../overlays/overlayCollect';
 
 export interface CollectedOverlays {
   markers: MarkerDescriptor[];
+  markerViews: CollectedMarkerView[];
   polylines: PolylineDescriptor[];
   polygons: PolygonDescriptor[];
   circles: CircleDescriptor[];
@@ -41,6 +43,7 @@ export function useCollectedOverlays(children: ReactNode): CollectedOverlays {
 
     return {
       markers: state.markers,
+      markerViews: state.markerViews,
       polylines: state.polylines,
       polygons: state.polygons,
       circles: state.circles,

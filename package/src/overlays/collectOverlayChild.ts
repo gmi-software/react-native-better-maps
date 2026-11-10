@@ -35,6 +35,7 @@ import {
   collectMarkerOverlay,
   type MarkerImageResolver,
 } from './collectMarkerOverlay';
+import { collectMarkerView } from './collectMarkerView';
 
 function isOverlayChild(
   child: ReactElement,
@@ -48,7 +49,7 @@ function isOverlayChild(
     }
   }
 
-  return child.type === component;
+  return component != null && child.type === component;
 }
 
 export interface OverlayCollectorDependencies {
@@ -79,6 +80,17 @@ const overlayCollectors: OverlayCollector[] = [
         return;
       }
       collectMarkerOverlay(id, props, state, dependencies.resolveMarkerImage);
+    },
+  },
+  {
+    // Matched by `overlayType` alone: importing the component would pull its
+    // native host into everything that collects overlays.
+    overlayType: OverlayType.MarkerView,
+    component: undefined,
+    // One namespace with `Marker`: both feed one native marker list.
+    idKind: 'marker',
+    collect: (child, id, state) => {
+      collectMarkerView(child, id, state);
     },
   },
   {

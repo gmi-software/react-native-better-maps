@@ -13,6 +13,7 @@ import type {
 } from '../native/specs/MapView.nitro';
 import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
 import type { EdgePadding, Region, RegionChangeDetails } from './region';
+import type { RenderMarkerViewCluster } from './markerView';
 
 /**
  * Available map display styles.
@@ -186,6 +187,12 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
 
+  /**
+   * Draws each cluster as a live `MarkerView` instead of the default badge.
+   * Needs `clusteringEnabled`.
+   */
+  renderCluster?: RenderMarkerViewCluster;
+
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
 }
@@ -211,6 +218,12 @@ interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
 
+  /**
+   * Draws each cluster as a live `MarkerView` instead of the default badge.
+   * Needs `clusteringEnabled`.
+   */
+  renderCluster?: RenderMarkerViewCluster;
+
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
 }
@@ -233,6 +246,12 @@ interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
 
+  /**
+   * Draws each cluster as a live `MarkerView` instead of the default badge.
+   * Needs `clusteringEnabled`.
+   */
+  renderCluster?: RenderMarkerViewCluster;
+
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
 }
@@ -244,6 +263,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   applePoiDetailPresentation?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
+  renderCluster?: never;
   clusterEnteringAnimation?: never;
   onPoiPress?: never;
 }
@@ -255,6 +275,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   applePoiDetailPresentation?: never;
   customMapStyle?: never;
   clusteringEnabled?: never;
+  renderCluster?: never;
   clusterEnteringAnimation?: never;
   onPoiPress?: never;
 }

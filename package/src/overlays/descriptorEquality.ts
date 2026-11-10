@@ -138,6 +138,7 @@ export function markerDescriptorsEqual(
       left.subtitle === right.subtitle &&
       left.draggable === right.draggable &&
       left.clusterable === right.clusterable &&
+      left.liveView === right.liveView &&
       markerImagesEqual(left.image, right.image) &&
       left.markerColor === right.markerColor &&
       pointsEqual(left.anchor, right.anchor) &&

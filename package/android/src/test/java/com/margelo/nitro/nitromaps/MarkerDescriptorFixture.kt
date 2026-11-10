@@ -12,6 +12,7 @@ internal fun marker(
   opacity: Double? = null,
   zIndex: Double? = null,
   enteringAnimation: OverlayEnteringAnimationDescriptor? = null,
+  liveView: Boolean? = null,
 ): MarkerDescriptor {
   // Named arguments on purpose: MarkerDescriptor is generated from
   // package/src/native/specs/overlays.ts, so reordering a field there silently
@@ -23,6 +24,7 @@ internal fun marker(
     subtitle = "Subtitle",
     draggable = false,
     clusterable = true,
+    liveView = liveView,
     image = image,
     markerColor = markerColor,
     zIndex = zIndex,

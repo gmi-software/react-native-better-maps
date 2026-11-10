@@ -15,6 +15,7 @@ import {
 import { deliveryZoneScenario } from './deliveryZone';
 import { geojsonScenario } from './geojson';
 import { landmarksScenario } from './landmarks';
+import { liveMarkersScenario } from './liveMarkers';
 import { mountEffectCameraScenario } from './mountEffectCamera';
 import { createScenarioOverlayProps } from './overlaySource';
 import { riverRouteScenario } from './riverRoute';
@@ -35,6 +36,7 @@ export const MAP_SCENARIOS: MapScenario[] = [
   allOverlaysScenario,
   landmarksScenario,
   customMarkerImagesScenario,
+  liveMarkersScenario,
   riverRouteScenario,
   deliveryZoneScenario,
   geojsonScenario,

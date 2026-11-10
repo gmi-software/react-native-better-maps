@@ -48,6 +48,9 @@ Pod::Spec.new do |s|
     'ios/**/*.{m,mm}',
     'cpp/**/*.{hpp,cpp}',
   ]
+  # The C++ headers include React Native's; they must stay out of the Swift
+  # module's umbrella header.
+  s.private_header_files = ['cpp/**/*.{h,hpp}']
   s.exclude_files = [
     'ios/Package.swift',
     'ios/Tests/**/*',

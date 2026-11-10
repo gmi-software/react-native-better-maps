@@ -1,7 +1,7 @@
 package com.margelo.nitro.nitromaps
 
 import android.view.View
-import android.widget.FrameLayout
+import android.view.ViewGroup
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.uimanager.ThemedReactContext
@@ -51,7 +51,7 @@ class HybridMapView(
   private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
 
-  override val view: FrameLayout = FrameLayout(context)
+  override val view = NitroMapContainerView(context)
 
   override var provider: MapProvider?
     get() = _provider
@@ -89,6 +89,7 @@ class HybridMapView(
     get() = _scrollEnabled
     set(value) {
       _scrollEnabled = value
+      view.scrollGesturesEnabled = value != false
       adapter?.scrollEnabled = value
     }
 
@@ -96,6 +97,7 @@ class HybridMapView(
     get() = _zoomEnabled
     set(value) {
       _zoomEnabled = value
+      updateMultiTouchGestures()
       adapter?.zoomEnabled = value
     }
 
@@ -103,6 +105,7 @@ class HybridMapView(
     get() = _rotateEnabled
     set(value) {
       _rotateEnabled = value
+      updateMultiTouchGestures()
       adapter?.rotateEnabled = value
     }
 
@@ -110,8 +113,14 @@ class HybridMapView(
     get() = _pitchEnabled
     set(value) {
       _pitchEnabled = value
+      updateMultiTouchGestures()
       adapter?.pitchEnabled = value
     }
+
+  /** Whether a pinch that starts on a live marker is the map's to handle. */
+  private fun updateMultiTouchGestures() {
+    view.multiTouchGesturesEnabled = _zoomEnabled != false || _rotateEnabled != false || _pitchEnabled != false
+  }
 
   override var showsUserLocation: Boolean?
     get() = _showsUserLocation
@@ -166,6 +175,18 @@ class HybridMapView(
     set(value) {
       _clusteringEnabled = value
       adapter?.clusteringEnabled = value
+    }
+
+  override var customClusterViews: Boolean? = null
+    set(value) {
+      field = value
+      adapter?.customClusterViews = value
+    }
+
+  override var onMarkerViewRenderState: ((state: NativeMarkerViewRenderState) -> Unit)? = null
+    set(value) {
+      field = value
+      adapter?.onMarkerViewRenderState = value
     }
 
   override var mapPadding: EdgePadding?
@@ -319,6 +340,7 @@ class HybridMapView(
   override fun afterUpdate() {
     val nextAdapter = adapterSlot.commit(AdapterConfiguration(_provider, _googleMapId)) ?: return
     attach(nextAdapter.view)
+    attachMarkers(nextAdapter)
     syncState(nextAdapter)
   }
 
@@ -336,6 +358,8 @@ class HybridMapView(
     _zoomEnabled = true
     _rotateEnabled = true
     _pitchEnabled = true
+    view.scrollGesturesEnabled = true
+    view.multiTouchGesturesEnabled = true
     _showsUserLocation = null
     _followsUserLocation = null
     _showsCompass = null
@@ -344,6 +368,8 @@ class HybridMapView(
     _customMapStyle = null
     _googleMapId = null
     _clusteringEnabled = null
+    customClusterViews = null
+    onMarkerViewRenderState = null
     _mapPadding = null
     _markerEnteringAnimation = null
     _clusterEnteringAnimation = null
@@ -400,20 +426,34 @@ class HybridMapView(
    * Native has view recycling enabled.
    */
   private fun destroyAdapter(outgoing: MapProviderAdapter) {
+    outgoing.onCameraMoved = null
+    if (view.mapSurface === outgoing.view) {
+      view.mapSurface = null
+      view.makeProjection = null
+    }
     outgoing.release()
     view.removeView(outgoing.view)
+  }
+
+  /** Live markers follow the adapter's camera. */
+  private fun attachMarkers(adapter: MapProviderAdapter) {
+    view.mapSurface = adapter.view
+    view.makeProjection = adapter::makeMarkerProjection
+    adapter.onCameraMoved = view::updateMarkerPositions
   }
 
   /** Only ever sees [MapProvider.GOOGLE]: the [provider] setter rejects every other one. */
   private fun makeAdapter(configuration: AdapterConfiguration): MapProviderAdapter =
     GoogleMapProviderAdapter(context, configuration.googleMapId)
 
+  /** Below the live markers, which are drawn over the map. */
   private fun attach(contentView: View) {
     view.addView(
       contentView,
-      FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.MATCH_PARENT,
-        FrameLayout.LayoutParams.MATCH_PARENT,
+      0,
+      ViewGroup.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.MATCH_PARENT,
       ),
     )
   }
@@ -433,6 +473,9 @@ class HybridMapView(
     adapter.showsScale = _showsScale
     adapter.customMapStyle = _customMapStyle
     adapter.googleMapId = _googleMapId
+    // Before the markers: the first diff must already know what is live.
+    adapter.customClusterViews = customClusterViews
+    adapter.onMarkerViewRenderState = onMarkerViewRenderState
     adapter.clusteringEnabled = _clusteringEnabled
     adapter.markerEnteringAnimation = _markerEnteringAnimation
     adapter.clusterEnteringAnimation = _clusterEnteringAnimation

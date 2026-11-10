@@ -17,6 +17,8 @@ struct MapViewState {
   var customMapStyle: String?
   var googleMapId: String?
   var clusteringEnabled: Bool?
+  var customClusterViews: Bool?
+  var onMarkerViewRenderState: ((NativeMarkerViewRenderState) -> Void)?
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
@@ -52,6 +54,9 @@ struct MapViewState {
     adapter.applePoiDetailPresentation = applePoiDetailPresentation
     adapter.customMapStyle = customMapStyle
     adapter.googleMapId = googleMapId
+    // Before the markers: the first diff must already know what is live.
+    adapter.customClusterViews = customClusterViews
+    adapter.onMarkerViewRenderState = onMarkerViewRenderState
     adapter.clusteringEnabled = clusteringEnabled
     adapter.mapPadding = mapPadding
     adapter.markerEnteringAnimation = markerEnteringAnimation

@@ -33,6 +33,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Region change events](#region-change-events)
 - [Native POI press events](#native-poi-press-events)
 - [Custom marker images](#custom-marker-images)
+- [Live JSX markers](#live-jsx-markers)
 - [GeoJSON overlays](#geojson-overlays)
 - [Google Maps setup](#google-maps-setup)
 - [Marker entering animations](#marker-entering-animations)
@@ -58,7 +59,8 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - **Native POI taps** - `onPoiPress` reports provider-owned places from Apple Maps and Google Maps without confusing them with app-owned markers.
 - **Native POI details** - `applePoiDetailPresentation` opens MapKit's own place details (callout, sheet, or Open in Maps) on Apple Maps, iOS 18+.
 - **Camera control** - Declarative region/camera props plus imperative camera helpers.
-- **Marker clustering** - Native marker clustering for large point sets.
+- **Live JSX markers** - `MarkerView` draws markers with interactive, animated React Native content, placed by native projection with no snapshots and no per-frame JS.
+- **Marker clustering** - Native marker clustering for large point sets, with optional JSX cluster badges.
 - **Native entering animations** - Configurable marker and cluster entrance animations.
 - **Expo friendly** - Config plugin for Google Maps API keys and location permissions.
 - **Tree-shakeable package** - ESM-only build with an explicit `exports` map.
@@ -670,7 +672,44 @@ Platform notes:
 | `rotation`             | `rotation`                         |
 | `flat`                 | `flat`                             |
 | `opacity`              | `opacity`                          |
-| Custom RN child views  | Not supported (use bitmap `image`) |
+| Custom RN child views  | `MarkerView` children              |
+
+## Live JSX markers
+
+`MarkerView` draws a marker with live React Native content - `Pressable`, state, Reanimated animations - on Apple Maps and Google Maps alike. The map moves it with its native projection on every camera frame: nothing is snapshotted and no JavaScript runs while the camera moves.
+
+```tsx
+<MapView
+  clusteringEnabled
+  renderCluster={(cluster) => (
+    <MarkerView
+      coordinate={cluster.coordinate}
+      width={52}
+      height={52}
+      anchor={{ x: 0.5, y: 0.5 }}
+    >
+      <Pressable onPress={() => cluster.onPress()} style={styles.cluster}>
+        <Text>{cluster.count}</Text>
+      </Pressable>
+    </MarkerView>
+  )}
+>
+  {places.map((place) => (
+    <MarkerView
+      key={place.id}
+      coordinate={place.coordinate}
+      width={76}
+      height={40}
+    >
+      <Pressable onPress={() => select(place.id)} style={styles.bubble}>
+        <Text>{place.price} zł</Text>
+      </Pressable>
+    </MarkerView>
+  ))}
+</MapView>
+```
+
+Live markers share native clustering with `Marker`, and are mounted only while shown: a marker grouped into a cluster is unmounted, so keep persistent state in your app. Give each a fixed `width` and `height`, and animate `transform` and `opacity` inside it. For large static datasets, SDK-drawn `Marker` images remain the cheaper choice. See [Live JSX markers](docs/custom-marker-views.md) for the full contract.
 
 ## GeoJSON overlays
 
@@ -926,6 +965,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Scale control              | Supported                                                   | Unsupported                                | Unsupported; debug builds log a warning    |
 | Markers / overlays         | Supported                                                   | Supported                                  | Supported                                  |
 | Custom marker images       | Supported                                                   | Supported                                  | Supported                                  |
+| Live JSX markers           | Supported                                                   | Supported; the map renders at most 60 FPS  | Supported                                  |
 | Marker callouts / dragging | Supported                                                   | Supported                                  | Supported                                  |
 | Overlay press events       | Supported                                                   | Supported                                  | Supported                                  |
 | GeoJSON overlays           | Supported (JS conversion)                                   | Supported (JS conversion)                  | Supported (JS conversion)                  |
@@ -941,14 +981,15 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 
 ### Components
 
-| Component  | Description                       |
-| ---------- | --------------------------------- |
-| `MapView`  | Root map container                |
-| `Marker`   | Point annotation                  |
-| `Polyline` | Line overlay                      |
-| `Polygon`  | Filled area overlay               |
-| `Circle`   | Circular area overlay             |
-| `Geojson`  | GeoJSON FeatureCollection overlay |
+| Component    | Description                       |
+| ------------ | --------------------------------- |
+| `MapView`    | Root map container                |
+| `Marker`     | Point annotation                  |
+| `MarkerView` | Marker drawn by live JSX          |
+| `Polyline`   | Line overlay                      |
+| `Polygon`    | Filled area overlay               |
+| `Circle`     | Circular area overlay             |
+| `Geojson`    | GeoJSON FeatureCollection overlay |
 
 ### Types
 
@@ -971,6 +1012,9 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | `MapViewPropsForProvider`    | Provider-specific `MapView` props                     |
 | `MarkerDescriptor`           | Bulk marker descriptor                                |
 | `MarkerProps`                | Props for `Marker`                                    |
+| `MarkerViewProps`            | Props for `MarkerView`                                |
+| `MarkerViewCluster`          | Cluster passed to `renderCluster`                     |
+| `RenderMarkerViewCluster`    | Type of the `renderCluster` prop                      |
 | `MarkerImage`                | Resolved marker image descriptor                      |
 | `MarkerAnchor`               | Anchor point on marker image (0..1)                   |
 | `MarkerPoint`                | Point offset in dp                                    |
@@ -1014,6 +1058,7 @@ See [example/.env.example](example/.env.example) for the supported environment v
 - [Expo setup](docs/expo-setup.md)
 - [Architecture](docs/architecture.md)
 - [GeoJSON overlays](docs/geojson.md)
+- [Live JSX markers](docs/custom-marker-views.md)
 - [Roadmap](docs/roadmap.md)
 - [Contributing](CONTRIBUTING.md)
 - [Code of conduct](CODE_OF_CONDUCT.md)

@@ -9,6 +9,7 @@ import poiStar from '../assets/poiStar.png';
 import type { MapScenario } from './types';
 
 const markerRedSource = Image.resolveAssetSource(markerRed);
+const poiStarSource = Image.resolveAssetSource(poiStar);
 
 /** Leaflet Color Markers — logical size 25×41 dp (@2x bitmaps). */
 const LEAFLET_MARKER = {
@@ -25,7 +26,11 @@ const PIN_ANCHOR = { x: 0.5, y: 1 } as const;
 export interface CustomMarkerImagesOptions {
   rotation: number;
   flat: boolean;
+  /** The last pressed marker; the selectable pin grows while it is selected. */
+  selectedMarkerId: string | null;
 }
+
+const SELECTABLE_MARKER_ID = 'selectable-pin';
 
 const BASE = {
   latitude: 52.2297,
@@ -81,10 +86,10 @@ export function createCustomMarkerImagesScenario(
           longitude: longitude + lngStep * 1.5,
         },
         title: 'Remote URL',
-        subtitle: 'Leaflet gold pin · async fetch',
+        subtitle: 'Leaflet gold pin · scale 2 only · 25×41 dp',
         image: {
           uri: `${LEAFLET_BASE}/marker-icon-2x-gold.png`,
-          ...LEAFLET_MARKER,
+          scale: LEAFLET_MARKER.scale,
         },
         anchor: PIN_ANCHOR,
       },
@@ -207,6 +212,22 @@ export function createCustomMarkerImagesScenario(
         },
         anchor: PIN_ANCHOR,
       },
+      {
+        id: SELECTABLE_MARKER_ID,
+        coordinate: {
+          latitude: latitude - latStep * 3.9,
+          longitude,
+        },
+        title: 'Image swap',
+        subtitle: 'Press to toggle 34 / 48 dp · swaps in place',
+        image: {
+          uri: poiStarSource.uri,
+          width: options.selectedMarkerId === SELECTABLE_MARKER_ID ? 48 : 34,
+          height: options.selectedMarkerId === SELECTABLE_MARKER_ID ? 48 : 34,
+          scale: poiStarSource.scale,
+        },
+        anchor: { x: 0.5, y: 0.5 },
+      },
     ],
   };
 }
@@ -214,6 +235,7 @@ export function createCustomMarkerImagesScenario(
 export const customMarkerImagesScenario = createCustomMarkerImagesScenario({
   rotation: 45,
   flat: true,
+  selectedMarkerId: null,
 });
 
 export const CUSTOM_MARKER_IMAGES_SCENARIO_ID = customMarkerImagesScenario.id;

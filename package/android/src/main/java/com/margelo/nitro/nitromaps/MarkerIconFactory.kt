@@ -289,27 +289,27 @@ internal class MarkerIconFactory(
     image: MarkerImage,
     key: String,
   ): BitmapDescriptor? {
+    val bitmap = loadRemoteBitmap(image, key) ?: return null
+    return cacheBitmap(key, bitmap)
+  }
+
+  private fun loadRemoteBitmap(
+    image: MarkerImage,
+    key: String = cacheKey(image),
+  ): Bitmap? {
     return try {
       val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
       val bitmap = decodeByteArray(bytes, image)
       if (bitmap == null) {
         logLoadFailure(image, key, "not decodable")
-        return null
       }
-      cacheBitmap(key, bitmap)
-    val bitmap = loadRemoteBitmap(image) ?: return null
-    return cacheBitmap(key, bitmap)
-  }
-
-  private fun loadRemoteBitmap(image: MarkerImage): Bitmap? =
-    try {
-      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri)
-      bytes?.let { decodeByteArray(it, image) }?.let { resizeBitmap(it, image) }
+      bitmap
     } catch (error: Exception) {
       // Not the exception itself: its message can carry the full URL.
       logLoadFailure(image, key, "request failed: ${error.javaClass.simpleName}")
       null
     }
+  }
 
   private fun loadLocalBitmap(image: MarkerImage): Bitmap? {
     val uri = image.uri

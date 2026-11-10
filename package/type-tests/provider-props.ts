@@ -123,6 +123,8 @@ export const mapboxClusterPressBehaviorProps: MapViewPropsForProvider<'mapbox'> 
     provider: 'mapbox',
     // @ts-expect-error Planned Mapbox support has no clustering capability yet.
     clusterPressBehavior: 'none',
+  };
+
 export const openStreetMapClusterStyleProps: MapViewPropsForProvider<'openstreetmap'> =
   {
     provider: 'openstreetmap',

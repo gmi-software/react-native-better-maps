@@ -250,6 +250,8 @@ interface ExistingDefaultProviderProps
    * camera still, for apps that open a list or sheet for the cluster instead.
    */
   clusterPressBehavior?: ClusterPressBehavior;
+
+  /**
    * How the cluster badge looks: its colors, border, or an image behind the count. Fields
    * left out keep the default badge's look.
    */
@@ -287,6 +289,8 @@ interface AppleMapViewProps
    * camera still, for apps that open a list or sheet for the cluster instead.
    */
   clusterPressBehavior?: ClusterPressBehavior;
+
+  /**
    * How the cluster badge looks: its colors, border, or an image behind the count. Fields
    * left out keep the default badge's look.
    */
@@ -321,6 +325,8 @@ interface GoogleMapViewProps
    * camera still, for apps that open a list or sheet for the cluster instead.
    */
   clusterPressBehavior?: ClusterPressBehavior;
+
+  /**
    * How the cluster badge looks: its colors, border, or an image behind the count. Fields
    * left out keep the default badge's look.
    */

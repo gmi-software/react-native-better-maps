@@ -532,6 +532,10 @@ const ScenarioDock = memo(function ScenarioDock({
               >
                 <Text style={styles.actionButtonIcon}>⤢</Text>
                 <Text style={styles.actionButtonText}>Fit</Text>
+              </ScalePressable>
+            </View>
+          ) : null}
+
           {scenario.advanced?.clusteringEnabled === true ? (
             <View style={styles.actionRow}>
               <ScalePressable
@@ -569,6 +573,11 @@ const ScenarioDock = memo(function ScenarioDock({
                 <Text style={styles.actionButtonIcon}>◌</Text>
                 <Text style={styles.actionButtonText}>
                   POIs · {pointsOfInterestLabel(pointsOfInterest)}
+                </Text>
+              </ScalePressable>
+            </View>
+          ) : null}
+
           {scenario.advanced?.clusteringEnabled ? (
             <View style={styles.actionRow}>
               <ScalePressable
@@ -996,6 +1005,7 @@ export default function App() {
     setClusterPressBehavior(next);
     setStatus(`Cluster press · ${next}`);
   }, [clusterPressBehavior]);
+
   const cycleClusterStyle = useCallback(() => {
     setClusterStyleIndex(
       (current) => (current + 1) % CLUSTER_STYLE_OPTIONS.length,

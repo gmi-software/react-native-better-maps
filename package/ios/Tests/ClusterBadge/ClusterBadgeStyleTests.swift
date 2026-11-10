@@ -72,3 +72,88 @@ func definesEveryColorAsValidHex() {
   }
   #expect(ClusterBadgeStyle.shadowColor.toHexColorComponents()?.alpha == 0x47)
 }
+
+@Test
+func fitsTheCountInsideAGivenInset() {
+  // With no border, a 56 pt badge leaves 56 - 2 * 4 = 48 pt for the count.
+  #expect(ClusterBadgeStyle.fittedLabelFontSize(labelWidth: 48, diameter: 56, inset: 0) == 13)
+  #expect(ClusterBadgeStyle.fittedLabelFontSize(labelWidth: 48, diameter: 56) < 13)
+}
+
+@Test
+func keepsTheDefaultBadgeWhenNoStyleIsSet() {
+  let appearance = ClusterBadgeAppearance()
+
+  #expect(appearance == .standard)
+  #expect(appearance.fill == .gradient)
+  #expect(appearance.borderColor == ClusterBadgeStyle.borderColor)
+  #expect(appearance.borderWidth == ClusterBadgeStyle.borderWidth)
+  #expect(appearance.labelColor == ClusterBadgeStyle.labelColor)
+  #expect(appearance.backgroundImageKey == nil)
+}
+
+@Test
+func replacesTheGradientWithAFlatBackgroundColor() {
+  let appearance = ClusterBadgeAppearance(
+    backgroundColor: "#E30613",
+    textColor: "#000000",
+    borderColor: "#00FF00",
+    borderWidth: 3
+  )
+
+  #expect(appearance.fill == .solid("#E30613"))
+  #expect(appearance.labelColor == "#000000")
+  #expect(appearance.borderColor == "#00FF00")
+  #expect(appearance.borderWidth == 3)
+}
+
+@Test
+func keepsTheFieldsAStyleLeavesOut() {
+  let appearance = ClusterBadgeAppearance(textColor: "#000000")
+
+  #expect(appearance.fill == .gradient)
+  #expect(appearance.borderColor == ClusterBadgeStyle.borderColor)
+  #expect(appearance.borderWidth == ClusterBadgeStyle.borderWidth)
+}
+
+@Test
+func clampsTheBorderWidth() {
+  #expect(ClusterBadgeAppearance(borderWidth: -1).borderWidth == 0)
+  #expect(ClusterBadgeAppearance(borderWidth: .nan).borderWidth == ClusterBadgeStyle.borderWidth)
+  #expect(ClusterBadgeAppearance(borderWidth: .infinity).borderWidth == ClusterBadgeStyle.borderWidth)
+}
+
+@Test
+func drawsTheDiscInTheFillColorWithoutABorder() {
+  #expect(ClusterBadgeAppearance(borderColor: "#00FF00").discColor == "#00FF00")
+  #expect(ClusterBadgeAppearance(backgroundColor: "#E30613", borderWidth: 0).discColor == "#E30613")
+  #expect(ClusterBadgeAppearance(borderWidth: 0).discColor == ClusterBadgeStyle.gradientBottomColor)
+}
+
+@Test
+func letsTheCountUseTheBorderOfAnImageBadge() {
+  #expect(ClusterBadgeAppearance(borderWidth: 3).labelInset == 3)
+  #expect(ClusterBadgeAppearance(borderWidth: 3, backgroundImageKey: "badge.png").labelInset == 0)
+}
+
+@Test
+func fallsBackToTheColoredBadgeWithoutItsImage() {
+  let appearance = ClusterBadgeAppearance(backgroundColor: "#E30613", backgroundImageKey: "badge.png")
+
+  #expect(appearance.withoutBackgroundImage == ClusterBadgeAppearance(backgroundColor: "#E30613"))
+}
+
+@Test
+func cachesEveryLookApart() {
+  let looks = [
+    ClusterBadgeAppearance(),
+    ClusterBadgeAppearance(backgroundColor: "#E30613"),
+    ClusterBadgeAppearance(textColor: "#000000"),
+    ClusterBadgeAppearance(borderColor: "#000000"),
+    ClusterBadgeAppearance(borderWidth: 0),
+    ClusterBadgeAppearance(backgroundImageKey: "badge.png"),
+  ]
+
+  #expect(Set(looks.map(\.cacheKey)).count == looks.count)
+  #expect(ClusterBadgeAppearance().cacheKey == ClusterBadgeAppearance.standard.cacheKey)
+}

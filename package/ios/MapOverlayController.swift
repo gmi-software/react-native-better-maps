@@ -43,8 +43,35 @@ final class MapOverlayController {
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
 
+  private let clusterBadges = ClusterBadgeStyleState()
+
   init(mapView: MKMapView) {
     self.mapView = mapView
+    clusterBadges.onChange = { [weak self] in
+      self?.refreshClusterViews()
+    }
+  }
+
+  func setClusterStyle(_ style: ClusterStyleDescriptor?) {
+    clusterBadges.setStyle(style)
+  }
+
+  func clusterBadgeImage(count: Int) -> UIImage {
+    clusterBadges.image(count: count)
+  }
+
+  /// Redraws the clusters on screen in place; the rest get the new badge when MapKit asks for
+  /// their views.
+  private func refreshClusterViews() {
+    guard let mapView else {
+      return
+    }
+    for case let cluster as MapClusterAnnotation in displayedAnnotations.values {
+      (mapView.view(for: cluster) as? NitroClusterAnnotationView)?.configure(
+        count: cluster.count,
+        image: clusterBadges.image(count: cluster.count)
+      )
+    }
   }
 
   private var usesViewportPipeline: Bool {
@@ -180,7 +207,7 @@ final class MapOverlayController {
             region: region
           )
           if let view = mapView.view(for: cluster) as? NitroClusterAnnotationView {
-            view.configure(count: count)
+            view.configure(count: count, image: clusterBadges.image(count: count))
           }
         }
       }

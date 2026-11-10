@@ -2,6 +2,7 @@ package com.margelo.nitro.nitromaps
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -71,4 +72,93 @@ class ClusterBadgeStyleTest {
     }
     assertEquals(0x47, ClusterBadgeStyle.SHADOW_COLOR.toColorInt() ushr 24)
   }
+
+  @Test
+  fun fitsTheCountInsideAGivenInset() {
+    // With no border, a 56 dp badge leaves 56 - 2 * 4 = 48 dp for the count.
+    assertEquals(13f, ClusterBadgeStyle.fittedLabelFontSizeDp(labelWidthDp = 48f, diameterDp = 56f, insetDp = 0f))
+    assertTrue(ClusterBadgeStyle.fittedLabelFontSizeDp(labelWidthDp = 48f, diameterDp = 56f) < 13f)
+  }
+
+  @Test
+  fun keepsTheDefaultBadgeWhenNoStyleIsSet() {
+    val appearance = resolve()
+
+    assertEquals(ClusterBadgeAppearance.STANDARD, appearance)
+    assertNull(appearance.solidFillColor)
+    assertEquals(ClusterBadgeStyle.BORDER_COLOR, appearance.borderColor)
+    assertEquals(ClusterBadgeStyle.BORDER_WIDTH_DP, appearance.borderWidthDp)
+    assertEquals(ClusterBadgeStyle.LABEL_COLOR, appearance.labelColor)
+    assertNull(appearance.backgroundImageKey)
+  }
+
+  @Test
+  fun replacesTheGradientWithAFlatBackgroundColor() {
+    val appearance =
+      resolve(backgroundColor = "#E30613", textColor = "#000000", borderColor = "#00FF00", borderWidth = 3.0)
+
+    assertEquals("#E30613", appearance.solidFillColor)
+    assertEquals("#000000", appearance.labelColor)
+    assertEquals("#00FF00", appearance.borderColor)
+    assertEquals(3f, appearance.borderWidthDp)
+  }
+
+  @Test
+  fun keepsTheFieldsAStyleLeavesOut() {
+    val appearance = resolve(textColor = "#000000")
+
+    assertNull(appearance.solidFillColor)
+    assertEquals(ClusterBadgeStyle.BORDER_COLOR, appearance.borderColor)
+    assertEquals(ClusterBadgeStyle.BORDER_WIDTH_DP, appearance.borderWidthDp)
+  }
+
+  @Test
+  fun clampsTheBorderWidth() {
+    assertEquals(0f, resolve(borderWidth = -1.0).borderWidthDp)
+    assertEquals(ClusterBadgeStyle.BORDER_WIDTH_DP, resolve(borderWidth = Double.NaN).borderWidthDp)
+    assertEquals(ClusterBadgeStyle.BORDER_WIDTH_DP, resolve(borderWidth = Double.POSITIVE_INFINITY).borderWidthDp)
+  }
+
+  @Test
+  fun drawsTheDiscInTheFillColorWithoutABorder() {
+    assertEquals("#00FF00", resolve(borderColor = "#00FF00").discColor)
+    assertEquals("#E30613", resolve(backgroundColor = "#E30613", borderWidth = 0.0).discColor)
+    assertEquals(ClusterBadgeStyle.GRADIENT_BOTTOM_COLOR, resolve(borderWidth = 0.0).discColor)
+  }
+
+  @Test
+  fun letsTheCountUseTheBorderOfAnImageBadge() {
+    assertEquals(3f, resolve(borderWidth = 3.0).labelInsetDp)
+    assertEquals(0f, resolve(borderWidth = 3.0, backgroundImageKey = "badge.png").labelInsetDp)
+  }
+
+  @Test
+  fun fallsBackToTheColoredBadgeWithoutItsImage() {
+    val appearance = resolve(backgroundColor = "#E30613", backgroundImageKey = "badge.png")
+
+    assertEquals(resolve(backgroundColor = "#E30613"), appearance.withoutBackgroundImage)
+  }
+
+  @Test
+  fun cachesEveryLookApart() {
+    val looks =
+      listOf(
+        resolve(),
+        resolve(backgroundColor = "#E30613"),
+        resolve(textColor = "#000000"),
+        resolve(borderColor = "#000000"),
+        resolve(borderWidth = 0.0),
+        resolve(backgroundImageKey = "badge.png"),
+      )
+
+    assertEquals(looks.size, looks.map { it.cacheKey }.toSet().size)
+  }
+
+  private fun resolve(
+    backgroundColor: String? = null,
+    textColor: String? = null,
+    borderColor: String? = null,
+    borderWidth: Double? = null,
+    backgroundImageKey: String? = null,
+  ) = ClusterBadgeAppearance.resolve(backgroundColor, textColor, borderColor, borderWidth, backgroundImageKey)
 }

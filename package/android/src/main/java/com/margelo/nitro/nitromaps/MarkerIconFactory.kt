@@ -159,7 +159,7 @@ internal class MarkerIconFactory(
 
   private fun defaultMarkerDisplaySizePx(): Pair<Float, Float> = (DEFAULT_MARKER_WIDTH_DP * density) to (DEFAULT_MARKER_HEIGHT_DP * density)
 
-  private fun cacheKey(image: MarkerImage): String {
+  fun cacheKey(image: MarkerImage): String {
     // `origin` is part of the key so a bundled image cannot warm the cache for a
     // user-supplied one with the same URI, which would hand it a policy-free entry.
     return "${image.uri}|${image.width ?: ""}|${image.height ?: ""}|${image.scale ?: ""}|${image.origin ?: ""}"
@@ -199,6 +199,30 @@ internal class MarkerIconFactory(
           loadLocalIcon(image, key)
         }
       deliverOnMainThread { onLoaded(descriptor) }
+    }
+  }
+
+  /**
+   * Loads [image] as a bitmap to draw into another icon, such as a cluster badge, under the
+   * same remote host policy as a marker image. Not cached here: the caller keeps it.
+   * [onLoaded] runs on the main thread, with `null` when the image cannot be loaded.
+   */
+  fun loadBitmap(
+    image: MarkerImage,
+    onLoaded: (Bitmap?) -> Unit,
+  ) {
+    val isRemote = RemoteMarkerUriPolicy.isRemoteUri(image.uri)
+    if (isRemote) {
+      RemoteMarkerUriPolicy.rejectReason(image, resolveHostAddress = false)?.let { reason ->
+        logRejectedRemoteMarkerUri(image.uri, reason)
+        deliverOnMainThread { onLoaded(null) }
+        return
+      }
+    }
+
+    loadExecutor.execute {
+      val bitmap = if (isRemote) loadRemoteBitmap(image) else loadLocalBitmap(image)
+      deliverOnMainThread { onLoaded(bitmap) }
     }
   }
 
@@ -243,15 +267,18 @@ internal class MarkerIconFactory(
     image: MarkerImage,
     key: String,
   ): BitmapDescriptor? {
-    return try {
-      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
-      val bitmap = decodeByteArray(bytes, image) ?: return null
-      cacheBitmap(key, resizeBitmap(bitmap, image))
+    val bitmap = loadRemoteBitmap(image) ?: return null
+    return cacheBitmap(key, bitmap)
+  }
+
+  private fun loadRemoteBitmap(image: MarkerImage): Bitmap? =
+    try {
+      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri)
+      bytes?.let { decodeByteArray(it, image) }?.let { resizeBitmap(it, image) }
     } catch (error: Exception) {
       Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image: ${image.uri}", error)
       null
     }
-  }
 
   private fun loadLocalBitmap(image: MarkerImage): Bitmap? {
     val uri = image.uri

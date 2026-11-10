@@ -48,9 +48,13 @@ enum ClusterBadgeStyle {
   }
 
   /// The font size that fits a count measuring `labelWidth` at `labelFontSize` inside
-  /// the border of a badge `diameter` across.
-  static func fittedLabelFontSize(labelWidth: CGFloat, diameter: CGFloat) -> CGFloat {
-    let availableWidth = diameter - 2 * (borderWidth + labelPadding)
+  /// a border `inset` wide on a badge `diameter` across.
+  static func fittedLabelFontSize(
+    labelWidth: CGFloat,
+    diameter: CGFloat,
+    inset: CGFloat = borderWidth
+  ) -> CGFloat {
+    let availableWidth = diameter - 2 * (inset + labelPadding)
     guard labelWidth > availableWidth else {
       return labelFontSize
     }

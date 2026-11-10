@@ -274,6 +274,14 @@ class GoogleMapProviderAdapter(
       overlayController.clusterEnteringAnimation = value
     }
 
+  private var _clusterStyle: ClusterStyleDescriptor? = null
+  override var clusterStyle: ClusterStyleDescriptor?
+    get() = _clusterStyle
+    set(value) {
+      _clusterStyle = value
+      overlayController.setClusterStyle(value)
+    }
+
   override var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
   override var onRegionChangeComplete: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
   override var onMapReady: (() -> Unit)? = null

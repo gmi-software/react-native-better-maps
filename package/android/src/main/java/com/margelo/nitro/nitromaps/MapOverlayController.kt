@@ -60,7 +60,10 @@ internal class MapOverlayController(
   private var liveRefreshRunnable: Runnable? = null
   private var lastLiveRefreshMs: Long = 0L
   private var computeExecutor = Executors.newSingleThreadExecutor()
-  private val iconFactory = ClusterIconFactory(density)
+  private val iconFactory =
+    ClusterIconFactory(density, markerIconFactory).apply {
+      onChange = { refreshClusterIcons() }
+    }
 
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
@@ -93,6 +96,17 @@ internal class MapOverlayController(
     viewHeightPx = heightPx
     if (widthPx > 0 && heightPx > 0 && renderState.usesViewportPipeline) {
       refreshViewportMarkers()
+    }
+  }
+
+  fun setClusterStyle(style: ClusterStyleDescriptor?) {
+    iconFactory.setStyle(style)
+  }
+
+  /** Redraws the clusters on the map in place. */
+  private fun refreshClusterIcons() {
+    for ((key, cluster) in clusterByKey) {
+      markers[key]?.setIcon(iconFactory.icon(cluster.count))
     }
   }
 

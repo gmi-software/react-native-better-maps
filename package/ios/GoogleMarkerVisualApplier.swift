@@ -5,7 +5,15 @@ import UIKit
 /// Applies a marker descriptor's visual fields onto a `GMSMarker`. Main-thread only.
 final class GoogleMarkerVisualApplier {
   private static let defaultIconToken: NSString = "__default__"
+  private static let placeholderIconToken: NSString = "__placeholder__"
   private static let defaultPinImage = GMSMarker.markerImage(with: nil)
+  /// Shown while a marker's first image loads, or after it failed: a `nil` icon is the default pin.
+  static let placeholderIcon: UIImage = {
+    let format = UIGraphicsImageRendererFormat()
+    format.opaque = false
+    format.scale = 1
+    return UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1), format: format).image { _ in }
+  }()
 
   private struct PendingIconLoad {
     let applicationToken: NSObject
@@ -80,6 +88,10 @@ final class GoogleMarkerVisualApplier {
     }
 
     cancelPending(state)
+    // A marker that already shows an image keeps it until the new one is ready, like a cache hit.
+    if !showsImage(state) {
+      showPlaceholder(on: marker, state: state)
+    }
     let applicationToken = NSObject()
     state.pending = PendingIconLoad(
       applicationToken: applicationToken,
@@ -97,6 +109,8 @@ final class GoogleMarkerVisualApplier {
       }
       state.pending = nil
       guard let uiImage else {
+        // The loader logged why. The placeholder token makes the next apply retry the load.
+        self.showPlaceholder(on: marker, state: state)
         return
       }
       self.setIcon(
@@ -121,6 +135,18 @@ final class GoogleMarkerVisualApplier {
     state.appliedImageToken = token
   }
 
+  private func showsImage(_ state: MarkerIconState) -> Bool {
+    guard let token = state.appliedImageToken, token != Self.placeholderIconToken else {
+      return false
+    }
+    return !token.hasPrefix(Self.defaultIconToken as String)
+  }
+
+  private func showPlaceholder(on marker: GMSMarker, state: MarkerIconState) {
+    marker.icon = Self.placeholderIcon
+    state.appliedImageToken = Self.placeholderIconToken
+  }
+
   private func state(for marker: GMSMarker) -> MarkerIconState {
     if let existing = states.object(forKey: marker) {
       return existing
@@ -143,7 +169,7 @@ final class GoogleMarkerVisualApplier {
     if descriptor.image == nil {
       return Self.defaultPinImage.size
     }
-    if let icon, icon.size.width > 0, icon.size.height > 0 {
+    if let icon, icon !== Self.placeholderIcon, icon.size.width > 0, icon.size.height > 0 {
       return icon.size
     }
     return Self.defaultPinImage.size

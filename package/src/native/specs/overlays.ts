@@ -9,8 +9,14 @@ export type MarkerImageOrigin = 'bundled' | 'remote';
 
 export interface MarkerImage {
   uri: string;
+  /** Display width in dp. Used only together with `height`; both win over `scale`. */
   width?: number;
+  /** Display height in dp. Used only together with `width`; both win over `scale`. */
   height?: number;
+  /**
+   * Pixels per dp of the bitmap, e.g. `2` for an `@2x` image. Without `width`/`height`, the
+   * image draws at its pixel size divided by `scale`.
+   */
   scale?: number;
 
   /** Absent means user-supplied — the Android remote host policy applies. */

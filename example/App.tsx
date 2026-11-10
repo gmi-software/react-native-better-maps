@@ -788,6 +788,9 @@ export default function App() {
   const [dockExpanded, setDockExpanded] = useState(false);
   const [customMarkerRotation, setCustomMarkerRotation] = useState(45);
   const [customMarkerFlat, setCustomMarkerFlat] = useState(true);
+  const [selectedCustomMarkerId, setSelectedCustomMarkerId] = useState<
+    string | null
+  >(null);
   const [applePoiDetailPresentation, setApplePoiDetailPresentation] =
     useState<ApplePoiDetailPresentation>(
       APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
@@ -800,6 +803,7 @@ export default function App() {
         return createCustomMarkerImagesScenario({
           rotation: customMarkerRotation,
           flat: customMarkerFlat,
+          selectedMarkerId: selectedCustomMarkerId,
         });
       case APPLE_POI_DETAILS_SCENARIO_ID:
         return createApplePoiDetailsScenario(applePoiDetailPresentation);
@@ -810,6 +814,7 @@ export default function App() {
     baseScenario,
     customMarkerRotation,
     customMarkerFlat,
+    selectedCustomMarkerId,
     applePoiDetailPresentation,
   ]);
   const provider = SUPPORTED_MAP_PROVIDERS[providerIndex] ?? 'google';
@@ -967,6 +972,7 @@ export default function App() {
 
   const handleMarkerPress = useCallback((id: string) => {
     setStatus(`Marker · ${id}`);
+    setSelectedCustomMarkerId((current) => (current === id ? null : id));
   }, []);
 
   const handleMarkerDragEnd = useCallback(

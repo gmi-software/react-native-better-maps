@@ -8,7 +8,9 @@ import poiRestaurant from '../assets/poiRestaurant.png';
 import poiStar from '../assets/poiStar.png';
 import type { MapScenario } from './types';
 
-const markerRedSource = Image.resolveAssetSource(markerRed);
+// A bundled require() asset always resolves; React Native 0.88 still types the
+// result as `| undefined`.
+const markerRedSource = Image.resolveAssetSource(markerRed)!;
 
 /** Leaflet Color Markers — logical size 25×41 dp (@2x bitmaps). */
 const LEAFLET_MARKER = {

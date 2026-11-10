@@ -11,8 +11,8 @@ name: Native
 #
 # The two lists below are identical; GitHub Actions does not support YAML anchors.
 # Two entries are not self-evident: `package/scripts/**` holds
-# patch-nitrogen-generated.mjs, which rewrites the generated C++ that both CMake and
-# the pod compile; `package/iosTests/**` compiles nothing today, because autolinking
+# patch-nitrogen-generated.mjs, which rewrites the generated Swift that the pod
+# compiles; `package/iosTests/**` compiles nothing today, because autolinking
 # declares the pod without `:testspecs`, but is listed so the filter is already right
 # once that is wired up.
 on:

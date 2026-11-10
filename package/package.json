@@ -84,18 +84,18 @@
   "peerDependencies": {
     "react": "*",
     "react-native": ">=0.78.0",
-    "react-native-nitro-modules": ">=0.35.0"
+    "react-native-nitro-modules": ">=0.37.0"
   },
   "devDependencies": {
-    "@expo/config-plugins": "~57.0.0",
+    "@expo/config-plugins": "~58.0.12",
     "@release-it/conventional-changelog": "^12.0.2",
     "@types/bun": "^1.4.2",
-    "@types/react": "^19.2.15",
-    "nitrogen": "^0.35.9",
-    "react": "19.2.3",
-    "react-native": "0.86.0",
+    "@types/react": "^19.3.0",
+    "nitrogen": "^0.37.2",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
     "react-native-builder-bob": "^0.43.1",
-    "react-native-nitro-modules": "^0.35.10",
+    "react-native-nitro-modules": "^0.37.2",
     "release-it": "^21.1.0",
     "typescript": "^6.0.3"
   },

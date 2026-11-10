@@ -87,4 +87,95 @@ extension ApplePoiCategory {
 
     return (.unknown, category.rawValue)
   }
+
+  /// The MapKit category for a POI filter, or nil when the running OS has none:
+  /// the categories added in iOS 18 on iOS 16 and 17, and `unknown` everywhere.
+  var mkPointOfInterestCategory: MKPointOfInterestCategory? {
+    switch self {
+    case .airport: return .airport
+    case .amusementpark: return .amusementPark
+    case .aquarium: return .aquarium
+    case .atm: return .atm
+    case .bakery: return .bakery
+    case .bank: return .bank
+    case .beach: return .beach
+    case .brewery: return .brewery
+    case .cafe: return .cafe
+    case .campground: return .campground
+    case .carrental: return .carRental
+    case .evcharger: return .evCharger
+    case .firestation: return .fireStation
+    case .fitnesscenter: return .fitnessCenter
+    case .foodmarket: return .foodMarket
+    case .gasstation: return .gasStation
+    case .hospital: return .hospital
+    case .hotel: return .hotel
+    case .laundry: return .laundry
+    case .library: return .library
+    case .marina: return .marina
+    case .movietheater: return .movieTheater
+    case .museum: return .museum
+    case .nationalpark: return .nationalPark
+    case .nightlife: return .nightlife
+    case .park: return .park
+    case .parking: return .parking
+    case .pharmacy: return .pharmacy
+    case .police: return .police
+    case .postoffice: return .postOffice
+    case .publictransport: return .publicTransport
+    case .restaurant: return .restaurant
+    case .restroom: return .restroom
+    case .school: return .school
+    case .stadium: return .stadium
+    case .store: return .store
+    case .theater: return .theater
+    case .university: return .university
+    case .winery: return .winery
+    case .zoo: return .zoo
+    case .unknown: return nil
+    default: break
+    }
+
+    guard #available(iOS 18.0, *) else {
+      return nil
+    }
+    switch self {
+    case .animalservice: return .animalService
+    case .automotiverepair: return .automotiveRepair
+    case .baseball: return .baseball
+    case .basketball: return .basketball
+    case .beauty: return .beauty
+    case .bowling: return .bowling
+    case .castle: return .castle
+    case .conventioncenter: return .conventionCenter
+    case .distillery: return .distillery
+    case .fairground: return .fairground
+    case .fishing: return .fishing
+    case .fortress: return .fortress
+    case .golf: return .golf
+    case .gokart: return .goKart
+    case .hiking: return .hiking
+    case .kayaking: return .kayaking
+    case .landmark: return .landmark
+    case .mailbox: return .mailbox
+    case .minigolf: return .miniGolf
+    case .musicvenue: return .musicVenue
+    case .nationalmonument: return .nationalMonument
+    case .planetarium: return .planetarium
+    case .rockclimbing: return .rockClimbing
+    case .rvpark: return .rvPark
+    case .skatepark: return .skatePark
+    case .skating: return .skating
+    case .skiing: return .skiing
+    case .soccer: return .soccer
+    case .spa: return .spa
+    case .surfing: return .surfing
+    case .swimming: return .swimming
+    case .tennis: return .tennis
+    case .volleyball: return .volleyball
+    case .playground: return MKPointOfInterestCategory(rawValue: "MKPOICategoryPlayground")
+    case .religioussite: return MKPointOfInterestCategory(rawValue: "MKPOICategoryReligiousSite")
+    default: return nil
+    }
+  }
 }

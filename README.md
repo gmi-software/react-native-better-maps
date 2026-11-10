@@ -32,6 +32,7 @@ Built with [Nitro Modules](https://nitro.margelo.com/) for high-performance nati
 - [Map providers](#map-providers)
 - [Region change events](#region-change-events)
 - [Native POI press events](#native-poi-press-events)
+- [Filtering points of interest](#filtering-points-of-interest)
 - [Custom marker images](#custom-marker-images)
 - [GeoJSON overlays](#geojson-overlays)
 - [Google Maps setup](#google-maps-setup)
@@ -585,6 +586,46 @@ Apple MapKit can present its own place details for a selected point of interest 
 - On iOS 16 and 17 the prop is a no-op: POI taps still emit `onPoiPress` and the selection is cleared, but no native details appear.
 - The Google Maps SDK (iOS and Android) has no equivalent native place-detail surface, so Google POI taps remain event-only.
 
+## Filtering points of interest
+
+`pointsOfInterest` picks which provider-owned points of interest the base map shows. Pair it with `mapType="mutedStandard"` for a quiet map under your own pins:
+
+```tsx
+<MapView mapType="mutedStandard" pointsOfInterest="none" style={{ flex: 1 }} />
+
+<MapView pointsOfInterest={{ exclude: ['restaurant', 'store'] }} style={{ flex: 1 }} />
+
+<MapView pointsOfInterest={{ include: ['park', 'museum'] }} style={{ flex: 1 }} />
+```
+
+| Value                       | Shows                      |
+| --------------------------- | -------------------------- |
+| omitted                     | The provider default (all) |
+| `'all'`                     | Every POI                  |
+| `'none'`                    | No POI                     |
+| `{ include: PoiCategory[] }` | Only these categories      |
+| `{ exclude: PoiCategory[] }` | Every category but these   |
+
+`PoiCategory` is `ApplePoiCategory` without `unknown`.
+
+- **Apple MapKit** filters by category through `MKPointOfInterestFilter`. The prop overrides the POI rules in `customMapStyle`; without it, a style that turns any `poi` feature off still hides every POI. Categories added in iOS 18 (such as `beauty`, `castle` or `hiking`) are skipped on iOS 16 and 17. Satellite maps show no POIs either way.
+- **Google Maps** has no category filter, so the prop becomes style rules. They come before your `customMapStyle` rules, so a rule of yours for the same feature wins. Google groups POIs more coarsely, and each category stands for its group:
+
+  | Google feature type    | Categories                                                                                                                                                                                                                        |
+  | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `poi.attraction`       | `amusementPark`, `aquarium`, `castle`, `fortress`, `landmark`, `museum`, `nationalMonument`, `planetarium`, `zoo`                                                                                                                 |
+  | `poi.business`         | `animalService`, `atm`, `automotiveRepair`, `bakery`, `bank`, `beauty`, `bowling`, `brewery`, `cafe`, `carRental`, `distillery`, `evCharger`, `fitnessCenter`, `foodMarket`, `gasStation`, `hotel`, `laundry`, `movieTheater`, `musicVenue`, `nightlife`, `restaurant`, `spa`, `store`, `theater`, `winery` |
+  | `poi.government`       | `postOffice`                                                                                                                                                                                                                      |
+  | `poi.medical`          | `fireStation`, `hospital`, `pharmacy`, `police`                                                                                                                                                                                   |
+  | `poi.park`             | `nationalPark`, `park`, `playground`                                                                                                                                                                                              |
+  | `poi.place_of_worship` | `religiousSite`                                                                                                                                                                                                                   |
+  | `poi.school`           | `school`, `university`                                                                                                                                                                                                            |
+  | `poi.sports_complex`   | `baseball`, `basketball`, `golf`, `soccer`, `stadium`, `tennis`, `volleyball`                                                                                                                                                     |
+
+  Excluding `restaurant` therefore hides every business, and including it shows every business. The other categories (`airport`, `beach`, `campground`, `fishing`, `hiking`, `kayaking`, `library`, `mailbox`, `marina`, `miniGolf`, `goKart`, `parking`, `publicTransport`, `restroom`, `rockClimbing`, `rvPark`, `skatePark`, `skating`, `skiing`, `surfing`, `swimming`, `fairground`, `conventionCenter`) have no Google POI type: they are ignored in `exclude` and stay hidden with `include`.
+- Google Maps ignores styles when `googleMapId` is set, so the prop has no effect there; debug builds log a warning. Set POI visibility in the cloud map style instead.
+- `openstreetmap` and `mapbox` reject the prop at the type level.
+
 ## Custom marker images
 
 Markers support custom bitmap icons with positioning and styling options:
@@ -926,7 +967,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Fit to coordinates         | Supported                                                   | Supported                                  | Supported                                  |
 | Screen point conversion    | Supported                                                   | Supported                                  | Supported                                  |
 | Region change events       | Supported, with `isGesture`                                 | Supported, with `isGesture`                | Supported, with `isGesture`                |
-| Map types                  | Standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain       | Standard, satellite, hybrid, terrain       |
+| Map types                  | Standard, muted standard, satellite, hybrid; terrain falls back to standard | Standard, satellite, hybrid, terrain; muted standard falls back to standard | Standard, satellite, hybrid, terrain; muted standard falls back to standard |
 | Gestures                   | Supported                                                   | Supported                                  | Supported                                  |
 | User location              | Supported; host app owns permission prompt                  | Supported; host app owns permission prompt | Supported; host app owns permission prompt |
 | Follow user location       | Supported                                                   | Supported                                  | Unsupported; debug builds log a warning    |
@@ -939,6 +980,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | GeoJSON overlays           | Supported (JS conversion)                                   | Supported (JS conversion)                  | Supported (JS conversion)                  |
 | Native POI press events    | Supported on iOS 16+                                        | Supported                                  | Supported                                  |
 | Native POI details         | Supported on iOS 18+ (callout, sheet, Open in Maps)         | Unsupported; taps stay event-only          | Unsupported; taps stay event-only          |
+| POI filter (`pointsOfInterest`) | By category; iOS 18 categories need iOS 18          | By Google POI group, via map styles; not with `googleMapId` | By Google POI group, via map styles; not with `googleMapId` |
 | Marker entering animation  | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Cluster entering animation | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Clustering                 | Supported                                                   | Supported                                  | Supported                                  |
@@ -967,12 +1009,14 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | `Region`                     | Center + span                                         |
 | `RegionChangeDetails`        | `{ isGesture }` context for a region change           |
 | `Camera`                     | Position, zoom, heading, pitch                        |
-| `MapType`                    | `'standard' \| 'satellite' \| 'hybrid' \| 'terrain'`  |
+| `MapType`                    | `'standard' \| 'mutedStandard' \| 'satellite' \| 'hybrid' \| 'terrain'` |
 | `MapProvider`                | `'apple' \| 'google' \| 'openstreetmap' \| 'mapbox'`  |
 | `PoiPressEvent`              | Provider-discriminated native POI press payload       |
 | `ApplePoiPressEvent`         | Apple Maps POI payload with category                  |
 | `GooglePoiPressEvent`        | Google Maps POI payload with place ID                 |
 | `ApplePoiCategory`           | Known MapKit POI categories plus `unknown`            |
+| `PoiCategory`                | `ApplePoiCategory` without `unknown`, for `pointsOfInterest` |
+| `PointsOfInterest`           | `'all' \| 'none' \| { include } \| { exclude }` POI filter |
 | `ApplePoiDetailPresentation` | `'automatic' \| 'callout' \| 'sheet' \| 'openInMaps'` |
 | `MapViewRef`                 | Imperative handle for the camera and screen points    |
 | `MapViewProps`               | Props for `MapView`                                   |

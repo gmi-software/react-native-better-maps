@@ -45,6 +45,7 @@ class HybridMapView(
   private var _showsScale: Boolean? = null
   private var _applePoiDetailPresentation: ApplePoiDetailPresentation? = null
   private var _customMapStyle: String? = null
+  private var _applePoiFilter: NativePoiFilter? = null
   private var _googleMapId: String? = null
   private var _clusteringEnabled: Boolean? = null
   private var _mapPadding: EdgePadding? = null
@@ -153,6 +154,13 @@ class HybridMapView(
     set(value) {
       _customMapStyle = value
       adapter?.customMapStyle = value
+    }
+
+  /** Apple MapKit only; Google Maps gets `pointsOfInterest` as style rules in `customMapStyle`. */
+  override var applePoiFilter: NativePoiFilter?
+    get() = _applePoiFilter
+    set(value) {
+      _applePoiFilter = value
     }
 
   override var googleMapId: String?
@@ -342,6 +350,7 @@ class HybridMapView(
     _showsScale = null
     _applePoiDetailPresentation = null
     _customMapStyle = null
+    _applePoiFilter = null
     _googleMapId = null
     _clusteringEnabled = null
     _mapPadding = null

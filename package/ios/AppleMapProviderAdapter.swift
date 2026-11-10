@@ -155,6 +155,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
+  var applePoiFilter: NativePoiFilter? {
+    didSet {
+      applyCustomMapStyle(to: view)
+    }
+  }
+
   var googleMapId: String?
 
   var clusteringEnabled: Bool? {
@@ -650,6 +656,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     showsCompass = nil
     showsScale = nil
     customMapStyle = nil
+    applePoiFilter = nil
     googleMapId = nil
     clusteringEnabled = nil
     mapPadding = nil
@@ -693,7 +700,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   private func applyCustomMapStyle(to mapView: MKMapView) {
     if #available(iOS 16.0, *) {
-      CustomMapStyleParser.apply(json: customMapStyle, mapType: mapType, to: mapView)
+      CustomMapStyleParser.apply(
+        json: customMapStyle,
+        mapType: mapType,
+        poiFilter: applePoiFilter,
+        to: mapView
+      )
     }
   }
 

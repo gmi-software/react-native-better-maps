@@ -40,6 +40,10 @@ let package = Package(
       name: "NitroMapsMarkerImageSize",
       path: "MarkerImageSize"
     ),
+    .target(
+      name: "NitroMapsPoiFilter",
+      path: "PoiFilter"
+    ),
     .testTarget(
       name: "NitroMapsCameraTests",
       dependencies: ["NitroMapsCamera"],
@@ -80,6 +84,11 @@ let package = Package(
       name: "NitroMapsMarkerImageSizeTests",
       dependencies: ["NitroMapsMarkerImageSize"],
       path: "Tests/MarkerImageSize"
+    ),
+    .testTarget(
+      name: "NitroMapsPoiFilterTests",
+      dependencies: ["NitroMapsPoiFilter"],
+      path: "Tests/PoiFilter"
     ),
   ]
 )

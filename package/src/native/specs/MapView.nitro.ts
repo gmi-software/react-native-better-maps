@@ -100,6 +100,20 @@ export type ApplePoiCategory =
   | 'unknown';
 
 /**
+ * How the {@linkcode NativePoiFilter} treats its categories.
+ */
+export type PoiFilterMode = 'all' | 'none' | 'include' | 'exclude';
+
+/**
+ * The `pointsOfInterest` prop as MapKit gets it. `categories` is read only for
+ * `include` and `exclude`.
+ */
+export interface NativePoiFilter {
+  mode: PoiFilterMode;
+  categories: ApplePoiCategory[];
+}
+
+/**
  * Native MapKit presentation for a selected point of interest (iOS 18+).
  *
  * Mirrors the `MKSelectionAccessory.mapItemDetail(_:)` presentation styles.
@@ -171,8 +185,17 @@ export interface MapViewProps extends HybridViewProps {
    */
   applePoiDetailPresentation?: ApplePoiDetailPresentation;
 
-  /** Custom map style as a JSON string (full support on Android; curated subset on iOS 16+). */
+  /**
+   * Custom map style as a JSON string (full support on Android; curated subset on iOS 16+).
+   * On Google Maps it already holds the rules generated for `pointsOfInterest`.
+   */
   customMapStyle?: string;
+
+  /**
+   * Points of interest MapKit shows (Apple MapKit only). Beats the POI rules
+   * read from `customMapStyle`. Omit to keep them.
+   */
+  applePoiFilter?: NativePoiFilter;
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;

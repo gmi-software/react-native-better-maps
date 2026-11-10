@@ -116,6 +116,11 @@ final class HybridMapView: HybridMapViewSpec {
     set { setBackedOnMain(newValue, store: \.customMapStyle) { $0.customMapStyle = $1 } }
   }
 
+  var applePoiFilter: NativePoiFilter? {
+    get { getBacked(\.applePoiFilter) }
+    set { setBackedOnMain(newValue, store: \.applePoiFilter) { $0.applePoiFilter = $1 } }
+  }
+
   var googleMapId: String? {
     get { getBacked(\.googleMapId) }
     set { withStateLock { self._state.googleMapId = newValue } }

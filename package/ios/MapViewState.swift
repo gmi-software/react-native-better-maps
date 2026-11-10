@@ -15,6 +15,7 @@ struct MapViewState {
   var showsScale: Bool?
   var applePoiDetailPresentation: ApplePoiDetailPresentation?
   var customMapStyle: String?
+  var applePoiFilter: NativePoiFilter?
   var googleMapId: String?
   var clusteringEnabled: Bool?
   var mapPadding: EdgePadding?
@@ -51,6 +52,7 @@ struct MapViewState {
     adapter.showsScale = showsScale
     adapter.applePoiDetailPresentation = applePoiDetailPresentation
     adapter.customMapStyle = customMapStyle
+    adapter.applePoiFilter = applePoiFilter
     adapter.googleMapId = googleMapId
     adapter.clusteringEnabled = clusteringEnabled
     adapter.mapPadding = mapPadding

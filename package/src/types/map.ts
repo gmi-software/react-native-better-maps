@@ -16,8 +16,41 @@ import type { EdgePadding, Region, RegionChangeDetails } from './region';
 
 /**
  * Available map display styles.
+ *
+ * `mutedStandard` is Apple's low-contrast standard map, for apps that draw
+ * their own content on top. Google Maps has no muted map and shows `standard`.
  */
-export type MapType = 'standard' | 'satellite' | 'hybrid' | 'terrain';
+export type MapType =
+  'standard' | 'mutedStandard' | 'satellite' | 'hybrid' | 'terrain';
+
+/**
+ * A category of provider-owned points of interest, after MapKit's
+ * `MKPointOfInterestCategory`. Google Maps groups POIs more coarsely; see
+ * {@linkcode PointsOfInterest}.
+ */
+export type PoiCategory = Exclude<ApplePoiCategory, 'unknown'>;
+
+/**
+ * Which provider-owned points of interest the base map shows.
+ *
+ * - `'all'` / `'none'`: every POI, or none.
+ * - `{ include }`: only these categories.
+ * - `{ exclude }`: every category but these.
+ *
+ * Apple MapKit filters by category. Categories added in iOS 18 (`beauty`,
+ * `castle`, `hiking`, …) are skipped on iOS 16 and 17.
+ *
+ * Google Maps filters by feature type, so each category stands for its whole
+ * group: excluding `restaurant` hides every business (`poi.business`), and
+ * including it shows every business. Categories with no Google group (such as
+ * `airport`, `beach` or `parking`) are ignored when excluded and stay hidden
+ * when included.
+ */
+export type PointsOfInterest =
+  | 'all'
+  | 'none'
+  | { include: PoiCategory[]; exclude?: never }
+  | { exclude: PoiCategory[]; include?: never };
 
 /**
  * Native rendering backend for the map view.
@@ -158,7 +191,24 @@ interface BaseMapViewProps<PoiEvent extends PoiPressEvent = PoiPressEvent> {
   markerEnteringAnimation?: OverlayEnteringAnimation;
 }
 
-interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
+/** Shared docs for the providers that support `pointsOfInterest`. */
+interface PointsOfInterestProps {
+  /**
+   * Which provider-owned points of interest the base map shows. Omit to keep
+   * the provider's default, which is all of them.
+   *
+   * On Apple MapKit it overrides the POI rules in `customMapStyle`. On Google
+   * Maps it becomes style rules placed before the `customMapStyle` rules, so
+   * an explicit `customMapStyle` rule wins. Google Maps ignores styles when
+   * `googleMapId` is set; debug builds log a warning.
+   *
+   * @see {@linkcode PointsOfInterest}
+   */
+  pointsOfInterest?: PointsOfInterest;
+}
+
+interface ExistingDefaultProviderProps
+  extends BaseMapViewProps<PoiPressEvent>, PointsOfInterestProps {
   /**
    * Optional provider. When omitted, iOS uses Apple MapKit and Android uses
    * Google Maps.
@@ -190,7 +240,8 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
   clusterEnteringAnimation?: OverlayEnteringAnimation;
 }
 
-interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
+interface AppleMapViewProps
+  extends BaseMapViewProps<ApplePoiPressEvent>, PointsOfInterestProps {
   provider: 'apple';
 
   /** Google Map IDs are only supported by the Google provider. */
@@ -215,7 +266,8 @@ interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
   clusterEnteringAnimation?: OverlayEnteringAnimation;
 }
 
-interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
+interface GoogleMapViewProps
+  extends BaseMapViewProps<GooglePoiPressEvent>, PointsOfInterestProps {
   provider: 'google';
 
   /** Google Cloud Map ID for cloud-based Google Maps styling. */
@@ -243,6 +295,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   showsScale?: never;
   applePoiDetailPresentation?: never;
   customMapStyle?: never;
+  pointsOfInterest?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
   onPoiPress?: never;
@@ -254,6 +307,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   showsScale?: never;
   applePoiDetailPresentation?: never;
   customMapStyle?: never;
+  pointsOfInterest?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
   onPoiPress?: never;

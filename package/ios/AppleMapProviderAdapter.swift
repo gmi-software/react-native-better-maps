@@ -189,6 +189,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
+  var clusterStyle: ClusterStyleDescriptor? {
+    didSet {
+      overlayController.setClusterStyle(clusterStyle)
+    }
+  }
+
   var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
   var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)? {
@@ -601,6 +607,10 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     onLongPress?(Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude))
   }
 
+  func clusterBadgeImage(count: Int) -> UIImage {
+    overlayController.clusterBadgeImage(count: count)
+  }
+
   func notifyOverlayPress(at point: CGPoint) -> Bool {
     guard let hit = overlayController.overlayHit(at: point) else {
       return false
@@ -670,6 +680,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil
+    clusterStyle = nil
     view.mapType = .standard
     view.isScrollEnabled = true
     view.isZoomEnabled = true

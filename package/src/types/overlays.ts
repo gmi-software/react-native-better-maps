@@ -32,6 +32,34 @@ export type OverlayEnteringAnimation =
   | OverlayEnteringAnimationConfig;
 
 /**
+ * How the library's cluster badge looks. Every field is optional, and a field left out keeps
+ * the default badge's look: a blue gradient circle with a white 2 dp border and a white count.
+ */
+export interface ClusterStyle {
+  /**
+   * A flat fill for the circle, as a hex string (`#RGB`, `#RGBA`, `#RRGGBB` or `#RRGGBBAA`).
+   * Left out, the circle keeps its blue gradient.
+   */
+  backgroundColor?: string;
+
+  /** Color of the count, as a hex string. */
+  textColor?: string;
+
+  /** Color of the ring along the circle's edge, as a hex string. */
+  borderColor?: string;
+
+  /** Width of the ring in dp; `0` draws no ring. */
+  borderWidth?: number;
+
+  /**
+   * Drawn in place of the circle, its border and its shadow, scaled to fit the badge (34 to
+   * 56 dp across, growing with the count), with the count centered on top in `textColor`.
+   * The colored badge shows until the image has loaded, and if it fails to.
+   */
+  image?: MarkerImageSource;
+}
+
+/**
  * Descriptor for bulk marker rendering.
  */
 export interface MarkerDescriptor {

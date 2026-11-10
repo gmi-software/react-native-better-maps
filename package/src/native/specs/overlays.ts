@@ -25,6 +25,18 @@ export interface MarkerImage {
 
 export type MarkerImageSource = number | MarkerImage;
 
+/**
+ * Serialized `clusterStyle` passed to the native map view. Colors are hex strings, the same as
+ * every other color the library passes; `image` has been through `resolveMarkerImage`.
+ */
+export interface ClusterStyleDescriptor {
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  image?: MarkerImage;
+}
+
 /** Anchor point on the marker image (0..1). */
 export interface MarkerAnchor {
   x: number;

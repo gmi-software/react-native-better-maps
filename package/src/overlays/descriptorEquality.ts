@@ -1,6 +1,7 @@
 import type { Coordinate } from '../types/coordinate';
 import type {
   CircleDescriptor,
+  ClusterStyleDescriptor,
   MarkerAnchor,
   MarkerDescriptor,
   MarkerImage,
@@ -103,6 +104,27 @@ function markerImagesEqual(
     left.height === right.height &&
     left.scale === right.scale &&
     left.origin === right.origin
+  );
+}
+
+export function clusterStylesEqual(
+  left: ClusterStyleDescriptor | undefined,
+  right: ClusterStyleDescriptor | undefined,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (left == null || right == null) {
+    return false;
+  }
+
+  return (
+    left.backgroundColor === right.backgroundColor &&
+    left.textColor === right.textColor &&
+    left.borderColor === right.borderColor &&
+    left.borderWidth === right.borderWidth &&
+    markerImagesEqual(left.image, right.image)
   );
 }
 

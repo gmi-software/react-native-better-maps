@@ -12,7 +12,11 @@ import type {
   ApplePoiDetailPresentation,
   ClusterPressBehavior,
 } from '../native/specs/MapView.nitro';
-import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
+import type {
+  ClusterStyle,
+  MarkerDescriptor,
+  OverlayEnteringAnimation,
+} from './overlays';
 import type { EdgePadding, Region, RegionChangeDetails } from './region';
 
 /**
@@ -246,6 +250,10 @@ interface ExistingDefaultProviderProps
    * camera still, for apps that open a list or sheet for the cluster instead.
    */
   clusterPressBehavior?: ClusterPressBehavior;
+   * How the cluster badge looks: its colors, border, or an image behind the count. Fields
+   * left out keep the default badge's look.
+   */
+  clusterStyle?: ClusterStyle;
 }
 
 interface AppleMapViewProps
@@ -279,6 +287,10 @@ interface AppleMapViewProps
    * camera still, for apps that open a list or sheet for the cluster instead.
    */
   clusterPressBehavior?: ClusterPressBehavior;
+   * How the cluster badge looks: its colors, border, or an image behind the count. Fields
+   * left out keep the default badge's look.
+   */
+  clusterStyle?: ClusterStyle;
 }
 
 interface GoogleMapViewProps
@@ -309,6 +321,10 @@ interface GoogleMapViewProps
    * camera still, for apps that open a list or sheet for the cluster instead.
    */
   clusterPressBehavior?: ClusterPressBehavior;
+   * How the cluster badge looks: its colors, border, or an image behind the count. Fields
+   * left out keep the default badge's look.
+   */
+  clusterStyle?: ClusterStyle;
 }
 
 interface OpenStreetMapViewProps extends BaseMapViewProps {
@@ -321,6 +337,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
   clusterPressBehavior?: never;
+  clusterStyle?: never;
   onPoiPress?: never;
 }
 
@@ -334,6 +351,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
   clusterPressBehavior?: never;
+  clusterStyle?: never;
   onPoiPress?: never;
 }
 

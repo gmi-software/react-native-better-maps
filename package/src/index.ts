@@ -34,6 +34,7 @@ export type {
   MarkerDescriptor,
   MarkerPoint,
   MarkerProps,
+  ClusterStyle,
   OverlayEnteringAnimation,
   OverlayEnteringAnimationConfig,
   OverlayEnteringAnimationPreset,

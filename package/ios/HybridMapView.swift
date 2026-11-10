@@ -163,6 +163,11 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
+  var clusterStyle: ClusterStyleDescriptor? {
+    get { getBacked(\.clusterStyle) }
+    set { setBackedOnMain(newValue, store: \.clusterStyle) { $0.clusterStyle = $1 } }
+  }
+
   var onRegionChange: ((Region, RegionChangeDetails) -> Void)? {
     get { getBacked(\.onRegionChange) }
     set { setBackedOnMain(newValue, store: \.onRegionChange) { $0.onRegionChange = $1 } }

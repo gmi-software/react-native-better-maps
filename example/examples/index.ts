@@ -1,4 +1,8 @@
-import { advancedFeaturesScenario } from './advancedFeatures';
+import {
+  advancedFeaturesScenario,
+  CLUSTER_STYLE_OPTIONS,
+  type ClusterStyleOption,
+} from './advancedFeatures';
 import { allOverlaysScenario } from './allOverlays';
 import {
   CAMERA_TIMING_SCENARIO_ID,
@@ -41,6 +45,8 @@ export {
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
   createQuietMapScenario,
+  CLUSTER_STYLE_OPTIONS,
+  type ClusterStyleOption,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
   nextApplePoiDetailPresentation,
   nextQuietMapPointsOfInterestIndex,

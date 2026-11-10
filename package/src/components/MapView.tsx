@@ -22,12 +22,14 @@ import type {
 } from '../native/specs/MapView.nitro';
 import {
   circleListsEqual,
+  clusterStylesEqual,
   enteringAnimationsEqual,
   markerListsEqual,
   polygonListsEqual,
   polylineListsEqual,
 } from '../overlays/descriptorEquality';
 import { OverlayType, overlayCallbackKey } from '../overlays/overlayType';
+import { normalizeClusterStyle } from '../overlays/normalizeClusterStyle';
 import { normalizeMarkerDescriptors } from '../overlays/normalizeMarkerDescriptors';
 import {
   normalizeCircleDescriptors,
@@ -71,6 +73,7 @@ export function MapView({
   mapPadding,
   markerEnteringAnimation,
   clusterEnteringAnimation,
+  clusterStyle: clusterStyleProp,
   markers: markersProp,
   polylines: polylinesProp,
   polygons: polygonsProp,
@@ -155,6 +158,10 @@ export function MapView({
   const clusterEntering = useStableValue(
     normalizeEnteringAnimation(clusterEnteringAnimation),
     enteringAnimationsEqual,
+  );
+  const clusterStyle = useStableValue(
+    normalizeClusterStyle(clusterStyleProp),
+    clusterStylesEqual,
   );
   const cameraProps = useStableCameraProps({ region, camera, mapPadding });
   // MapKit filters POIs natively; Google Maps reads them from its style JSON.
@@ -362,6 +369,7 @@ export function MapView({
       mapPadding={cameraProps.mapPadding}
       markerEnteringAnimation={markerEntering}
       clusterEnteringAnimation={clusterEntering}
+      clusterStyle={clusterStyle}
       markers={markers}
       polylines={polylines}
       polygons={polygons}

@@ -14,6 +14,12 @@ export const appleProps: MapViewPropsForProvider<'apple'> = {
   markerEnteringAnimation: { preset: 'fade-scale', duration: 180 },
   clusterEnteringAnimation: 'system',
   clusterPressBehavior: 'none',
+  clusterStyle: {
+    backgroundColor: '#E30613',
+    textColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+    borderWidth: 2,
+  },
   onPoiPress: (event) => {
     event.category satisfies ApplePoiCategory;
     // @ts-expect-error Apple POI events do not include Google place IDs.
@@ -28,6 +34,7 @@ export const googleProps: MapViewPropsForProvider<'google'> = {
   clusteringEnabled: true,
   clusterEnteringAnimation: false,
   clusterPressBehavior: 'zoom',
+  clusterStyle: { image: 1 },
   onPoiPress: (event) => {
     event.placeId satisfies string;
     // @ts-expect-error Google POI events do not include Apple categories.
@@ -40,6 +47,7 @@ export const defaultProviderProps: MapViewProps = {
   applePoiDetailPresentation: 'sheet',
   customMapStyle: '[]',
   markerEnteringAnimation: false,
+  clusterStyle: { image: { uri: 'https://example.com/badge.png' } },
   onPoiPress: (event) => {
     if (event.provider === 'google') {
       event.placeId satisfies string;
@@ -115,6 +123,11 @@ export const mapboxClusterPressBehaviorProps: MapViewPropsForProvider<'mapbox'> 
     provider: 'mapbox',
     // @ts-expect-error Planned Mapbox support has no clustering capability yet.
     clusterPressBehavior: 'none',
+export const openStreetMapClusterStyleProps: MapViewPropsForProvider<'openstreetmap'> =
+  {
+    provider: 'openstreetmap',
+    // @ts-expect-error Planned OpenStreetMap support has no cluster badge to style yet.
+    clusterStyle: { backgroundColor: '#E30613' },
   };
 
 export const openStreetMapPoiPressProps: MapViewPropsForProvider<'openstreetmap'> =
@@ -128,6 +141,19 @@ export const mapboxClusterAnimationProps: MapViewPropsForProvider<'mapbox'> = {
   provider: 'mapbox',
   // @ts-expect-error Planned Mapbox support has no cluster animation capability yet.
   clusterEnteringAnimation: { preset: 'fade' },
+};
+
+export const mapboxClusterStyleProps: MapViewPropsForProvider<'mapbox'> = {
+  provider: 'mapbox',
+  // @ts-expect-error Planned Mapbox support has no cluster badge to style yet.
+  clusterStyle: { backgroundColor: '#E30613' },
+};
+
+export const clusterStyleColorProps: MapViewProps = {
+  clusterStyle: {
+    // @ts-expect-error Cluster colors are hex strings, like every other color the library takes.
+    backgroundColor: 0xe30613ff,
+  },
 };
 
 export const mapboxPoiPressProps: MapViewPropsForProvider<'mapbox'> = {

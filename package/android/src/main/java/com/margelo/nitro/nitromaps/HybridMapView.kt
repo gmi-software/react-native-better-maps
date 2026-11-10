@@ -52,6 +52,7 @@ class HybridMapView(
   private var _mapPadding: EdgePadding? = null
   private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
+  private var _clusterStyle: ClusterStyleDescriptor? = null
 
   override val view: FrameLayout = FrameLayout(context)
 
@@ -203,6 +204,13 @@ class HybridMapView(
     set(value) {
       _clusterEnteringAnimation = value
       adapter?.clusterEnteringAnimation = value
+    }
+
+  override var clusterStyle: ClusterStyleDescriptor?
+    get() = _clusterStyle
+    set(value) {
+      _clusterStyle = value
+      adapter?.clusterStyle = value
     }
 
   override var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)? = null
@@ -365,6 +373,7 @@ class HybridMapView(
     _mapPadding = null
     _markerEnteringAnimation = null
     _clusterEnteringAnimation = null
+    _clusterStyle = null
     onRegionChange = null
     onRegionChangeComplete = null
     onMapReady = null
@@ -455,6 +464,7 @@ class HybridMapView(
     adapter.clusterPressBehavior = _clusterPressBehavior
     adapter.markerEnteringAnimation = _markerEnteringAnimation
     adapter.clusterEnteringAnimation = _clusterEnteringAnimation
+    adapter.clusterStyle = _clusterStyle
     adapter.onRegionChange = onRegionChange
     adapter.onRegionChangeComplete = onRegionChangeComplete
     adapter.onMapReady = onMapReady

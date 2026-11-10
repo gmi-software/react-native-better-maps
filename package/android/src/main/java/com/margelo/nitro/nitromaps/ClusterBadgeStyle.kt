@@ -64,14 +64,15 @@ internal object ClusterBadgeStyle {
   }
 
   /**
-   * The font size that fits a count measuring [labelWidthDp] at [LABEL_FONT_SIZE_DP] inside
-   * the border of a badge [diameterDp] across.
+   * The font size that fits a count measuring [labelWidthDp] at [LABEL_FONT_SIZE_DP] inside a
+   * border [insetDp] wide on a badge [diameterDp] across.
    */
   fun fittedLabelFontSizeDp(
     labelWidthDp: Float,
     diameterDp: Float,
+    insetDp: Float = BORDER_WIDTH_DP,
   ): Float {
-    val availableWidth = diameterDp - 2 * (BORDER_WIDTH_DP + LABEL_PADDING_DP)
+    val availableWidth = diameterDp - 2 * (insetDp + LABEL_PADDING_DP)
     if (labelWidthDp <= availableWidth) {
       return LABEL_FONT_SIZE_DP
     }

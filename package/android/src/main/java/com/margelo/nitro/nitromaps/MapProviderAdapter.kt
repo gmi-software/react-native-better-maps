@@ -24,6 +24,7 @@ interface MapProviderAdapter {
   var mapPadding: EdgePadding?
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor?
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
+  var clusterStyle: ClusterStyleDescriptor?
 
   var onRegionChange: ((region: Region, details: RegionChangeDetails) -> Unit)?
   var onRegionChangeComplete: ((region: Region, details: RegionChangeDetails) -> Unit)?

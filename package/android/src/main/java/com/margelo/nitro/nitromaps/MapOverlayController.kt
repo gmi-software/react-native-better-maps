@@ -64,6 +64,7 @@ internal class MapOverlayController(
 
   var markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
+  var clusterPressBehavior: ClusterPressBehavior? = null
 
   fun setGoogleMap(map: GoogleMap?) {
     googleMap = map
@@ -591,9 +592,14 @@ internal class MapOverlayController(
           longitude = cluster.position.longitude,
         ),
       )
-      googleMap?.animateCamera(
-        CameraUpdateFactory.newLatLngBounds(cluster.bounds, (72 * density).toInt()),
-      )
+      if (clusterPressBehavior != ClusterPressBehavior.NONE) {
+        googleMap?.animateCamera(
+          CameraUpdateFactory.newLatLngBounds(
+            cluster.bounds.expandedForClusterZoom(),
+            (72 * density).toInt(),
+          ),
+        )
+      }
       return true
     }
 

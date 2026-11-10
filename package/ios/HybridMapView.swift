@@ -128,6 +128,13 @@ final class HybridMapView: HybridMapViewSpec {
     }
   }
 
+  var clusterPressBehavior: ClusterPressBehavior? {
+    get { getBacked(\.clusterPressBehavior) }
+    set {
+      setBackedOnMain(newValue, store: \.clusterPressBehavior) { $0.clusterPressBehavior = $1 }
+    }
+  }
+
   var mapPadding: EdgePadding? {
     get { getBacked(\.mapPadding) }
     set { setBackedOnMain(newValue, store: \.mapPadding) { $0.mapPadding = $1 } }

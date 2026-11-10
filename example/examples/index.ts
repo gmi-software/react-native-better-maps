@@ -1,6 +1,10 @@
 import { advancedFeaturesScenario } from './advancedFeatures';
 import { allOverlaysScenario } from './allOverlays';
 import {
+  CAMERA_TIMING_SCENARIO_ID,
+  cameraTimingScenario,
+} from './cameraTiming';
+import {
   APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
   APPLE_POI_DETAILS_SCENARIO_ID,
   applePoiDetailsScenario,
@@ -24,6 +28,7 @@ export type { MapScenario } from './types';
 export {
   APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
   APPLE_POI_DETAILS_SCENARIO_ID,
+  CAMERA_TIMING_SCENARIO_ID,
   createApplePoiDetailsScenario,
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
@@ -41,4 +46,5 @@ export const MAP_SCENARIOS: MapScenario[] = [
   advancedFeaturesScenario,
   applePoiDetailsScenario,
   mountEffectCameraScenario,
+  cameraTimingScenario,
 ];

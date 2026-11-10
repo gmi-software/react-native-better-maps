@@ -49,14 +49,14 @@ protocol MapProviderAdapter: AnyObject {
   /// cuts it short.
   func applyCamera(camera: Camera) throws -> Promise<Void>
 
-  /// `duration` is in seconds, here and in `animateToRegion`: `HybridMapView`
-  /// converts the milliseconds JS passes.
+  /// `duration` is in seconds, here and in `animateToRegion`, and 0 for a jump:
+  /// `HybridMapView` converts the milliseconds JS passes and fills in the default.
   ///
   /// - SeeAlso: ``applyCamera(camera:)`` for when the Promise settles.
-  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void>
+  func animateCamera(camera: Camera, duration: TimeInterval) throws -> Promise<Void>
 
   /// - SeeAlso: ``applyCamera(camera:)`` for when the Promise settles.
-  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void>
+  func animateToRegion(region: Region, duration: TimeInterval) throws -> Promise<Void>
 
   func getVisibleRegion() throws -> Promise<VisibleRegion>
 
@@ -147,11 +147,11 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
     throw error
   }
 
-  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void> {
+  func animateCamera(camera: Camera, duration: TimeInterval) throws -> Promise<Void> {
     throw error
   }
 
-  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
+  func animateToRegion(region: Region, duration: TimeInterval) throws -> Promise<Void> {
     throw error
   }
 

@@ -53,6 +53,7 @@ import {
 import {
   APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
   APPLE_POI_DETAILS_SCENARIO_ID,
+  CAMERA_TIMING_SCENARIO_ID,
   MAP_SCENARIOS,
   type MapScenario,
   createApplePoiDetailsScenario,
@@ -63,6 +64,7 @@ import {
 } from './examples';
 
 const MAP_TYPES: MapType[] = ['standard', 'satellite', 'hybrid'];
+const CAMERA_TIMING_DURATIONS = [250, 2000];
 type SupportedExampleProvider = Extract<MapProvider, 'apple' | 'google'>;
 type AnimationOptionId = 'system' | 'fade' | 'fade-scale' | 'none';
 
@@ -318,6 +320,8 @@ type ScenarioDockProps = {
   onCycleCustomMarkerRotation: () => void;
   onToggleCustomMarkerFlat: () => void;
   onCycleApplePoiDetailMode: () => void;
+  onTimeAnimateCamera: (duration: number) => void;
+  onTimeDefaultFit: () => void;
 };
 
 const ScenarioDock = memo(function ScenarioDock({
@@ -341,6 +345,8 @@ const ScenarioDock = memo(function ScenarioDock({
   onCycleCustomMarkerRotation,
   onToggleCustomMarkerFlat,
   onCycleApplePoiDetailMode,
+  onTimeAnimateCamera,
+  onTimeDefaultFit,
 }: ScenarioDockProps) {
   const applePoiDetailPresentation =
     scenario.advanced?.applePoiDetailPresentation;
@@ -479,6 +485,28 @@ const ScenarioDock = memo(function ScenarioDock({
                 <Text style={styles.actionButtonText}>
                   Flat {customMarkerFlat ? 'on' : 'off'}
                 </Text>
+              </ScalePressable>
+            </View>
+          ) : null}
+
+          {scenario.id === CAMERA_TIMING_SCENARIO_ID ? (
+            <View style={styles.actionRow}>
+              {CAMERA_TIMING_DURATIONS.map((duration) => (
+                <ScalePressable
+                  key={duration}
+                  onPress={() => onTimeAnimateCamera(duration)}
+                  style={styles.actionButton}
+                >
+                  <Text style={styles.actionButtonIcon}>↻</Text>
+                  <Text style={styles.actionButtonText}>{duration} ms</Text>
+                </ScalePressable>
+              ))}
+              <ScalePressable
+                onPress={onTimeDefaultFit}
+                style={[styles.actionButton, styles.actionButtonAccent]}
+              >
+                <Text style={styles.actionButtonIcon}>⤢</Text>
+                <Text style={styles.actionButtonText}>Fit</Text>
               </ScalePressable>
             </View>
           ) : null}
@@ -811,6 +839,49 @@ export default function App() {
       ?.catch(() => {});
   }, [scenario]);
 
+  // Alternates between two cameras so every press moves the map.
+  const timingZoomedIn = useRef(false);
+  const timeCameraPromise = useCallback(
+    (label: string, move: () => Promise<void> | undefined) => {
+      const startedAt = Date.now();
+      move()
+        ?.then(() => setStatus(`${label} · ${Date.now() - startedAt} ms`))
+        .catch((error: unknown) => setStatus(`${label} · ${String(error)}`));
+    },
+    [],
+  );
+
+  const handleTimeAnimateCamera = useCallback(
+    (duration: number) => {
+      timingZoomedIn.current = !timingZoomedIn.current;
+      timeCameraPromise(`animateCamera ${duration} ms`, () =>
+        mapRef.current?.animateCamera(
+          {
+            center: {
+              latitude: scenario.region.latitude,
+              longitude: scenario.region.longitude,
+            },
+            zoom: timingZoomedIn.current ? 9 : 13,
+            heading: 0,
+            pitch: 0,
+          },
+          duration,
+        ),
+      );
+    },
+    [scenario, timeCameraPromise],
+  );
+
+  const handleTimeDefaultFit = useCallback(() => {
+    // No `animated` argument: the call under test is the default.
+    timeCameraPromise('fitToCoordinates', () =>
+      mapRef.current?.fitToCoordinates(
+        (scenario.markers ?? []).map((marker) => marker.coordinate),
+        mapPadding,
+      ),
+    );
+  }, [scenario, mapPadding, timeCameraPromise]);
+
   const handleGetCamera = useCallback(async () => {
     try {
       const camera = await mapRef.current?.getCamera();
@@ -968,18 +1039,25 @@ export default function App() {
     );
   }, []);
 
+  // The camera timing results are the point of that scenario; do not bury them.
+  const reportsRegionChanges = scenario.id !== CAMERA_TIMING_SCENARIO_ID;
+
   const handleRegionChange = useCallback(
     (region: Region, details: RegionChangeDetails) => {
-      setStatus(`Region start · ${regionLabel(region, details)}`);
+      if (reportsRegionChanges) {
+        setStatus(`Region start · ${regionLabel(region, details)}`);
+      }
     },
-    [],
+    [reportsRegionChanges],
   );
 
   const handleRegionChangeComplete = useCallback(
     (region: Region, details: RegionChangeDetails) => {
-      setStatus(`Region complete · ${regionLabel(region, details)}`);
+      if (reportsRegionChanges) {
+        setStatus(`Region complete · ${regionLabel(region, details)}`);
+      }
     },
-    [],
+    [reportsRegionChanges],
   );
 
   return (
@@ -1033,6 +1111,8 @@ export default function App() {
         onCycleCustomMarkerRotation={cycleCustomMarkerRotation}
         onToggleCustomMarkerFlat={toggleCustomMarkerFlat}
         onCycleApplePoiDetailMode={cycleApplePoiDetailMode}
+        onTimeAnimateCamera={handleTimeAnimateCamera}
+        onTimeDefaultFit={handleTimeDefaultFit}
       />
       <StatusBar style="light" />
     </View>

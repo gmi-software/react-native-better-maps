@@ -23,4 +23,10 @@ class CameraAnimationDurationTest {
     assertEquals(0, cameraAnimationDurationMs(Double.NaN))
     assertTrue(cameraAnimationDurationMs(-100.0) <= 0)
   }
+
+  @Test
+  fun jumpsForAnInfiniteDuration() {
+    assertEquals(0, cameraAnimationDurationMs(Double.POSITIVE_INFINITY))
+    assertEquals(0, cameraAnimationDurationMs(Double.NEGATIVE_INFINITY))
+  }
 }

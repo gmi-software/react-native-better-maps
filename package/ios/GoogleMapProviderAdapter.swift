@@ -260,24 +260,22 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     return Promise.resolved()
   }
 
-  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void> {
-    let animationDuration = duration ?? Self.defaultAnimationDuration
-    let animated = animationDuration > 0
-    guard updateMapCamera(camera, animated: animated, duration: animationDuration), animated else {
+  func animateCamera(camera: Camera, duration: TimeInterval) throws -> Promise<Void> {
+    let animated = duration > 0
+    guard updateMapCamera(camera, animated: animated, duration: duration), animated else {
       return Promise.resolved()
     }
 
-    return trackCameraMove(duration: animationDuration)
+    return trackCameraMove(duration: duration)
   }
 
-  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
-    let animationDuration = duration ?? Self.defaultAnimationDuration
-    let animated = animationDuration > 0
-    guard applyRegion(region, animated: animated, duration: animationDuration), animated else {
+  func animateToRegion(region: Region, duration: TimeInterval) throws -> Promise<Void> {
+    let animated = duration > 0
+    guard applyRegion(region, animated: animated, duration: duration), animated else {
       return Promise.resolved()
     }
 
-    return trackCameraMove(duration: animationDuration)
+    return trackCameraMove(duration: duration)
   }
 
   func getVisibleRegion() throws -> Promise<VisibleRegion> {

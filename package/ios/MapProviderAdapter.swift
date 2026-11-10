@@ -17,6 +17,7 @@ protocol MapProviderAdapter: AnyObject {
   var showsScale: Bool? { get set }
   var applePoiDetailPresentation: ApplePoiDetailPresentation? { get set }
   var customMapStyle: String? { get set }
+  var applePoiFilter: NativePoiFilter? { get set }
   var googleMapId: String? { get set }
   var clusteringEnabled: Bool? { get set }
   var mapPadding: EdgePadding? { get set }
@@ -90,6 +91,7 @@ final class UnavailableMapProviderAdapter: MapProviderAdapter {
   var showsScale: Bool?
   var applePoiDetailPresentation: ApplePoiDetailPresentation?
   var customMapStyle: String?
+  var applePoiFilter: NativePoiFilter?
   var googleMapId: String?
   var clusteringEnabled: Bool?
   var mapPadding: EdgePadding?

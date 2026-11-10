@@ -59,10 +59,20 @@ import {
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
+  createQuietMapScenario,
   nextApplePoiDetailPresentation,
+  nextQuietMapPointsOfInterestIndex,
+  pointsOfInterestLabel,
+  QUIET_MAP_DEFAULT_POINTS_OF_INTEREST_INDEX,
+  QUIET_MAP_SCENARIO_ID,
 } from './examples';
 
-const MAP_TYPES: MapType[] = ['standard', 'satellite', 'hybrid'];
+const MAP_TYPES: MapType[] = [
+  'standard',
+  'mutedStandard',
+  'satellite',
+  'hybrid',
+];
 type SupportedExampleProvider = Extract<MapProvider, 'apple' | 'google'>;
 type AnimationOptionId = 'system' | 'fade' | 'fade-scale' | 'none';
 
@@ -115,6 +125,7 @@ function getSupportedMapProviders(): SupportedExampleProvider[] {
 
 const MAP_TYPE_LABELS: Record<MapType, string> = {
   standard: 'Standard',
+  mutedStandard: 'Muted',
   satellite: 'Satellite',
   hybrid: 'Hybrid',
   terrain: 'Terrain',
@@ -318,6 +329,7 @@ type ScenarioDockProps = {
   onCycleCustomMarkerRotation: () => void;
   onToggleCustomMarkerFlat: () => void;
   onCycleApplePoiDetailMode: () => void;
+  onCyclePointsOfInterest: () => void;
 };
 
 const ScenarioDock = memo(function ScenarioDock({
@@ -341,9 +353,11 @@ const ScenarioDock = memo(function ScenarioDock({
   onCycleCustomMarkerRotation,
   onToggleCustomMarkerFlat,
   onCycleApplePoiDetailMode,
+  onCyclePointsOfInterest,
 }: ScenarioDockProps) {
   const applePoiDetailPresentation =
     scenario.advanced?.applePoiDetailPresentation;
+  const pointsOfInterest = scenario.advanced?.pointsOfInterest;
   const chevronRotation = useSharedValue(0);
 
   useEffect(() => {
@@ -492,6 +506,20 @@ const ScenarioDock = memo(function ScenarioDock({
                 <Text style={styles.actionButtonIcon}>◉</Text>
                 <Text style={styles.actionButtonText}>
                   POI · {applePoiDetailPresentation}
+                </Text>
+              </ScalePressable>
+            </View>
+          ) : null}
+
+          {pointsOfInterest != null ? (
+            <View style={styles.actionRow}>
+              <ScalePressable
+                onPress={onCyclePointsOfInterest}
+                style={[styles.actionButton, styles.actionButtonAccent]}
+              >
+                <Text style={styles.actionButtonIcon}>◌</Text>
+                <Text style={styles.actionButtonText}>
+                  POIs · {pointsOfInterestLabel(pointsOfInterest)}
                 </Text>
               </ScalePressable>
             </View>
@@ -647,6 +675,7 @@ const MapScene = memo(function MapScene({
     followsUserLocation: scenario.advanced?.followsUserLocation,
     showsCompass: scenario.advanced?.showsCompass,
     customMapStyle: scenario.advanced?.customMapStyle,
+    pointsOfInterest: scenario.advanced?.pointsOfInterest,
     mapPadding,
     markerEnteringAnimation: animationOption.value,
     clusterEnteringAnimation: scenario.advanced?.clusteringEnabled
@@ -764,6 +793,9 @@ export default function App() {
     useState<ApplePoiDetailPresentation>(
       APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
     );
+  const [pointsOfInterestIndex, setPointsOfInterestIndex] = useState(
+    QUIET_MAP_DEFAULT_POINTS_OF_INTEREST_INDEX,
+  );
 
   const baseScenario = MAP_SCENARIOS[scenarioIndex];
   const scenario = useMemo(() => {
@@ -775,6 +807,8 @@ export default function App() {
         });
       case APPLE_POI_DETAILS_SCENARIO_ID:
         return createApplePoiDetailsScenario(applePoiDetailPresentation);
+      case QUIET_MAP_SCENARIO_ID:
+        return createQuietMapScenario(pointsOfInterestIndex);
       default:
         return baseScenario;
     }
@@ -783,6 +817,7 @@ export default function App() {
     customMarkerRotation,
     customMarkerFlat,
     applePoiDetailPresentation,
+    pointsOfInterestIndex,
   ]);
   const provider = SUPPORTED_MAP_PROVIDERS[providerIndex] ?? 'google';
   const animationOption = ANIMATION_OPTIONS[animationOptionIndex];
@@ -848,6 +883,10 @@ export default function App() {
     );
   }, [applePoiDetailPresentation, provider]);
 
+  const cyclePointsOfInterest = useCallback(() => {
+    setPointsOfInterestIndex(nextQuietMapPointsOfInterestIndex);
+  }, []);
+
   const cycleProvider = useCallback(() => {
     // Keep the updater pure: React may run it twice, so status and ready are
     // set from the handler with the index it computed.
@@ -870,6 +909,10 @@ export default function App() {
       setScenarioIndex(index);
       setMapReady(false);
       setStatus(MAP_SCENARIOS[index].name);
+      const scenarioMapType = MAP_SCENARIOS[index].advanced?.mapType;
+      if (scenarioMapType != null && MAP_TYPES.includes(scenarioMapType)) {
+        setMapTypeIndex(MAP_TYPES.indexOf(scenarioMapType));
+      }
     },
     [scenarioIndex],
   );
@@ -1033,6 +1076,7 @@ export default function App() {
         onCycleCustomMarkerRotation={cycleCustomMarkerRotation}
         onToggleCustomMarkerFlat={toggleCustomMarkerFlat}
         onCycleApplePoiDetailMode={cycleApplePoiDetailMode}
+        onCyclePointsOfInterest={cyclePointsOfInterest}
       />
       <StatusBar style="light" />
     </View>

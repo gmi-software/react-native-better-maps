@@ -2,6 +2,7 @@ import type {
   ApplePoiCategory,
   MapViewProps,
   MapViewPropsForProvider,
+  PoiCategory,
   Region,
 } from '../src';
 
@@ -136,4 +137,43 @@ export const mapboxApplePoiDetailProps: MapViewPropsForProvider<'mapbox'> = {
   provider: 'mapbox',
   // @ts-expect-error Planned Mapbox support has no native POI detail surface.
   applePoiDetailPresentation: 'callout',
+};
+
+export const applePointsOfInterestProps: MapViewPropsForProvider<'apple'> = {
+  provider: 'apple',
+  mapType: 'mutedStandard',
+  pointsOfInterest: { exclude: ['restaurant', 'store'] },
+};
+
+export const googlePointsOfInterestProps: MapViewPropsForProvider<'google'> = {
+  provider: 'google',
+  mapType: 'mutedStandard',
+  pointsOfInterest: 'none',
+};
+
+export const defaultProviderPointsOfInterestProps: MapViewProps = {
+  pointsOfInterest: { include: ['park', 'museum'] satisfies PoiCategory[] },
+};
+
+export const unknownPoiCategoryProps: MapViewProps = {
+  // @ts-expect-error `unknown` only describes POI press events, not a category to filter by.
+  pointsOfInterest: { include: ['unknown'] },
+};
+
+export const includeAndExcludePoiProps: MapViewProps = {
+  // @ts-expect-error A POI filter either includes or excludes categories, not both.
+  pointsOfInterest: { include: ['park'], exclude: ['store'] },
+};
+
+export const openStreetMapPointsOfInterestProps: MapViewPropsForProvider<'openstreetmap'> =
+  {
+    provider: 'openstreetmap',
+    // @ts-expect-error Planned OpenStreetMap support has no POI filter yet.
+    pointsOfInterest: 'none',
+  };
+
+export const mapboxPointsOfInterestProps: MapViewPropsForProvider<'mapbox'> = {
+  provider: 'mapbox',
+  // @ts-expect-error Planned Mapbox support has no POI filter yet.
+  pointsOfInterest: 'none',
 };

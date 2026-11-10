@@ -54,6 +54,13 @@ jobs:
         with:
           bun-version: latest
 
+      # Expo prebuild, pod install and Gradle all shell out to node, and React
+      # Native 0.88 needs ^22.13. Pinned so a runner image change cannot move it.
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
       - name: Restore the Bun cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -182,6 +189,13 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
+
+      # Expo prebuild, pod install and Gradle all shell out to node, and React
+      # Native 0.88 needs ^22.13. Pinned so a runner image change cannot move it.
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
 
       - name: Restore the Bun cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

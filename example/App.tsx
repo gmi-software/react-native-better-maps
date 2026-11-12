@@ -866,17 +866,24 @@ export default function App() {
     async (duration: number) => {
       // Zoom away from wherever the camera is, so every press moves the map
       // and no other button can turn it into a no-op.
+      const map = mapRef.current;
+      const startedIn = sceneKeyRef.current;
+      if (map == null) {
+        return;
+      }
       let camera;
       try {
-        camera = await mapRef.current?.getCamera();
+        camera = await map.getCamera();
       } catch {
         return;
       }
-      if (camera == null) {
+      // The scene may have changed while the camera was read; the replacement
+      // map must not be moved to the old scenario.
+      if (mapRef.current !== map || sceneKeyRef.current !== startedIn) {
         return;
       }
       timeCameraPromise(`animateCamera ${duration} ms`, () =>
-        mapRef.current?.animateCamera(
+        map.animateCamera(
           {
             center: {
               latitude: scenario.region.latitude,

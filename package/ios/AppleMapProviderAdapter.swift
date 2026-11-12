@@ -158,6 +158,11 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   var applePoiFilter: NativePoiFilter? {
     didSet {
+      // Attaching and resetting assign nil to maps without the prop; rebuilding
+      // the configuration for that would only make MapKit redraw.
+      guard oldValue != nil || applePoiFilter != nil else {
+        return
+      }
       applyCustomMapStyle(to: view)
     }
   }

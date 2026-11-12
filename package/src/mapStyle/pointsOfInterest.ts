@@ -2,7 +2,7 @@ import type {
   ApplePoiCategory,
   NativePoiFilter,
 } from '../native/specs/MapView.nitro';
-import type { PointsOfInterest } from '../types/map';
+import type { PoiCategory, PointsOfInterest } from '../types/map';
 import { createWarn } from '../utils/warn';
 
 const warnPointsOfInterest = createWarn('pointsOfInterest');
@@ -94,11 +94,15 @@ const GOOGLE_POI_FEATURE_TYPES: Partial<
 
 type CategoryFilter = Exclude<PointsOfInterest, string>;
 
-function categoryFilter(filter: CategoryFilter): NativePoiFilter {
+/** Reads the filter without copying it: the equality check runs on every render. */
+function categoryFilter(filter: CategoryFilter): {
+  mode: 'include' | 'exclude';
+  categories: readonly PoiCategory[];
+} {
   if ('include' in filter && filter.include != null) {
-    return { mode: 'include', categories: [...filter.include] };
+    return { mode: 'include', categories: filter.include };
   }
-  return { mode: 'exclude', categories: [...(filter.exclude ?? [])] };
+  return { mode: 'exclude', categories: filter.exclude ?? [] };
 }
 
 function googleFeatureTypes(
@@ -198,7 +202,8 @@ export function toApplePoiFilter(
   if (typeof pointsOfInterest === 'string') {
     return { mode: pointsOfInterest, categories: [] };
   }
-  return categoryFilter(pointsOfInterest);
+  const { mode, categories } = categoryFilter(pointsOfInterest);
+  return { mode, categories: [...categories] };
 }
 
 /** Whether two `pointsOfInterest` values ask for the same thing. */

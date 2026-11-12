@@ -7,6 +7,8 @@ extension MapType {
     switch self {
     case .standard, .terrain:
       return .standard
+    case .mutedstandard:
+      return .mutedStandard
     case .satellite:
       return .satellite
     case .hybrid:

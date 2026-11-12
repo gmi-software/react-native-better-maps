@@ -3,7 +3,9 @@ import type {
   EdgePadding,
   GeojsonInput,
   GeojsonProps,
+  MapType,
   MapViewProps,
+  PointsOfInterest,
   Region,
 } from 'react-native-better-maps';
 
@@ -15,6 +17,9 @@ export interface MapScenarioAdvancedOptions {
   showsScale?: boolean;
   applePoiDetailPresentation?: ApplePoiDetailPresentation;
   customMapStyle?: string;
+  /** Map type the scenario starts with; the map type button still cycles. */
+  mapType?: MapType;
+  pointsOfInterest?: PointsOfInterest;
   mapPadding?: EdgePadding;
   fitToCoordinatesOnReady?: boolean;
   fitToCoordinatesOnMount?: boolean;

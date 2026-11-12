@@ -18,7 +18,9 @@ export type {
   MapType,
   MapViewProps,
   MapViewPropsForProvider,
+  PoiCategory,
   PoiPressEvent,
+  PointsOfInterest,
 } from './map';
 export type {
   MarkerAnchor,

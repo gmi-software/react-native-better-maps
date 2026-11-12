@@ -10,6 +10,11 @@ import { useMapViewCommands } from '../hooks/useMapViewCommands';
 import { useNitroCallback } from '../hooks/useNitroCallback';
 import { useStableCameraProps } from '../hooks/useStableCameraProps';
 import { useStableValue } from '../hooks/useStableValue';
+import {
+  pointsOfInterestEqual,
+  resolveGoogleMapStyle,
+  toApplePoiFilter,
+} from '../mapStyle/pointsOfInterest';
 import { NativeMapView } from '../native/MapViewNative';
 import type {
   MapView as NativeMapViewHybrid,
@@ -60,6 +65,7 @@ export function MapView({
   showsScale,
   applePoiDetailPresentation,
   customMapStyle,
+  pointsOfInterest: pointsOfInterestProp,
   clusteringEnabled,
   mapPadding,
   markerEnteringAnimation,
@@ -150,6 +156,25 @@ export function MapView({
     enteringAnimationsEqual,
   );
   const cameraProps = useStableCameraProps({ region, camera, mapPadding });
+  // MapKit filters POIs natively; Google Maps reads them from its style JSON.
+  const pointsOfInterest = useStableValue(
+    pointsOfInterestProp,
+    pointsOfInterestEqual,
+  );
+  const applePoiFilter = useMemo(
+    () =>
+      resolvedProvider === 'apple'
+        ? toApplePoiFilter(pointsOfInterest)
+        : undefined,
+    [resolvedProvider, pointsOfInterest],
+  );
+  const mapStyle = useMemo(
+    () =>
+      resolvedProvider === 'google'
+        ? resolveGoogleMapStyle(pointsOfInterest, customMapStyle, googleMapId)
+        : customMapStyle,
+    [resolvedProvider, pointsOfInterest, customMapStyle, googleMapId],
+  );
 
   const hasMarkerPress =
     onMarkerPressProp != null || hasCollectedMarkerPress;
@@ -329,7 +354,8 @@ export function MapView({
       showsCompass={showsCompass}
       showsScale={showsScale}
       applePoiDetailPresentation={applePoiDetailPresentation}
-      customMapStyle={customMapStyle}
+      customMapStyle={mapStyle}
+      applePoiFilter={applePoiFilter}
       clusteringEnabled={clusteringEnabled}
       mapPadding={cameraProps.mapPadding}
       markerEnteringAnimation={markerEntering}

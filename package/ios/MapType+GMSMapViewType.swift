@@ -2,9 +2,10 @@
 import GoogleMaps
 
 extension MapType {
+  /// `mutedStandard` is Apple-only and falls back to the normal map.
   func toGMSMapViewType() -> GMSMapViewType {
     switch self {
-    case .standard:
+    case .standard, .mutedstandard:
       return .normal
     case .satellite:
       return .satellite

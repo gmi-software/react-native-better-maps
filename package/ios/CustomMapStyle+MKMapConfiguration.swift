@@ -3,17 +3,25 @@ import MapKit
 enum CustomMapStyleParser {
   /// Applies a curated subset of Google Maps JSON style rules via MapKit configuration.
   /// Full JSON parity is not available on iOS; POI/transit visibility and elevation are supported.
+  /// `poiFilter` (the `pointsOfInterest` prop) beats the style's POI rules.
   @available(iOS 16.0, *)
-  static func apply(json: String?, mapType: MapType, to mapView: MKMapView) {
+  static func apply(
+    json: String?,
+    mapType: MapType,
+    poiFilter: NativePoiFilter?,
+    to mapView: MKMapView
+  ) {
     guard let json, !json.isEmpty,
       let data = json.data(using: .utf8),
       let rules = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
     else {
-      mapView.preferredConfiguration = mapType.toMKMapConfiguration()
+      let configuration = mapType.toMKMapConfiguration()
+      applyPoiFilter(poiFilter, styleHidesPois: false, to: configuration)
+      mapView.preferredConfiguration = configuration
       return
     }
 
-    var configuration = mapType.toMKMapConfiguration()
+    let configuration = mapType.toMKMapConfiguration()
     var hidePois = false
     var hideTransit = false
     var useFlatElevation = false
@@ -44,20 +52,70 @@ enum CustomMapStyleParser {
       }
     }
 
+    applyPoiFilter(poiFilter, styleHidesPois: hidePois, to: configuration)
     if let standard = configuration as? MKStandardMapConfiguration {
-      if hidePois {
-        standard.pointOfInterestFilter = .excludingAll
-      }
       if hideTransit {
         standard.showsTraffic = false
       }
       if useFlatElevation {
         standard.elevationStyle = .flat
       }
-      configuration = standard
     }
 
     mapView.preferredConfiguration = configuration
+  }
+
+  /// Satellite imagery has no points of interest, so only the standard and
+  /// hybrid configurations take a filter.
+  @available(iOS 16.0, *)
+  private static func applyPoiFilter(
+    _ poiFilter: NativePoiFilter?,
+    styleHidesPois: Bool,
+    to configuration: MKMapConfiguration
+  ) {
+    guard
+      let choice = resolvePoiFilter(poiFilter?.toRequest(), styleHidesPois: styleHidesPois)
+    else {
+      return
+    }
+
+    let filter = choice.toMKPointOfInterestFilter()
+    if let standard = configuration as? MKStandardMapConfiguration {
+      standard.pointOfInterestFilter = filter
+    } else if let hybrid = configuration as? MKHybridMapConfiguration {
+      hybrid.pointOfInterestFilter = filter
+    }
+  }
+}
+
+extension NativePoiFilter {
+  fileprivate func toRequest() -> PoiFilterRequest<MKPointOfInterestCategory> {
+    let categories = categories.compactMap(\.mkPointOfInterestCategory)
+    switch mode {
+    case .all:
+      return .showAll
+    case .none:
+      return .hideAll
+    case .include:
+      return .only(categories)
+    case .exclude:
+      return .allExcept(categories)
+    }
+  }
+}
+
+extension PoiFilterChoice where Category == MKPointOfInterestCategory {
+  fileprivate func toMKPointOfInterestFilter() -> MKPointOfInterestFilter {
+    switch self {
+    case .includingAll:
+      return .includingAll
+    case .excludingAll:
+      return .excludingAll
+    case .including(let categories):
+      return MKPointOfInterestFilter(including: categories)
+    case .excluding(let categories):
+      return MKPointOfInterestFilter(excluding: categories)
+    }
   }
 }
 
@@ -67,6 +125,8 @@ extension MapType {
     switch self {
     case .standard, .terrain:
       return MKStandardMapConfiguration(elevationStyle: .realistic)
+    case .mutedstandard:
+      return MKStandardMapConfiguration(elevationStyle: .realistic, emphasisStyle: .muted)
     case .satellite:
       return MKImageryMapConfiguration(elevationStyle: .realistic)
     case .hybrid:

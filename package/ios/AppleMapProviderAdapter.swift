@@ -156,6 +156,17 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     }
   }
 
+  var applePoiFilter: NativePoiFilter? {
+    didSet {
+      // Attaching and resetting assign nil to maps without the prop; rebuilding
+      // the configuration for that would only make MapKit redraw.
+      guard oldValue != nil || applePoiFilter != nil else {
+        return
+      }
+      applyCustomMapStyle(to: view)
+    }
+  }
+
   var googleMapId: String?
 
   var clusteringEnabled: Bool? {
@@ -653,6 +664,7 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     showsCompass = nil
     showsScale = nil
     customMapStyle = nil
+    applePoiFilter = nil
     googleMapId = nil
     clusteringEnabled = nil
     mapPadding = nil
@@ -696,7 +708,12 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
 
   private func applyCustomMapStyle(to mapView: MKMapView) {
     if #available(iOS 16.0, *) {
-      CustomMapStyleParser.apply(json: customMapStyle, mapType: mapType, to: mapView)
+      CustomMapStyleParser.apply(
+        json: customMapStyle,
+        mapType: mapType,
+        poiFilter: applePoiFilter,
+        to: mapView
+      )
     }
   }
 

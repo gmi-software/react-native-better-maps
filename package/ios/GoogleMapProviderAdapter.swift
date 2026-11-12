@@ -164,6 +164,9 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
+  /// Apple MapKit only; Google Maps gets `pointsOfInterest` as style rules in `customMapStyle`.
+  var applePoiFilter: NativePoiFilter?
+
   var googleMapId: String? {
     get { _googleMapId }
     set { _googleMapId = newValue }
@@ -363,6 +366,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     showsScale = nil
     applePoiDetailPresentation = nil
     customMapStyle = nil
+    applePoiFilter = nil
     googleMapId = nil
     clusteringEnabled = nil
     mapPadding = nil

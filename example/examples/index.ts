@@ -17,6 +17,14 @@ import { geojsonScenario } from './geojson';
 import { landmarksScenario } from './landmarks';
 import { mountEffectCameraScenario } from './mountEffectCamera';
 import { createScenarioOverlayProps } from './overlaySource';
+import {
+  createQuietMapScenario,
+  nextQuietMapPointsOfInterestIndex,
+  pointsOfInterestLabel,
+  QUIET_MAP_DEFAULT_POINTS_OF_INTEREST_INDEX,
+  QUIET_MAP_SCENARIO_ID,
+  quietMapScenario,
+} from './quietMap';
 import { riverRouteScenario } from './riverRoute';
 import type { MapScenario } from './types';
 
@@ -27,8 +35,13 @@ export {
   createApplePoiDetailsScenario,
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
+  createQuietMapScenario,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
   nextApplePoiDetailPresentation,
+  nextQuietMapPointsOfInterestIndex,
+  pointsOfInterestLabel,
+  QUIET_MAP_DEFAULT_POINTS_OF_INTEREST_INDEX,
+  QUIET_MAP_SCENARIO_ID,
 };
 
 export const MAP_SCENARIOS: MapScenario[] = [
@@ -40,5 +53,6 @@ export const MAP_SCENARIOS: MapScenario[] = [
   geojsonScenario,
   advancedFeaturesScenario,
   applePoiDetailsScenario,
+  quietMapScenario,
   mountEffectCameraScenario,
 ];

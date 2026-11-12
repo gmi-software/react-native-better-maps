@@ -60,4 +60,14 @@ enum ClusterBadgeStyle {
     }
     return labelFontSize * max(labelMinimumScaleFactor, availableWidth / labelWidth)
   }
+
+  /// A background image's declared size scaled down to fit a badge `diameter` across, so a
+  /// large declared size does not decode an image far bigger than the badge draws.
+  static func fittedImageSize(width: Double, height: Double, diameter: CGFloat) -> CGSize {
+    guard width > 0, height > 0 else {
+      return CGSize(width: width, height: height)
+    }
+    let scale = min(1, Double(diameter) / max(width, height))
+    return CGSize(width: width * scale, height: height * scale)
+  }
 }

@@ -26,6 +26,9 @@ internal class ClusterIconFactory(
   private var appearance = ClusterBadgeAppearance.STANDARD
   private var backgroundImage: Bitmap? = null
 
+  /** Key of the image being loaded, or null when none is. */
+  private var pendingImageKey: String? = null
+
   /** Tells a load that finished after the style changed again apart from the current one. */
   private var loadGeneration = 0
 
@@ -33,7 +36,7 @@ internal class ClusterIconFactory(
   var onChange: (() -> Unit)? = null
 
   fun setStyle(style: ClusterStyleDescriptor?) {
-    val image = style?.image
+    val image = style?.image?.let(::badgeImage)
     val next =
       ClusterBadgeAppearance.resolve(
         backgroundColor = style?.backgroundColor,
@@ -46,8 +49,10 @@ internal class ClusterIconFactory(
       return
     }
 
-    // A new color or border keeps the image already drawn, with no reload or fallback flash.
-    val keepsImage = backgroundImage != null && next.backgroundImageKey == appearance.backgroundImageKey
+    // A new color or border keeps the image already drawn or loading, with no reload or
+    // fallback flash. A load still running redraws with the latest look when it finishes.
+    val keepsImage =
+      next.backgroundImageKey == appearance.backgroundImageKey && (backgroundImage != null || pendingImageKey != null)
     appearance = next
     if (keepsImage) {
       onChange?.invoke()
@@ -55,10 +60,16 @@ internal class ClusterIconFactory(
     }
     loadGeneration += 1
     backgroundImage = null
+    pendingImageKey = null
     if (image != null) {
       val generation = loadGeneration
+      pendingImageKey = next.backgroundImageKey
       markerIconFactory.loadBitmap(image) { loaded ->
-        if (loaded == null || generation != loadGeneration) {
+        if (generation != loadGeneration) {
+          return@loadBitmap
+        }
+        pendingImageKey = null
+        if (loaded == null) {
           return@loadBitmap
         }
         backgroundImage = loaded
@@ -66,6 +77,15 @@ internal class ClusterIconFactory(
       }
     }
     onChange?.invoke()
+  }
+
+  /** [image] with its declared size bounded to the largest badge, which is all a badge draws. */
+  private fun badgeImage(image: MarkerImage): MarkerImage {
+    val width = image.width ?: return image
+    val height = image.height ?: return image
+    val (fittedWidth, fittedHeight) =
+      ClusterBadgeStyle.fittedImageSizeDp(width, height, ClusterBadgeMetrics.diameterDp(Int.MAX_VALUE))
+    return image.copy(width = fittedWidth, height = fittedHeight)
   }
 
   fun icon(count: Int): BitmapDescriptor {

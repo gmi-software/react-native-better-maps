@@ -3,6 +3,7 @@ package com.margelo.nitro.nitromaps
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * What a cluster badge looks like. iOS draws the same badge from `ClusterBadgeStyle.swift`;
@@ -77,5 +78,21 @@ internal object ClusterBadgeStyle {
       return LABEL_FONT_SIZE_DP
     }
     return LABEL_FONT_SIZE_DP * max(LABEL_MINIMUM_SCALE_FACTOR, availableWidth / labelWidthDp)
+  }
+
+  /**
+   * A background image's declared size scaled down to fit a badge [diameterDp] across, so a
+   * large declared size does not decode an image far bigger than the badge draws.
+   */
+  fun fittedImageSizeDp(
+    widthDp: Double,
+    heightDp: Double,
+    diameterDp: Float,
+  ): Pair<Double, Double> {
+    if (widthDp <= 0 || heightDp <= 0) {
+      return widthDp to heightDp
+    }
+    val scale = min(1.0, diameterDp / max(widthDp, heightDp))
+    return widthDp * scale to heightDp * scale
   }
 }

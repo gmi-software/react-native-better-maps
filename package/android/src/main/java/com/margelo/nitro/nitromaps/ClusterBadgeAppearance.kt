@@ -34,8 +34,14 @@ internal data class ClusterBadgeAppearance(
   /** Tells drawn badges apart in the icon cache. */
   val cacheKey: String
     get() =
-      listOf(solidFillColor ?: "gradient", borderColor, borderWidthDp.toString(), labelColor, backgroundImageKey ?: "")
-        .joinToString("|")
+      listOf(
+        // Prefixed so a solid fill named "gradient" does not share the default badge's key.
+        solidFillColor?.let { "solid:$it" } ?: "gradient",
+        borderColor,
+        borderWidthDp.toString(),
+        labelColor,
+        backgroundImageKey ?: "",
+      ).joinToString("|")
 
   companion object {
     val STANDARD = ClusterBadgeAppearance()

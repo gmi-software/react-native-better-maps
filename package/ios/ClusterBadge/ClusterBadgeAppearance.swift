@@ -72,7 +72,8 @@ struct ClusterBadgeAppearance: Hashable {
     case .gradient:
       fillKey = "gradient"
     case .solid(let color):
-      fillKey = color
+      // Prefixed so a solid fill named "gradient" does not share the default badge's key.
+      fillKey = "solid:\(color)"
     }
     return [fillKey, borderColor, "\(borderWidth)", labelColor, backgroundImageKey ?? ""]
       .joined(separator: "|")

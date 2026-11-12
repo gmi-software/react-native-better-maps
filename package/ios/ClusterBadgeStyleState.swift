@@ -9,11 +9,13 @@ final class ClusterBadgeStyleState {
 
   private var appearance = ClusterBadgeAppearance.standard
   private var backgroundImage: UIImage?
+  /// Key of the image being loaded, or `nil` when none is.
+  private var pendingImageKey: String?
   /// Tells a load that finished after the style changed again apart from the current one.
   private var loadGeneration = 0
 
   func setStyle(_ style: ClusterStyleDescriptor?) {
-    let image = style?.image
+    let image = style?.image.map(Self.badgeImage)
     let next = ClusterBadgeAppearance(
       backgroundColor: style?.backgroundColor,
       textColor: style?.textColor,
@@ -25,8 +27,11 @@ final class ClusterBadgeStyleState {
       return
     }
 
-    // A new color or border keeps the image already drawn, with no reload or fallback flash.
-    let keepsImage = backgroundImage != nil && next.backgroundImageKey == appearance.backgroundImageKey
+    // A new color or border keeps the image already drawn or loading, with no reload or
+    // fallback flash. A load still running redraws with the latest look when it finishes.
+    let keepsImage =
+      next.backgroundImageKey == appearance.backgroundImageKey
+      && (backgroundImage != nil || pendingImageKey != nil)
     appearance = next
     if keepsImage {
       onChange?()
@@ -34,10 +39,16 @@ final class ClusterBadgeStyleState {
     }
     loadGeneration += 1
     backgroundImage = image.flatMap(MarkerImageLoader.cachedImage(for:))
+    pendingImageKey = nil
     if let image, backgroundImage == nil {
       let generation = loadGeneration
+      pendingImageKey = next.backgroundImageKey
       MarkerImageLoader.load(image) { [weak self] loaded in
-        guard let self, let loaded, generation == self.loadGeneration else {
+        guard let self, generation == self.loadGeneration else {
+          return
+        }
+        self.pendingImageKey = nil
+        guard let loaded else {
           return
         }
         self.backgroundImage = loaded
@@ -45,6 +56,25 @@ final class ClusterBadgeStyleState {
       }
     }
     onChange?()
+  }
+
+  /// `image` with its declared size bounded to the largest badge, which is all a badge draws.
+  private static func badgeImage(_ image: MarkerImage) -> MarkerImage {
+    guard let width = image.width, let height = image.height else {
+      return image
+    }
+    let size = ClusterBadgeStyle.fittedImageSize(
+      width: width,
+      height: height,
+      diameter: ClusterBadgeMetrics.diameter(for: .max)
+    )
+    return MarkerImage(
+      uri: image.uri,
+      width: Double(size.width),
+      height: Double(size.height),
+      scale: image.scale,
+      origin: image.origin
+    )
   }
 
   func image(count: Int) -> UIImage {

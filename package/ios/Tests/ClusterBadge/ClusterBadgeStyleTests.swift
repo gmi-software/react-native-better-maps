@@ -148,6 +148,7 @@ func cachesEveryLookApart() {
   let looks = [
     ClusterBadgeAppearance(),
     ClusterBadgeAppearance(backgroundColor: "#E30613"),
+    ClusterBadgeAppearance(backgroundColor: "gradient"),
     ClusterBadgeAppearance(textColor: "#000000"),
     ClusterBadgeAppearance(borderColor: "#000000"),
     ClusterBadgeAppearance(borderWidth: 0),
@@ -156,4 +157,10 @@ func cachesEveryLookApart() {
 
   #expect(Set(looks.map(\.cacheKey)).count == looks.count)
   #expect(ClusterBadgeAppearance().cacheKey == ClusterBadgeAppearance.standard.cacheKey)
+}
+
+@Test
+func boundsALargeDeclaredImageToTheBadge() {
+  #expect(ClusterBadgeStyle.fittedImageSize(width: 448, height: 224, diameter: 56) == CGSize(width: 56, height: 28))
+  #expect(ClusterBadgeStyle.fittedImageSize(width: 40, height: 30, diameter: 56) == CGSize(width: 40, height: 30))
 }

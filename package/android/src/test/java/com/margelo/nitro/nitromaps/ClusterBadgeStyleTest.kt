@@ -145,6 +145,7 @@ class ClusterBadgeStyleTest {
       listOf(
         resolve(),
         resolve(backgroundColor = "#E30613"),
+        resolve(backgroundColor = "gradient"),
         resolve(textColor = "#000000"),
         resolve(borderColor = "#000000"),
         resolve(borderWidth = 0.0),
@@ -152,6 +153,12 @@ class ClusterBadgeStyleTest {
       )
 
     assertEquals(looks.size, looks.map { it.cacheKey }.toSet().size)
+  }
+
+  @Test
+  fun boundsALargeDeclaredImageToTheBadge() {
+    assertEquals(56.0 to 28.0, ClusterBadgeStyle.fittedImageSizeDp(448.0, 224.0, 56f))
+    assertEquals(40.0 to 30.0, ClusterBadgeStyle.fittedImageSizeDp(40.0, 30.0, 56f))
   }
 
   private fun resolve(

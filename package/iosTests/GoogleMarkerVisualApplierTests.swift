@@ -109,6 +109,37 @@ final class GoogleMarkerVisualApplierTests: XCTestCase {
     XCTAssertTrue(marker.icon === iconB)
   }
 
+  func testAnchorFollowsTheShownIconWhileAReplacementLoads() {
+    let iconA = makeIcon()
+    var completions: [(UIImage?) -> Void] = []
+    let applier = GoogleMarkerVisualApplier(
+      cachedImage: { image in image.uri.hasSuffix("a.png") ? iconA : nil },
+      loadImage: { _, completion in completions.append(completion) }
+    )
+    let marker = GMSMarker()
+    let imageB = MarkerImage(
+      uri: "https://example.test/b.png",
+      width: 80,
+      height: 80,
+      scale: 1,
+      origin: nil
+    )
+    let offset = MarkerPoint(x: 0, y: 20)
+
+    applier.apply(
+      markerDescriptor(image: remoteImage("a.png"), anchor: nil, centerOffset: offset),
+      to: marker
+    )
+    applier.apply(markerDescriptor(image: imageB, anchor: nil, centerOffset: offset), to: marker)
+
+    XCTAssertTrue(marker.icon === iconA)
+    XCTAssertEqual(marker.groundAnchor.y, 0.5, accuracy: 0.0001)
+
+    completions[0](makeIcon(side: 80))
+
+    XCTAssertEqual(marker.groundAnchor.y, 0.75, accuracy: 0.0001)
+  }
+
   func testFailedLoadShowsThePlaceholderAndTheNextApplyRetries() {
     var completions: [(UIImage?) -> Void] = []
     let applier = GoogleMarkerVisualApplier(
@@ -152,7 +183,11 @@ private func remoteImage(_ name: String) -> MarkerImage {
   )
 }
 
-private func markerDescriptor(image: MarkerImage?, anchor: MarkerAnchor?) -> MarkerDescriptor {
+private func markerDescriptor(
+  image: MarkerImage?,
+  anchor: MarkerAnchor?,
+  centerOffset: MarkerPoint? = nil
+) -> MarkerDescriptor {
   MarkerDescriptor(
     id: "marker",
     coordinate: Coordinate(latitude: 0, longitude: 0),
@@ -163,7 +198,7 @@ private func markerDescriptor(image: MarkerImage?, anchor: MarkerAnchor?) -> Mar
     image: image,
     markerColor: nil,
     anchor: anchor,
-    centerOffset: nil,
+    centerOffset: centerOffset,
     rotation: nil,
     flat: nil,
     opacity: nil,
@@ -172,7 +207,7 @@ private func markerDescriptor(image: MarkerImage?, anchor: MarkerAnchor?) -> Mar
   )
 }
 
-private func makeIcon() -> UIImage {
-  UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).image { _ in }
+private func makeIcon(side: CGFloat = 40) -> UIImage {
+  UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { _ in }
 }
 #endif

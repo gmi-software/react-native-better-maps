@@ -26,9 +26,10 @@ internal class MarkerIconFactory(
   private val cache = object : LruCache<String, CachedIcon>(iconCacheBytes()) {
     override fun sizeOf(key: String, value: CachedIcon): Int = value.byteCount
   }
-  private val sizeCache = object : LruCache<String, Pair<Float, Float>>(64) {}
   private val mainHandler = Handler(Looper.getMainLooper())
   private val appliedIconKeys = WeakHashMap<Marker, String>()
+  // Size of the image icon each marker shows, kept with the marker so cache eviction cannot lose it.
+  private val appliedImageSizes = WeakHashMap<Marker, Pair<Float, Float>>()
   private val pendingIconLoads = WeakHashMap<Marker, PendingIconLoad>()
   private val iconLoadGeneration = WeakHashMap<Marker, Int>()
 
@@ -37,7 +38,11 @@ internal class MarkerIconFactory(
     var onIconApplied: () -> Unit,
   )
 
-  private class CachedIcon(val descriptor: BitmapDescriptor, val byteCount: Int)
+  private class CachedIcon(
+    val descriptor: BitmapDescriptor,
+    val byteCount: Int,
+    val sizePx: Pair<Float, Float>,
+  )
 
   fun applyVisualProps(
     descriptor: MarkerDescriptor,
@@ -64,10 +69,11 @@ internal class MarkerIconFactory(
     marker: Marker,
   ) {
     val size =
-      if (descriptor.image != null) {
-        displaySizePx(descriptor.image) ?: (0f to 0f)
-      } else {
-        defaultMarkerDisplaySizePx()
+      when {
+        // While a replacement loads the old image stays on the map, so the anchor is sized for it.
+        descriptor.image != null && showsImage(marker) -> appliedImageSizes[marker] ?: (0f to 0f)
+        descriptor.image != null -> explicitDisplaySizePx(descriptor.image) ?: (0f to 0f)
+        else -> defaultMarkerDisplaySizePx()
       }
     val (anchorX, anchorY) = descriptor.effectiveGoogleMapsAnchor(size.first, size.second, density)
     marker.setAnchor(anchorX, anchorY)
@@ -121,6 +127,7 @@ internal class MarkerIconFactory(
     cache.get(iconKey)?.let { cached ->
       marker.setIcon(cached.descriptor)
       setApplied(marker, iconKey)
+      appliedImageSizes[marker] = cached.sizePx
       onIconApplied()
       return
     }
@@ -146,8 +153,9 @@ internal class MarkerIconFactory(
         return@loadIconAsync
       }
 
-      marker.setIcon(loaded)
+      marker.setIcon(loaded.descriptor)
       setApplied(marker, iconKey)
+      appliedImageSizes[marker] = loaded.sizePx
       callback?.invoke()
     }
   }
@@ -162,19 +170,10 @@ internal class MarkerIconFactory(
     appliedIconKeys[marker] = PLACEHOLDER_ICON_KEY
   }
 
-  private fun displaySizePx(image: MarkerImage): Pair<Float, Float>? {
-    val key = cacheKey(image)
-    sizeCache.get(key)?.let { return it }
-
-    val widthDp = image.width
-    val heightDp = image.height
-    if (widthDp != null && heightDp != null) {
-      val size = (widthDp * density).toFloat() to (heightDp * density).toFloat()
-      sizeCache.put(key, size)
-      return size
-    }
-
-    return null
+  private fun explicitDisplaySizePx(image: MarkerImage): Pair<Float, Float>? {
+    val widthDp = image.width ?: return null
+    val heightDp = image.height ?: return null
+    return (widthDp * density).toFloat() to (heightDp * density).toFloat()
   }
 
   private fun defaultMarkerDisplaySizePx(): Pair<Float, Float> = (DEFAULT_MARKER_WIDTH_DP * density) to (DEFAULT_MARKER_HEIGHT_DP * density)
@@ -188,7 +187,7 @@ internal class MarkerIconFactory(
   private fun loadLocalIcon(
     image: MarkerImage,
     key: String,
-  ): BitmapDescriptor? {
+  ): CachedIcon? {
     val bitmap = loadLocalBitmap(image)
     if (bitmap == null) {
       logLoadFailure(image, key, "not found or not decodable")
@@ -199,11 +198,11 @@ internal class MarkerIconFactory(
 
   private fun loadIconAsync(
     image: MarkerImage,
-    onLoaded: (BitmapDescriptor?) -> Unit,
+    onLoaded: (CachedIcon?) -> Unit,
   ) {
     val key = cacheKey(image)
     cache.get(key)?.let { cached ->
-      deliverOnMainThread { onLoaded(cached.descriptor) }
+      deliverOnMainThread { onLoaded(cached) }
       return
     }
 
@@ -216,13 +215,13 @@ internal class MarkerIconFactory(
     }
 
     loadExecutor.execute {
-      val descriptor =
+      val icon =
         if (RemoteMarkerUriPolicy.isRemoteUri(image.uri)) {
           loadRemoteIcon(image, key)
         } else {
           loadLocalIcon(image, key)
         }
-      deliverOnMainThread { onLoaded(descriptor) }
+      deliverOnMainThread { onLoaded(icon) }
     }
   }
 
@@ -266,7 +265,7 @@ internal class MarkerIconFactory(
   private fun loadRemoteIcon(
     image: MarkerImage,
     key: String,
-  ): BitmapDescriptor? {
+  ): CachedIcon? {
     return try {
       val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
       val bitmap = decodeByteArray(bytes, image)
@@ -409,11 +408,15 @@ internal class MarkerIconFactory(
   private fun cacheBitmap(
     key: String,
     bitmap: Bitmap,
-  ): BitmapDescriptor {
-    val descriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
-    cache.put(key, CachedIcon(descriptor, bitmap.allocationByteCount.coerceAtLeast(1)))
-    sizeCache.put(key, bitmap.width.toFloat() to bitmap.height.toFloat())
-    return descriptor
+  ): CachedIcon {
+    val icon =
+      CachedIcon(
+        descriptor = BitmapDescriptorFactory.fromBitmap(bitmap),
+        byteCount = bitmap.allocationByteCount.coerceAtLeast(1),
+        sizePx = bitmap.width.toFloat() to bitmap.height.toFloat(),
+      )
+    cache.put(key, icon)
+    return icon
   }
 
   private fun logRejectedRemoteMarkerUri(

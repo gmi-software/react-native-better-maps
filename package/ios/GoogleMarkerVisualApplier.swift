@@ -44,13 +44,14 @@ final class GoogleMarkerVisualApplier {
     marker.rotation = descriptor.rotation ?? 0
     marker.isFlat = descriptor.flat == true
     marker.opacity = Float(descriptor.opacity ?? 1)
-    applyAnchor(descriptor, to: marker)
+    // After the icon: the anchor has to know whether a replacement is still loading.
     applyIcon(descriptor, to: marker)
+    applyAnchor(descriptor, to: marker)
   }
 
   private func applyAnchor(_ descriptor: MarkerDescriptor, to marker: GMSMarker) {
     marker.groundAnchor = descriptor.effectiveGoogleMapsAnchor(
-      imageSize: anchorImageSize(descriptor, icon: marker.icon)
+      imageSize: anchorImageSize(descriptor, marker: marker)
     )
   }
 
@@ -170,7 +171,15 @@ final class GoogleMarkerVisualApplier {
     state.pending = nil
   }
 
-  private func anchorImageSize(_ descriptor: MarkerDescriptor, icon: UIImage?) -> CGSize {
+  private func anchorImageSize(_ descriptor: MarkerDescriptor, marker: GMSMarker) -> CGSize {
+    let icon = marker.icon
+    // While a replacement loads the old image stays on the map, so the anchor is sized for it.
+    // `setIcon` sizes it again for the replacement once that lands.
+    if let state = states.object(forKey: marker), state.pending != nil, showsImage(state),
+      let icon, icon.size.width > 0, icon.size.height > 0
+    {
+      return icon.size
+    }
     if let image = descriptor.image, let width = image.width, let height = image.height,
       width > 0, height > 0
     {

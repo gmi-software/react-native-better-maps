@@ -205,13 +205,18 @@ enum MarkerImageLoader {
   ) {
     let task = session.dataTask(with: url) { data, response, error in
       let uiImage: UIImage?
-      if let data, let decoded = decode(data, image: image) {
+      let statusCode = (response as? HTTPURLResponse)?.statusCode
+      if let statusCode, !(200..<300).contains(statusCode) {
+        // An error page can still decode as an image; it must not be cached or shown.
+        uiImage = nil
+        logLoadFailure(uri: image.uri, cacheKey: cacheKey, reason: "HTTP \(statusCode)")
+      } else if let data, let decoded = decode(data, image: image) {
         let resized = resize(decoded, image: image)
         cache.setObject(resized, forKey: cacheKey, cost: byteCost(of: resized))
         uiImage = resized
       } else {
         uiImage = nil
-        let status = (response as? HTTPURLResponse).map { " (HTTP \($0.statusCode))" } ?? ""
+        let status = statusCode.map { " (HTTP \($0))" } ?? ""
         logLoadFailure(
           uri: image.uri,
           cacheKey: cacheKey,

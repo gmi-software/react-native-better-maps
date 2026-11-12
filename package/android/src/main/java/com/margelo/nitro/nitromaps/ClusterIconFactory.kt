@@ -32,6 +32,9 @@ internal class ClusterIconFactory(
   /** Tells a load that finished after the style changed again apart from the current one. */
   private var loadGeneration = 0
 
+  /** What the largest badge draws an image at, which bounds one that declares no size. */
+  private val maxImageSizePx = ceil(ClusterBadgeMetrics.diameterDp(Int.MAX_VALUE) * density).toInt()
+
   /** Called on the main thread when the badges look different: a new style, or its image arriving. */
   var onChange: (() -> Unit)? = null
 
@@ -64,7 +67,7 @@ internal class ClusterIconFactory(
     if (image != null) {
       val generation = loadGeneration
       pendingImageKey = next.backgroundImageKey
-      markerIconFactory.loadBitmap(image) { loaded ->
+      markerIconFactory.loadBitmap(image, maxImageSizePx) { loaded ->
         if (generation != loadGeneration) {
           return@loadBitmap
         }
@@ -79,7 +82,10 @@ internal class ClusterIconFactory(
     onChange?.invoke()
   }
 
-  /** [image] with its declared size bounded to the largest badge, which is all a badge draws. */
+  /**
+   * [image] with its declared size bounded to the largest badge, which is all a badge draws.
+   * One that declares no size is bounded by [maxImageSizePx] as it decodes.
+   */
   private fun badgeImage(image: MarkerImage): MarkerImage {
     val width = image.width ?: return image
     val height = image.height ?: return image

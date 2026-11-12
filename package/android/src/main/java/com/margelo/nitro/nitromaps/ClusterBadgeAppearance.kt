@@ -54,7 +54,8 @@ internal data class ClusterBadgeAppearance(
       backgroundImageKey: String?,
     ): ClusterBadgeAppearance =
       ClusterBadgeAppearance(
-        solidFillColor = backgroundColor,
+        // A fill that does not parse keeps the default gradient, as on iOS.
+        solidFillColor = backgroundColor?.takeIf { it.toColorIntOrNull() != null },
         borderColor = borderColor ?: ClusterBadgeStyle.BORDER_COLOR,
         borderWidthDp =
           if (borderWidth != null && borderWidth.isFinite()) {

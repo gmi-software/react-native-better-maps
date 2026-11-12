@@ -104,6 +104,12 @@ class ClusterBadgeStyleTest {
   }
 
   @Test
+  fun keepsTheGradientForABackgroundColorThatDoesNotParse() {
+    assertNull(resolve(backgroundColor = "red").solidFillColor)
+    assertEquals(ClusterBadgeAppearance.STANDARD, resolve(backgroundColor = "gradient"))
+  }
+
+  @Test
   fun keepsTheFieldsAStyleLeavesOut() {
     val appearance = resolve(textColor = "#000000")
 
@@ -145,7 +151,6 @@ class ClusterBadgeStyleTest {
       listOf(
         resolve(),
         resolve(backgroundColor = "#E30613"),
-        resolve(backgroundColor = "gradient"),
         resolve(textColor = "#000000"),
         resolve(borderColor = "#000000"),
         resolve(borderWidth = 0.0),

@@ -13,15 +13,20 @@ final class ClusterBadgeStyleState {
   private var pendingImageKey: String?
   /// Tells a load that finished after the style changed again apart from the current one.
   private var loadGeneration = 0
+  /// What the largest badge draws an image at, which bounds one that declares no size.
+  private let maximumImagePixelSize = ClusterBadgeMetrics.diameter(for: .max) * UIScreen.main.scale
 
   func setStyle(_ style: ClusterStyleDescriptor?) {
     let image = style?.image.map(Self.badgeImage)
     let next = ClusterBadgeAppearance(
-      backgroundColor: style?.backgroundColor,
+      // A fill that does not parse keeps the default gradient, as on Android.
+      backgroundColor: style?.backgroundColor.flatMap { $0.toHexColorComponents() == nil ? nil : $0 },
       textColor: style?.textColor,
       borderColor: style?.borderColor,
       borderWidth: style?.borderWidth,
-      backgroundImageKey: image.map { MarkerImageLoader.cacheKey(for: $0) as String }
+      backgroundImageKey: image.map {
+        MarkerImageLoader.cacheKey(for: $0, maximumPixelSize: maximumImagePixelSize) as String
+      }
     )
     guard next != appearance else {
       return
@@ -38,12 +43,14 @@ final class ClusterBadgeStyleState {
       return
     }
     loadGeneration += 1
-    backgroundImage = image.flatMap(MarkerImageLoader.cachedImage(for:))
+    backgroundImage = image.flatMap {
+      MarkerImageLoader.cachedImage(for: $0, maximumPixelSize: maximumImagePixelSize)
+    }
     pendingImageKey = nil
     if let image, backgroundImage == nil {
       let generation = loadGeneration
       pendingImageKey = next.backgroundImageKey
-      MarkerImageLoader.load(image) { [weak self] loaded in
+      MarkerImageLoader.load(image, maximumPixelSize: maximumImagePixelSize) { [weak self] loaded in
         guard let self, generation == self.loadGeneration else {
           return
         }
@@ -59,6 +66,7 @@ final class ClusterBadgeStyleState {
   }
 
   /// `image` with its declared size bounded to the largest badge, which is all a badge draws.
+  /// One that declares no size is bounded by `maximumImagePixelSize` as it decodes.
   private static func badgeImage(_ image: MarkerImage) -> MarkerImage {
     guard let width = image.width, let height = image.height else {
       return image

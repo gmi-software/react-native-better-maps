@@ -126,6 +126,17 @@ function visibilityRule(
 }
 
 /**
+ * Hides every POI. Google files airports and transit stations under
+ * `transit.station`, not `poi`, so that is turned off as well.
+ */
+function hideAllPoiRules(): GoogleStyleRule[] {
+  return [
+    visibilityRule('poi', 'off'),
+    visibilityRule('transit.station', 'off'),
+  ];
+}
+
+/**
  * Google Maps style rules that show the points of interest asked for. Empty
  * when the map's default already does.
  */
@@ -136,13 +147,13 @@ export function googlePoiStyleRules(
     return [];
   }
   if (pointsOfInterest === 'none') {
-    return [visibilityRule('poi', 'off')];
+    return hideAllPoiRules();
   }
   const { mode, categories } = categoryFilter(pointsOfInterest);
   const featureTypes = googleFeatureTypes(categories);
   if (mode === 'include') {
     return [
-      visibilityRule('poi', 'off'),
+      ...hideAllPoiRules(),
       ...featureTypes.map((featureType) => visibilityRule(featureType, 'on')),
     ];
   }

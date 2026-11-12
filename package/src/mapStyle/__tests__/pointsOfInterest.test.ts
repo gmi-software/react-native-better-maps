@@ -32,6 +32,7 @@ const on = (featureType: string) => ({
   featureType,
   stylers: [{ visibility: 'on' as const }],
 });
+const hideAll = [off('poi'), off('transit.station')];
 
 describe('googlePoiStyleRules', () => {
   test('adds no rules for the provider default', () => {
@@ -39,8 +40,8 @@ describe('googlePoiStyleRules', () => {
     expect(googlePoiStyleRules('all')).toEqual([]);
   });
 
-  test('turns every POI off for none', () => {
-    expect(googlePoiStyleRules('none')).toEqual([off('poi')]);
+  test('turns every POI and transit station off for none', () => {
+    expect(googlePoiStyleRules('none')).toEqual(hideAll);
   });
 
   test('turns off the group of each excluded category, once', () => {
@@ -51,7 +52,7 @@ describe('googlePoiStyleRules', () => {
 
   test('turns every POI off, then the included groups back on', () => {
     expect(googlePoiStyleRules({ include: ['park', 'hospital'] })).toEqual([
-      off('poi'),
+      ...hideAll,
       on('poi.park'),
       on('poi.medical'),
     ]);
@@ -62,7 +63,8 @@ describe('googlePoiStyleRules', () => {
   });
 
   test('leaves included categories without a Google group hidden', () => {
-    expect(googlePoiStyleRules({ include: ['parking'] })).toEqual([off('poi')]);
+    expect(googlePoiStyleRules({ include: ['parking'] })).toEqual(hideAll);
+    expect(googlePoiStyleRules({ include: ['airport'] })).toEqual(hideAll);
   });
 
   test('maps every Google POI group', () => {
@@ -108,25 +110,25 @@ describe('resolveGoogleMapStyle', () => {
       JSON.stringify([customRule]),
       undefined,
     );
-    expect(JSON.parse(style ?? '')).toEqual([off('poi'), customRule]);
+    expect(JSON.parse(style ?? '')).toEqual([...hideAll, customRule]);
   });
 
   test('uses only the generated rules without a customMapStyle', () => {
     expect(resolveGoogleMapStyle('none', undefined, undefined)).toBe(
-      JSON.stringify([off('poi')]),
+      JSON.stringify(hideAll),
     );
     expect(resolveGoogleMapStyle('none', '  ', undefined)).toBe(
-      JSON.stringify([off('poi')]),
+      JSON.stringify(hideAll),
     );
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   test('warns and keeps the generated rules when customMapStyle is not a rule array', () => {
     expect(resolveGoogleMapStyle('none', '{not json', undefined)).toBe(
-      JSON.stringify([off('poi')]),
+      JSON.stringify(hideAll),
     );
     expect(resolveGoogleMapStyle('none', '{}', undefined)).toBe(
-      JSON.stringify([off('poi')]),
+      JSON.stringify(hideAll),
     );
     expect(warnSpy).toHaveBeenCalledTimes(2);
   });

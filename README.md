@@ -130,7 +130,7 @@ in `react-native-better-maps` and `react-native-maps` with
 | Nitro Modules             | `react-native-nitro-modules >=0.37.0`                                                |
 | iOS                       | `16.0+`                                                                              |
 | Android                   | `minSdkVersion 24+`                                                                  |
-| Expo                      | SDK 56+ (verified through SDK 58) with a development build; Expo Go is not supported |
+| Expo                      | SDK 56+ (SDK 58 builds in CI, device check pending); development build, not Expo Go  |
 
 Not supported today:
 
@@ -199,7 +199,7 @@ After `expo prebuild`, native projects have the required keys and permissions wi
 >
 > **EAS Secrets:** Store `GOOGLE_MAPS_API_KEY` as an EAS secret and reference it via `process.env.GOOGLE_MAPS_API_KEY` in `app.config.js`.
 
-See [docs/expo-setup.md](docs/expo-setup.md) for a full Expo setup walkthrough (SDK 56+, verified through SDK 58).
+See [docs/expo-setup.md](docs/expo-setup.md) for a full Expo setup walkthrough (SDK 56+; SDK 58 builds in CI, device check pending).
 
 ## Quick start
 

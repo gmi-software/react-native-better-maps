@@ -168,6 +168,24 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             | xcbeautify --renderer github-actions
 
+      # The app links every pod, so a link error the library scheme alone cannot
+      # show fails here. Same DerivedData: the library is not rebuilt.
+      - name: Build the example app
+        run: |
+          set -o pipefail
+          NSUnbufferedIO=YES xcodebuild build \
+            -workspace example/ios/NitroMapsExample.xcworkspace \
+            -scheme NitroMapsExample \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | xcbeautify --renderer github-actions
+
   android:
     name: Android
     # Pinned: the Android SDK and NDK contents differ between runner images.
@@ -276,14 +294,16 @@ jobs:
           "$sdkmanager" --install "ndk;$ndk_version"
 
       # assembleDebug, not compileDebugKotlin: it also runs CMake, so cpp-adapter.cpp,
-      # the generated JNI bindings and the shared C++ get compiled too. Both tasks go
-      # in one invocation — a second ./gradlew repays the configuration phase, which
+      # the generated JNI bindings and the shared C++ get compiled too. `:app` is
+      # assembled so a link error in the example fails here. All tasks go in one
+      # invocation — a second ./gradlew repays the configuration phase, which
       # shells out to node.
-      - name: Compile the library and run the Kotlin unit tests
+      - name: Compile the library, run the Kotlin unit tests and build the example app
         working-directory: example/android
         run: |
           ./gradlew \
             :react-native-better-maps:assembleDebug \
             :react-native-better-maps:testDebugUnitTest \
+            :app:assembleDebug \
             -PreactNativeArchitectures=arm64-v8a \
             --no-daemon --console=plain

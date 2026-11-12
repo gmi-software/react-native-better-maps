@@ -4,15 +4,15 @@ This guide covers configuring `react-native-better-maps` in an Expo app with the
 
 ## Prerequisites
 
-- Expo SDK 56+ (verified through SDK 58)
+- Expo SDK 56+ (verified through SDK 57; SDK 58 builds in CI, device check pending)
 - React Native 0.78+ with the New Architecture enabled (the default since Expo SDK 53; SDK 57 removed the `newArchEnabled` config property because the New Architecture is the only option)
 - `react-native-nitro-modules` 0.37+ installed alongside `react-native-better-maps`
 
-| Expo SDK | React Native | Status   |
-| -------- | ------------ | -------- |
-| 58       | 0.88         | Verified |
-| 57       | 0.86         | Verified |
-| 56       | 0.85         | Verified |
+| Expo SDK | React Native | Status                             |
+| -------- | ------------ | ---------------------------------- |
+| 58       | 0.88         | Builds in CI, device check pending |
+| 57       | 0.86         | Verified                           |
+| 56       | 0.85         | Verified                           |
 
 ## Install
 

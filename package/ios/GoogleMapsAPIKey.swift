@@ -38,7 +38,7 @@ enum MapProviderConfigurationError: LocalizedError, CustomStringConvertible {
       return
         "react-native-better-maps: provider=\"google\" on iOS requires the Google Maps SDK to be linked. Configure iosGoogleMapsApiKey or googleMapsApiKey in the config plugin, or set betterMaps.iosGoogleProvider=true in Podfile.properties.json, then run pod install."
     case .unsupportedIOSProvider(let provider):
-      return "Map provider \"\(provider)\" is not supported on iOS."
+      return "Map provider \"\(provider.stringValue)\" is not supported on iOS."
     }
   }
 

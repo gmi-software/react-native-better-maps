@@ -29,7 +29,7 @@ final class ClusterBadgeStyleState {
     let keepsImage = backgroundImage != nil && next.backgroundImageKey == appearance.backgroundImageKey
     appearance = next
     if keepsImage {
-      onChange?.invoke()
+      onChange?()
       return
     }
     loadGeneration += 1

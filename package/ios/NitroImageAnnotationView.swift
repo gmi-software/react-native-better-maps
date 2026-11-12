@@ -6,6 +6,8 @@ final class NitroImageAnnotationView: MKAnnotationView {
   static let reuseIdentifier = "NitroImage"
 
   private var loadToken: NSString?
+  /// Identifies the latest image request. A completion from an older request is ignored.
+  private var loadGeneration = 0
   /// MapKit sets `annotation` on dequeue, before `configure(for:)`, so it cannot tell a reuse.
   private weak var configuredMarker: MapMarkerAnnotation?
 
@@ -49,6 +51,8 @@ final class NitroImageAnnotationView: MKAnnotationView {
     }
 
     loadToken = token
+    loadGeneration += 1
+    let generation = loadGeneration
     if let cached = MarkerImageLoader.cachedImage(for: imageDescriptor) {
       self.image = cached
       applyLayout(for: marker, imageSize: cached.size)
@@ -64,6 +68,8 @@ final class NitroImageAnnotationView: MKAnnotationView {
 
     MarkerImageLoader.load(imageDescriptor) { [weak self] uiImage in
       guard let self else { return }
+      // A reused view can start a second load for the same image; the older one must not win.
+      guard generation == self.loadGeneration else { return }
 
       guard let marker = self.annotation as? MapMarkerAnnotation,
         let image = marker.image,

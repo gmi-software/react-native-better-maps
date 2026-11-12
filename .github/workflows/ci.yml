@@ -57,6 +57,20 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # README and docs/expo-setup.md name the newest Expo SDK the example app,
+      # and so the native build, is verified on. A dependency bump that moves the
+      # example to another SDK has to update those docs and this value with it.
+      - name: Check the example's Expo SDK
+        env:
+          EXPECTED_EXPO_MAJOR: '58'
+        run: |
+          actual="$(cd example && node -p "require('expo/package.json').version")"
+          echo "The example app resolves expo $actual."
+          if [ "${actual%%.*}" != "$EXPECTED_EXPO_MAJOR" ]; then
+            echo "::error::The example app is on Expo SDK ${actual%%.*}, but the docs say it is verified on SDK $EXPECTED_EXPO_MAJOR. Update README.md, docs/expo-setup.md and EXPECTED_EXPO_MAJOR together."
+            exit 1
+          fi
+
       - name: Codegen
         run: bun run nitrogen
 

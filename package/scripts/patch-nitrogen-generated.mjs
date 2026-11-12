@@ -24,31 +24,6 @@ function replaceOnce(filePath, from, to) {
   writeFileSync(filePath, source.replace(from, to));
 }
 
-replaceOnce(
-  join(
-    packageDir,
-    'nitrogen/generated/shared/c++/views/HybridMapViewComponent.cpp',
-  ),
-  `    const std::shared_ptr<const HybridMapViewProps>& constProps = concreteShadowNode.getConcreteSharedProps();
-    const std::shared_ptr<HybridMapViewProps>& props = std::const_pointer_cast<HybridMapViewProps>(constProps);
-`,
-  `    auto constProps = std::static_pointer_cast<const HybridMapViewProps>(concreteShadowNode.getProps());
-    auto props = std::const_pointer_cast<HybridMapViewProps>(constProps);
-`,
-);
-
-replaceOnce(
-  join(
-    packageDir,
-    'nitrogen/generated/shared/c++/views/HybridMapViewComponent.hpp',
-  ),
-  `  HybridMapViewState(const HybridMapViewState& /* previousState */, folly::dynamic /* data */) {}
-`,
-  `  HybridMapViewState(const HybridMapViewState& previousState, folly::dynamic /* data */):
-    _props(previousState.getProps()) {}
-`,
-);
-
 for (const fileName of [
   'Func_void_std__vector_std__string__Coordinate.swift',
   'HybridMapViewSpec_cxx.swift',

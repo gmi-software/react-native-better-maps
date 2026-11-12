@@ -61,6 +61,7 @@ export function MapView({
   applePoiDetailPresentation,
   customMapStyle,
   clusteringEnabled,
+  clusterPressBehavior,
   mapPadding,
   markerEnteringAnimation,
   clusterEnteringAnimation,
@@ -331,6 +332,7 @@ export function MapView({
       applePoiDetailPresentation={applePoiDetailPresentation}
       customMapStyle={customMapStyle}
       clusteringEnabled={clusteringEnabled}
+      clusterPressBehavior={clusterPressBehavior}
       mapPadding={cameraProps.mapPadding}
       markerEnteringAnimation={markerEntering}
       clusterEnteringAnimation={clusterEntering}

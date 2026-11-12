@@ -104,6 +104,14 @@ export type ApplePoiCategory =
  *
  * Mirrors the `MKSelectionAccessory.mapItemDetail(_:)` presentation styles.
  */
+/**
+ * What a press on a marker cluster does after `onClusterPress` fires.
+ *
+ * - `'zoom'` moves the camera to fit the cluster's markers.
+ * - `'none'` leaves the camera where it is.
+ */
+export type ClusterPressBehavior = 'zoom' | 'none';
+
 export type ApplePoiDetailPresentation =
   'automatic' | 'callout' | 'sheet' | 'openInMaps';
 
@@ -176,6 +184,9 @@ export interface MapViewProps extends HybridViewProps {
 
   /** Whether to cluster nearby markers. */
   clusteringEnabled?: boolean;
+
+  /** What a cluster press does after `onClusterPress` fires. Defaults to `'zoom'`. */
+  clusterPressBehavior?: ClusterPressBehavior;
 
   /** Padding applied to map edges, in density-independent pixels. */
   mapPadding?: EdgePadding;

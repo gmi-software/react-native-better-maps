@@ -266,6 +266,12 @@ class GoogleMapProviderAdapter(
       overlayController.markerEnteringAnimation = value
     }
 
+  override var clusterPressBehavior: ClusterPressBehavior?
+    get() = overlayController.clusterPressBehavior
+    set(value) {
+      overlayController.clusterPressBehavior = value
+    }
+
   private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   override var clusterEnteringAnimation: OverlayEnteringAnimationDescriptor?
     get() = _clusterEnteringAnimation

@@ -12,6 +12,7 @@ export const appleProps: MapViewPropsForProvider<'apple'> = {
   clusteringEnabled: true,
   markerEnteringAnimation: { preset: 'fade-scale', duration: 180 },
   clusterEnteringAnimation: 'system',
+  clusterPressBehavior: 'none',
   onPoiPress: (event) => {
     event.category satisfies ApplePoiCategory;
     // @ts-expect-error Apple POI events do not include Google place IDs.
@@ -25,6 +26,7 @@ export const googleProps: MapViewPropsForProvider<'google'> = {
   customMapStyle: '[]',
   clusteringEnabled: true,
   clusterEnteringAnimation: false,
+  clusterPressBehavior: 'zoom',
   onPoiPress: (event) => {
     event.placeId satisfies string;
     // @ts-expect-error Google POI events do not include Apple categories.
@@ -98,6 +100,20 @@ export const openStreetMapClusterAnimationProps: MapViewPropsForProvider<'openst
     provider: 'openstreetmap',
     // @ts-expect-error Planned OpenStreetMap support has no cluster animation capability yet.
     clusterEnteringAnimation: { preset: 'fade' },
+  };
+
+export const invalidClusterPressBehaviorProps: MapViewPropsForProvider<'apple'> =
+  {
+    provider: 'apple',
+    // @ts-expect-error Only 'zoom' and 'none' are cluster press behaviors.
+    clusterPressBehavior: 'select',
+  };
+
+export const mapboxClusterPressBehaviorProps: MapViewPropsForProvider<'mapbox'> =
+  {
+    provider: 'mapbox',
+    // @ts-expect-error Planned Mapbox support has no clustering capability yet.
+    clusterPressBehavior: 'none',
   };
 
 export const openStreetMapPoiPressProps: MapViewPropsForProvider<'openstreetmap'> =

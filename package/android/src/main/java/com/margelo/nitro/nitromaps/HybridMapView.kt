@@ -47,6 +47,7 @@ class HybridMapView(
   private var _customMapStyle: String? = null
   private var _googleMapId: String? = null
   private var _clusteringEnabled: Boolean? = null
+  private var _clusterPressBehavior: ClusterPressBehavior? = null
   private var _mapPadding: EdgePadding? = null
   private var _markerEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
   private var _clusterEnteringAnimation: OverlayEnteringAnimationDescriptor? = null
@@ -166,6 +167,13 @@ class HybridMapView(
     set(value) {
       _clusteringEnabled = value
       adapter?.clusteringEnabled = value
+    }
+
+  override var clusterPressBehavior: ClusterPressBehavior?
+    get() = _clusterPressBehavior
+    set(value) {
+      _clusterPressBehavior = value
+      adapter?.clusterPressBehavior = value
     }
 
   override var mapPadding: EdgePadding?
@@ -344,6 +352,7 @@ class HybridMapView(
     _customMapStyle = null
     _googleMapId = null
     _clusteringEnabled = null
+    _clusterPressBehavior = null
     _mapPadding = null
     _markerEnteringAnimation = null
     _clusterEnteringAnimation = null
@@ -434,6 +443,7 @@ class HybridMapView(
     adapter.customMapStyle = _customMapStyle
     adapter.googleMapId = _googleMapId
     adapter.clusteringEnabled = _clusteringEnabled
+    adapter.clusterPressBehavior = _clusterPressBehavior
     adapter.markerEnteringAnimation = _markerEnteringAnimation
     adapter.clusterEnteringAnimation = _clusterEnteringAnimation
     adapter.onRegionChange = onRegionChange

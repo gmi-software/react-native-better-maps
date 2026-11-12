@@ -25,7 +25,13 @@ final class ClusterBadgeStyleState {
       return
     }
 
+    // A new color or border keeps the image already drawn, with no reload or fallback flash.
+    let keepsImage = backgroundImage != nil && next.backgroundImageKey == appearance.backgroundImageKey
     appearance = next
+    if keepsImage {
+      onChange?.invoke()
+      return
+    }
     loadGeneration += 1
     backgroundImage = image.flatMap(MarkerImageLoader.cachedImage(for:))
     if let image, backgroundImage == nil {

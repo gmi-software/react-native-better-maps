@@ -46,7 +46,13 @@ internal class ClusterIconFactory(
       return
     }
 
+    // A new color or border keeps the image already drawn, with no reload or fallback flash.
+    val keepsImage = backgroundImage != null && next.backgroundImageKey == appearance.backgroundImageKey
     appearance = next
+    if (keepsImage) {
+      onChange?.invoke()
+      return
+    }
     loadGeneration += 1
     backgroundImage = null
     if (image != null) {

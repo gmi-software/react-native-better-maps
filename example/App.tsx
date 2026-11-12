@@ -839,21 +839,42 @@ export default function App() {
       ?.catch(() => {});
   }, [scenario]);
 
-  // Alternates between two cameras so every press moves the map.
-  const timingZoomedIn = useRef(false);
+  // A timing promise settles after the scene changed when the old map is
+  // released; its result belongs to that scene, not the one on screen.
+  const sceneKey = mapSceneKey(scenario, animationOption, provider);
+  const sceneKeyRef = useRef(sceneKey);
+  useEffect(() => {
+    sceneKeyRef.current = sceneKey;
+  }, [sceneKey]);
   const timeCameraPromise = useCallback(
     (label: string, move: () => Promise<void> | undefined) => {
+      const startedIn = sceneKeyRef.current;
       const startedAt = Date.now();
+      const report = (result: string) => {
+        if (sceneKeyRef.current === startedIn) {
+          setStatus(`${label} · ${result}`);
+        }
+      };
       move()
-        ?.then(() => setStatus(`${label} · ${Date.now() - startedAt} ms`))
-        .catch((error: unknown) => setStatus(`${label} · ${String(error)}`));
+        ?.then(() => report(`${Date.now() - startedAt} ms`))
+        .catch((error: unknown) => report(String(error)));
     },
     [],
   );
 
   const handleTimeAnimateCamera = useCallback(
-    (duration: number) => {
-      timingZoomedIn.current = !timingZoomedIn.current;
+    async (duration: number) => {
+      // Zoom away from wherever the camera is, so every press moves the map
+      // and no other button can turn it into a no-op.
+      let camera;
+      try {
+        camera = await mapRef.current?.getCamera();
+      } catch {
+        return;
+      }
+      if (camera == null) {
+        return;
+      }
       timeCameraPromise(`animateCamera ${duration} ms`, () =>
         mapRef.current?.animateCamera(
           {
@@ -861,7 +882,7 @@ export default function App() {
               latitude: scenario.region.latitude,
               longitude: scenario.region.longitude,
             },
-            zoom: timingZoomedIn.current ? 9 : 13,
+            zoom: (camera.zoom ?? 0) >= 11 ? 9 : 13,
             heading: 0,
             pitch: 0,
           },
@@ -1064,7 +1085,7 @@ export default function App() {
     <View style={styles.container}>
       <MapScene
         ref={mapRef}
-        key={mapSceneKey(scenario, animationOption, provider)}
+        key={sceneKey}
         scenario={scenario}
         provider={provider}
         mapType={MAP_TYPES[mapTypeIndex]}

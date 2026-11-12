@@ -24,17 +24,13 @@ final class GoogleMarkerVisualApplierTests: XCTestCase {
     applier.apply(markerDescriptor(image: image, anchor: MarkerAnchor(x: 0, y: 0)), to: marker)
     applier.apply(markerDescriptor(image: image, anchor: MarkerAnchor(x: 1, y: 1)), to: marker)
 
-    XCTAssertEqual(completions.count, 2)
-
-    let staleIcon = makeIcon()
-    let latestIcon = makeIcon()
-    completions[0](staleIcon)
-
+    XCTAssertEqual(completions.count, 1)
     XCTAssertTrue(marker.icon === GoogleMarkerVisualApplier.placeholderIcon)
 
-    completions[1](latestIcon)
+    let icon = makeIcon()
+    completions[0](icon)
 
-    XCTAssertTrue(marker.icon === latestIcon)
+    XCTAssertTrue(marker.icon === icon)
     XCTAssertEqual(marker.groundAnchor.x, 1, accuracy: 0.0001)
     XCTAssertEqual(marker.groundAnchor.y, 1, accuracy: 0.0001)
   }

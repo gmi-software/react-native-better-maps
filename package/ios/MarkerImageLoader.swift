@@ -179,6 +179,10 @@ enum MarkerImageLoader {
   /// Logged like `logRejected`: the public half drops the query string and credentials.
   private static func logLoadFailure(uri: String, cacheKey: NSString, reason: String) {
     failureLogLock.lock()
+    // Bounded like the image cache: URIs that differ per request would otherwise grow it forever.
+    if loggedFailureKeys.count >= maximumCachedImages {
+      loggedFailureKeys.removeAll()
+    }
     let isFirst = loggedFailureKeys.insert(cacheKey).inserted
     failureLogLock.unlock()
     guard isFirst else {

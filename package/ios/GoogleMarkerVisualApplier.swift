@@ -87,6 +87,16 @@ final class GoogleMarkerVisualApplier {
       return
     }
 
+    // A re-render while the same image loads keeps that load instead of starting another one.
+    if let pending = state.pending, pending.imageToken == imageToken {
+      state.pending = PendingIconLoad(
+        applicationToken: pending.applicationToken,
+        imageToken: imageToken,
+        descriptor: descriptor
+      )
+      return
+    }
+
     cancelPending(state)
     // A marker that already shows an image keeps it until the new one is ready, like a cache hit.
     if !showsImage(state) {

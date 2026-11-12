@@ -424,6 +424,10 @@ internal class MarkerIconFactory(
     key: String,
     reason: String,
   ) {
+    // Bounded: URIs that differ per request would otherwise grow it forever.
+    if (loggedFailureKeys.size >= MAX_LOGGED_FAILURE_KEYS) {
+      loggedFailureKeys.clear()
+    }
     if (loggedFailureKeys.add(key)) {
       Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image ($reason): ${loggableUri(image.uri)}")
     }
@@ -448,6 +452,7 @@ internal class MarkerIconFactory(
     private const val DEFAULT_MARKER_WIDTH_DP = 40f
     private const val DEFAULT_MARKER_HEIGHT_DP = 52f
     private const val MAX_DECODE_DIMENSION = 2048
+    private const val MAX_LOGGED_FAILURE_KEYS = 256
     private const val MAX_DECODE_PIXELS = 2048L * 2048L
     private const val MIN_ICON_CACHE_BYTES = 1024 * 1024
     private const val MAX_ICON_CACHE_BYTES = 32 * 1024 * 1024

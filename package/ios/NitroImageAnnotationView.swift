@@ -6,6 +6,8 @@ final class NitroImageAnnotationView: MKAnnotationView {
   static let reuseIdentifier = "NitroImage"
 
   private var loadToken: NSString?
+  /// MapKit sets `annotation` on dequeue, before `configure(for:)`, so it cannot tell a reuse.
+  private weak var configuredMarker: MapMarkerAnnotation?
 
   override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
     super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -20,8 +22,9 @@ final class NitroImageAnnotationView: MKAnnotationView {
   }
 
   func configure(for marker: MapMarkerAnnotation) {
-    let isSameAnnotation = annotation === marker
+    let isSameAnnotation = configuredMarker === marker
     annotation = marker
+    configuredMarker = marker
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil
     alpha = marker.opacity
@@ -38,7 +41,9 @@ final class NitroImageAnnotationView: MKAnnotationView {
     }
 
     let token = MarkerImageLoader.cacheKey(for: imageDescriptor)
-    if loadToken == token {
+    // Only for the same marker: on a reused view the token may belong to a load that left the
+    // previous marker's image showing.
+    if loadToken == token, isSameAnnotation {
       applyLayout(for: marker, imageSize: self.image?.size ?? .zero)
       return
     }

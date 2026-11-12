@@ -106,6 +106,8 @@ internal class MarkerIconFactory(
 
     val iconKey = cacheKey(image)
     if (isIconApplied(marker, iconKey)) {
+      // Back to the shown image: a load still running for another one must not replace it.
+      invalidatePendingLoad(marker)
       return
     }
 
@@ -348,7 +350,10 @@ internal class MarkerIconFactory(
     if (sourceWidth <= 0 || sourceHeight <= 0) {
       return null
     }
-    val target = image.displaySizePx(sourceWidth, sourceHeight, density)
+    val target =
+      image
+        .displaySizePx(sourceWidth, sourceHeight, density)
+        ?.boundedTo(MAX_DECODE_DIMENSION, MAX_DECODE_PIXELS)
     val options =
       BitmapFactory.Options().apply {
         inSampleSize =

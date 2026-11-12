@@ -9,7 +9,6 @@ import poiStar from '../assets/poiStar.png';
 import type { MapScenario } from './types';
 
 const markerRedSource = Image.resolveAssetSource(markerRed);
-const poiStarSource = Image.resolveAssetSource(poiStar);
 
 /** Leaflet Color Markers — logical size 25×41 dp (@2x bitmaps). */
 const LEAFLET_MARKER = {
@@ -219,14 +218,16 @@ export function createCustomMarkerImagesScenario(
           longitude,
         },
         title: 'Image swap',
-        subtitle: 'Press to toggle 34 / 48 dp · swaps in place',
+        subtitle: 'Press to toggle 25×41 / 37×61 dp · swaps in place',
+        // A remote URL: a `require()`d asset cannot set its own size, and its `uri` passed as a
+        // plain object counts as user-supplied, so Android rejects the Metro host in development.
         image: {
-          uri: poiStarSource.uri,
-          width: options.selectedMarkerId === SELECTABLE_MARKER_ID ? 48 : 34,
-          height: options.selectedMarkerId === SELECTABLE_MARKER_ID ? 48 : 34,
-          scale: poiStarSource.scale,
+          uri: `${LEAFLET_BASE}/marker-icon-2x-violet.png`,
+          width: options.selectedMarkerId === SELECTABLE_MARKER_ID ? 37 : 25,
+          height: options.selectedMarkerId === SELECTABLE_MARKER_ID ? 61 : 41,
+          scale: LEAFLET_MARKER.scale,
         },
-        anchor: { x: 0.5, y: 0.5 },
+        anchor: PIN_ANCHOR,
       },
     ],
   };

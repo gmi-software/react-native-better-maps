@@ -632,8 +632,8 @@ user's Local Network permission on iOS.
 
 A rejected URL logs `Rejected remote marker image URI` — under the `NitroMaps` logcat tag on
 Android, and under the `NitroMaps` category of the `com.nitromaps` subsystem in the unified log
-on iOS. The marker itself falls back to the default pin on both Google providers. On Apple Maps
-it draws with no image at all, the same as any marker image that fails to load.
+on iOS. The marker itself stays invisible on every provider, the same as any marker image that
+fails to load.
 
 `require()`d assets are exempt, including the packager URL Metro resolves them to in a
 development build.

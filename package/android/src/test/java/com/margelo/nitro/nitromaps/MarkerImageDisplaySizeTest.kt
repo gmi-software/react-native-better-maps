@@ -43,4 +43,28 @@ class MarkerImageDisplaySizeTest {
   fun `tiny results stay at least one pixel`() {
     assertEquals(1 to 1, image(scale = 100.0).displaySizePx(10, 10, 1f))
   }
+
+  @Test
+  fun `a size within the limits is kept`() {
+    assertEquals(150 to 246, (150 to 246).boundedTo(2048, 2048L * 2048L))
+    assertEquals(2048 to 2048, (2048 to 2048).boundedTo(2048, 2048L * 2048L))
+  }
+
+  @Test
+  fun `a scale-enlarged size is bounded with its aspect ratio`() {
+    // A 4000×3000 source at scale 1 on density 3 asks for 12000×9000.
+    val target = image(scale = 1.0).displaySizePx(4000, 3000, 3f)!!.boundedTo(2048, 2048L * 2048L)
+    assertEquals(2048 to 1536, target)
+  }
+
+  @Test
+  fun `the pixel limit binds when both sides fit`() {
+    val (width, height) = (2000 to 2000).boundedTo(4096, 1000L * 1000L)
+    assertEquals(1000 to 1000, width to height)
+  }
+
+  @Test
+  fun `an extreme aspect ratio keeps at least one pixel`() {
+    assertEquals(2048 to 1, (100_000 to 1).boundedTo(2048, 2048L * 2048L))
+  }
 }

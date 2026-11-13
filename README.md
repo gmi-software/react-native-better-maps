@@ -632,8 +632,8 @@ user's Local Network permission on iOS.
 
 A rejected URL logs `Rejected remote marker image URI` — under the `NitroMaps` logcat tag on
 Android, and under the `NitroMaps` category of the `com.nitromaps` subsystem in the unified log
-on iOS. The marker itself falls back to the default pin on both Google providers. On Apple Maps
-it draws with no image at all, the same as any marker image that fails to load.
+on iOS. The marker itself stays invisible on every provider, the same as any marker image that
+fails to load.
 
 `require()`d assets are exempt, including the packager URL Metro resolves them to in a
 development build.
@@ -656,9 +656,13 @@ Additional props:
 Platform notes:
 
 - Recommended icon size: up to **128×128 dp**; larger bitmaps are downscaled when `width`/`height` are provided.
-- Retina assets: pass `require()` and let Metro resolve `@2x`/`@3x`; optional explicit `width`/`height`/`scale` on `MarkerImage`.
+- Display size: an explicit `width` and `height` (in dp) win. Without them, `scale` maps the bitmap's pixels to dp, so a 50×82 px remote image with `scale: 2` draws at 25×41 dp on every device. Without either, a remote image keeps its pixel size.
+- Retina assets: pass `require()` and let Metro resolve `@2x`/`@3x`; it fills in `width`/`height` for you.
+- Until its image is ready, or after the load failed, a marker with `image` is invisible rather than the default pin. Changing `image` keeps the current image until the new one is ready, and a cached image is swapped in place. Failed loads log one warning per image (tag/category `NitroMaps`).
 - Remote URLs use a basic in-memory cache only (no disk persistence).
 - Custom React Native marker views (`<Marker><View /></Marker>`) are not supported.
+
+> **Behavior change after 1.2.1:** `MarkerImage.scale` used to be ignored, so an image with `scale` but no `width`/`height` drew at its pixel size on iOS and at a density-dependent size on Android. It now draws at pixels ÷ `scale` dp on both. If you passed `scale` and sized your bitmaps around the old result, drop `scale` or set `width`/`height`.
 
 ### react-native-maps migration (markers)
 

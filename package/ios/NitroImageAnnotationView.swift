@@ -6,6 +6,10 @@ final class NitroImageAnnotationView: MKAnnotationView {
   static let reuseIdentifier = "NitroImage"
 
   private var loadToken: NSString?
+  /// Identifies the latest image request. A completion from an older request is ignored.
+  private var loadGeneration = 0
+  /// MapKit sets `annotation` on dequeue, before `configure(for:)`, so it cannot tell a reuse.
+  private weak var configuredMarker: MapMarkerAnnotation?
 
   override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
     super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -20,7 +24,9 @@ final class NitroImageAnnotationView: MKAnnotationView {
   }
 
   func configure(for marker: MapMarkerAnnotation) {
+    let isSameAnnotation = configuredMarker === marker
     annotation = marker
+    configuredMarker = marker
     isDraggable = marker.draggable
     canShowCallout = marker.title != nil || marker.subtitle != nil
     alpha = marker.opacity
@@ -37,17 +43,33 @@ final class NitroImageAnnotationView: MKAnnotationView {
     }
 
     let token = MarkerImageLoader.cacheKey(for: imageDescriptor)
-    if loadToken == token {
+    // Only for the same marker: on a reused view the token may belong to a load that left the
+    // previous marker's image showing.
+    if loadToken == token, isSameAnnotation {
       applyLayout(for: marker, imageSize: self.image?.size ?? .zero)
       return
     }
 
     loadToken = token
-    self.image = nil
-    applyLayout(for: marker, imageSize: .zero)
+    loadGeneration += 1
+    let generation = loadGeneration
+    if let cached = MarkerImageLoader.cachedImage(for: imageDescriptor) {
+      self.image = cached
+      applyLayout(for: marker, imageSize: cached.size)
+      return
+    }
+
+    // A swap on the same marker keeps the current image until the new one is ready, so it does
+    // not blink. A reused view must not show the previous marker's image.
+    if !isSameAnnotation {
+      self.image = nil
+    }
+    applyLayout(for: marker, imageSize: self.image?.size ?? .zero)
 
     MarkerImageLoader.load(imageDescriptor) { [weak self] uiImage in
       guard let self else { return }
+      // A reused view can start a second load for the same image; the older one must not win.
+      guard generation == self.loadGeneration else { return }
 
       guard let marker = self.annotation as? MapMarkerAnnotation,
         let image = marker.image,

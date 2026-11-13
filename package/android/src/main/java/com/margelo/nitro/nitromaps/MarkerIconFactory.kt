@@ -11,7 +11,9 @@ import android.util.LruCache
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.Marker
+import java.net.URI
 import java.util.WeakHashMap
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -24,9 +26,10 @@ internal class MarkerIconFactory(
   private val cache = object : LruCache<String, CachedIcon>(iconCacheBytes()) {
     override fun sizeOf(key: String, value: CachedIcon): Int = value.byteCount
   }
-  private val sizeCache = object : LruCache<String, Pair<Float, Float>>(64) {}
   private val mainHandler = Handler(Looper.getMainLooper())
   private val appliedIconKeys = WeakHashMap<Marker, String>()
+  // Size of the image icon each marker shows, kept with the marker so cache eviction cannot lose it.
+  private val appliedImageSizes = WeakHashMap<Marker, Pair<Float, Float>>()
   private val pendingIconLoads = WeakHashMap<Marker, PendingIconLoad>()
   private val iconLoadGeneration = WeakHashMap<Marker, Int>()
 
@@ -35,7 +38,11 @@ internal class MarkerIconFactory(
     var onIconApplied: () -> Unit,
   )
 
-  private class CachedIcon(val descriptor: BitmapDescriptor, val byteCount: Int)
+  private class CachedIcon(
+    val descriptor: BitmapDescriptor,
+    val byteCount: Int,
+    val sizePx: Pair<Float, Float>,
+  )
 
   fun applyVisualProps(
     descriptor: MarkerDescriptor,
@@ -62,10 +69,11 @@ internal class MarkerIconFactory(
     marker: Marker,
   ) {
     val size =
-      if (descriptor.image != null) {
-        displaySizePx(descriptor.image) ?: (0f to 0f)
-      } else {
-        defaultMarkerDisplaySizePx()
+      when {
+        // While a replacement loads the old image stays on the map, so the anchor is sized for it.
+        descriptor.image != null && showsImage(marker) -> appliedImageSizes[marker] ?: (0f to 0f)
+        descriptor.image != null -> explicitDisplaySizePx(descriptor.image) ?: (0f to 0f)
+        else -> defaultMarkerDisplaySizePx()
       }
     val (anchorX, anchorY) = descriptor.effectiveGoogleMapsAnchor(size.first, size.second, density)
     marker.setAnchor(anchorX, anchorY)
@@ -104,6 +112,8 @@ internal class MarkerIconFactory(
 
     val iconKey = cacheKey(image)
     if (isIconApplied(marker, iconKey)) {
+      // Back to the shown image: a load still running for another one must not replace it.
+      invalidatePendingLoad(marker)
       return
     }
 
@@ -117,10 +127,15 @@ internal class MarkerIconFactory(
     cache.get(iconKey)?.let { cached ->
       marker.setIcon(cached.descriptor)
       setApplied(marker, iconKey)
+      appliedImageSizes[marker] = cached.sizePx
       onIconApplied()
       return
     }
 
+    // A marker that already shows an image keeps it until the new one is ready, like a cache hit.
+    if (!showsImage(marker)) {
+      showPlaceholder(marker)
+    }
     val generation = beginPendingLoad(marker, iconKey, onIconApplied)
     loadIconAsync(image) { loaded ->
       if (iconLoadGeneration[marker] != generation) {
@@ -133,28 +148,32 @@ internal class MarkerIconFactory(
       }
 
       if (loaded == null) {
+        // The load logged why. The placeholder key makes the next apply retry the load.
+        showPlaceholder(marker)
         return@loadIconAsync
       }
 
-      marker.setIcon(loaded)
+      marker.setIcon(loaded.descriptor)
       setApplied(marker, iconKey)
+      appliedImageSizes[marker] = loaded.sizePx
       callback?.invoke()
     }
   }
 
-  private fun displaySizePx(image: MarkerImage): Pair<Float, Float>? {
-    val key = cacheKey(image)
-    sizeCache.get(key)?.let { return it }
+  private fun showsImage(marker: Marker): Boolean {
+    val key = appliedIconKeys[marker] ?: return false
+    return key != PLACEHOLDER_ICON_KEY && !key.startsWith(DEFAULT_ICON_KEY)
+  }
 
-    val widthDp = image.width
-    val heightDp = image.height
-    if (widthDp != null && heightDp != null) {
-      val size = (widthDp * density).toFloat() to (heightDp * density).toFloat()
-      sizeCache.put(key, size)
-      return size
-    }
+  private fun showPlaceholder(marker: Marker) {
+    marker.setIcon(placeholderMarkerIcon)
+    appliedIconKeys[marker] = PLACEHOLDER_ICON_KEY
+  }
 
-    return null
+  private fun explicitDisplaySizePx(image: MarkerImage): Pair<Float, Float>? {
+    val widthDp = image.width ?: return null
+    val heightDp = image.height ?: return null
+    return (widthDp * density).toFloat() to (heightDp * density).toFloat()
   }
 
   private fun defaultMarkerDisplaySizePx(): Pair<Float, Float> = (DEFAULT_MARKER_WIDTH_DP * density) to (DEFAULT_MARKER_HEIGHT_DP * density)
@@ -168,18 +187,22 @@ internal class MarkerIconFactory(
   private fun loadLocalIcon(
     image: MarkerImage,
     key: String,
-  ): BitmapDescriptor? {
-    val bitmap = loadLocalBitmap(image) ?: return null
+  ): CachedIcon? {
+    val bitmap = loadLocalBitmap(image)
+    if (bitmap == null) {
+      logLoadFailure(image, key, "not found or not decodable")
+      return null
+    }
     return cacheBitmap(key, bitmap)
   }
 
   private fun loadIconAsync(
     image: MarkerImage,
-    onLoaded: (BitmapDescriptor?) -> Unit,
+    onLoaded: (CachedIcon?) -> Unit,
   ) {
     val key = cacheKey(image)
     cache.get(key)?.let { cached ->
-      deliverOnMainThread { onLoaded(cached.descriptor) }
+      deliverOnMainThread { onLoaded(cached) }
       return
     }
 
@@ -192,13 +215,13 @@ internal class MarkerIconFactory(
     }
 
     loadExecutor.execute {
-      val descriptor =
+      val icon =
         if (RemoteMarkerUriPolicy.isRemoteUri(image.uri)) {
           loadRemoteIcon(image, key)
         } else {
           loadLocalIcon(image, key)
         }
-      deliverOnMainThread { onLoaded(descriptor) }
+      deliverOnMainThread { onLoaded(icon) }
     }
   }
 
@@ -242,13 +265,18 @@ internal class MarkerIconFactory(
   private fun loadRemoteIcon(
     image: MarkerImage,
     key: String,
-  ): BitmapDescriptor? {
+  ): CachedIcon? {
     return try {
       val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
-      val bitmap = decodeByteArray(bytes, image) ?: return null
-      cacheBitmap(key, resizeBitmap(bitmap, image))
+      val bitmap = decodeByteArray(bytes, image)
+      if (bitmap == null) {
+        logLoadFailure(image, key, "not decodable")
+        return null
+      }
+      cacheBitmap(key, bitmap)
     } catch (error: Exception) {
-      Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image: ${image.uri}", error)
+      // Not the exception itself: its message can carry the full URL.
+      logLoadFailure(image, key, "request failed: ${error.javaClass.simpleName}")
       null
     }
   }
@@ -276,9 +304,7 @@ internal class MarkerIconFactory(
     }
 
     return try {
-      context.assets.open(uri).use { stream ->
-        decodeByteArray(stream.readBytes(), image)?.let { resizeBitmap(it, image) }
-      }
+      context.assets.open(uri).use { stream -> decodeByteArray(stream.readBytes(), image) }
     } catch (_: Exception) {
       null
     }
@@ -287,24 +313,12 @@ internal class MarkerIconFactory(
   private fun decodeFile(
     path: String,
     image: MarkerImage,
-  ): Bitmap? {
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeFile(path, bounds)
-    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
-    val decoded = BitmapFactory.decodeFile(path, options) ?: return null
-    return resizeBitmap(decoded, image)
-  }
+  ): Bitmap? = decodeSized(image) { options -> BitmapFactory.decodeFile(path, options) }
 
   private fun decodeResource(
     resourceId: Int,
     image: MarkerImage,
-  ): Bitmap? {
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeResource(context.resources, resourceId, bounds)
-    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
-    val decoded = BitmapFactory.decodeResource(context.resources, resourceId, options) ?: return null
-    return resizeBitmap(decoded, image)
-  }
+  ): Bitmap? = decodeSized(image) { options -> BitmapFactory.decodeResource(context.resources, resourceId, options) }
 
   private fun decodeByteArray(
     bytes: ByteArray,
@@ -313,38 +327,45 @@ internal class MarkerIconFactory(
     if (bytes.isEmpty()) {
       return null
     }
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
-    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+    return decodeSized(image) { options -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) }
   }
 
-  private fun targetDecodeSizePx(image: MarkerImage): Pair<Int, Int>? {
-    val widthDp = image.width ?: return null
-    val heightDp = image.height ?: return null
-    return (widthDp * density).toInt().coerceAtLeast(1) to (heightDp * density).toInt().coerceAtLeast(1)
-  }
-
-  private fun buildDecodeOptions(
-    sourceWidth: Int,
-    sourceHeight: Int,
+  /**
+   * Decodes through [decode] at the size [image] is drawn at. The size comes from the source's
+   * bounds, not the decoded bitmap, which `inSampleSize` may have shrunk.
+   */
+  private inline fun decodeSized(
     image: MarkerImage,
-  ): BitmapFactory.Options? {
+    decode: (BitmapFactory.Options) -> Bitmap?,
+  ): Bitmap? {
+    val bounds =
+      BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+        inScaled = false
+      }
+    decode(bounds)
+    val sourceWidth = bounds.outWidth
+    val sourceHeight = bounds.outHeight
     if (sourceWidth <= 0 || sourceHeight <= 0) {
       return null
     }
-    val target = targetDecodeSizePx(image)
-    val sampleSize =
-      computeInSampleSize(
-        sourceWidth = sourceWidth,
-        sourceHeight = sourceHeight,
-        reqWidth = target?.first,
-        reqHeight = target?.second,
-      )
-    return BitmapFactory.Options().apply {
-      inSampleSize = sampleSize
-      inScaled = false
-    }
+    val target =
+      image
+        .displaySizePx(sourceWidth, sourceHeight, density)
+        ?.boundedTo(MAX_DECODE_DIMENSION, MAX_DECODE_PIXELS)
+    val options =
+      BitmapFactory.Options().apply {
+        inSampleSize =
+          computeInSampleSize(
+            sourceWidth = sourceWidth,
+            sourceHeight = sourceHeight,
+            reqWidth = target?.first,
+            reqHeight = target?.second,
+          )
+        inScaled = false
+      }
+    val decoded = decode(options) ?: return null
+    return resizeBitmap(decoded, target)
   }
 
   private fun computeInSampleSize(
@@ -387,28 +408,44 @@ internal class MarkerIconFactory(
   private fun cacheBitmap(
     key: String,
     bitmap: Bitmap,
-  ): BitmapDescriptor {
-    val descriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
-    cache.put(key, CachedIcon(descriptor, bitmap.allocationByteCount.coerceAtLeast(1)))
-    sizeCache.put(key, bitmap.width.toFloat() to bitmap.height.toFloat())
-    return descriptor
+  ): CachedIcon {
+    val icon =
+      CachedIcon(
+        descriptor = BitmapDescriptorFactory.fromBitmap(bitmap),
+        byteCount = bitmap.allocationByteCount.coerceAtLeast(1),
+        sizePx = bitmap.width.toFloat() to bitmap.height.toFloat(),
+      )
+    cache.put(key, icon)
+    return icon
   }
 
   private fun logRejectedRemoteMarkerUri(
     uri: String,
     reason: String,
   ) {
-    Log.w(NITRO_MAPS_LOG_TAG, "Rejected remote marker image URI ($reason): $uri")
+    Log.w(NITRO_MAPS_LOG_TAG, "Rejected remote marker image URI ($reason): ${loggableUri(uri)}")
+  }
+
+  /** Once per image: a failed load is not cached, so every re-render retries it. */
+  private fun logLoadFailure(
+    image: MarkerImage,
+    key: String,
+    reason: String,
+  ) {
+    // Bounded: URIs that differ per request would otherwise grow it forever.
+    if (loggedFailureKeys.size >= MAX_LOGGED_FAILURE_KEYS) {
+      loggedFailureKeys.clear()
+    }
+    if (loggedFailureKeys.add(key)) {
+      Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image ($reason): ${loggableUri(image.uri)}")
+    }
   }
 
   private fun resizeBitmap(
     source: Bitmap,
-    image: MarkerImage,
+    target: Pair<Int, Int>?,
   ): Bitmap {
-    val width = image.width ?: return source
-    val height = image.height ?: return source
-    val targetWidth = (width * density).toInt().coerceAtLeast(1)
-    val targetHeight = (height * density).toInt().coerceAtLeast(1)
+    val (targetWidth, targetHeight) = target ?: return source
 
     if (source.width == targetWidth && source.height == targetHeight) {
       return source
@@ -419,9 +456,11 @@ internal class MarkerIconFactory(
 
   private companion object {
     const val DEFAULT_ICON_KEY = "__default__"
+    const val PLACEHOLDER_ICON_KEY = "__placeholder__"
     private const val DEFAULT_MARKER_WIDTH_DP = 40f
     private const val DEFAULT_MARKER_HEIGHT_DP = 52f
     private const val MAX_DECODE_DIMENSION = 2048
+    private const val MAX_LOGGED_FAILURE_KEYS = 256
     private const val MAX_DECODE_PIXELS = 2048L * 2048L
     private const val MIN_ICON_CACHE_BYTES = 1024 * 1024
     private const val MAX_ICON_CACHE_BYTES = 32 * 1024 * 1024
@@ -435,9 +474,27 @@ internal class MarkerIconFactory(
     }
 
     private val loadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val loggedFailureKeys: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /** Without the query string and credentials, which can carry a signed token or a password. */
+    private fun loggableUri(uri: String): String =
+      try {
+        val parsed = URI(uri)
+        URI(parsed.scheme, null, parsed.host, parsed.port, parsed.path, null, null).toString()
+      } catch (_: Exception) {
+        "<unparseable URI>"
+      }
 
     // Shared by every map, and first built on the load executor: an HTTP client loads the system
     // trust store when it is created.
     private val remoteImageFetcher by lazy { RemoteMarkerImageFetcher() }
   }
+}
+
+/**
+ * Shown while a marker's first image loads, or after it failed: a marker without an icon is the
+ * default pin. Built on first use, once the Maps SDK is initialized.
+ */
+internal val placeholderMarkerIcon: BitmapDescriptor by lazy {
+  BitmapDescriptorFactory.fromBitmap(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
 }

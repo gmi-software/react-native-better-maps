@@ -36,6 +36,9 @@ enum MarkerImageLoader {
   /// The category matches `NITRO_MAPS_LOG_TAG` on Android, so a rejected image is found the same
   /// way on both platforms.
   private static let logger = Logger(subsystem: "com.nitromaps", category: "NitroMaps")
+  /// A failed load is not cached, so every re-render retries it; the warning is logged once.
+  private static let failureLogLock = NSLock()
+  private static var loggedFailureKeys = Set<NSString>()
 
   static func cachedImage(for image: MarkerImage) -> UIImage? {
     cache.object(forKey: cacheKey(for: image))
@@ -61,6 +64,8 @@ enum MarkerImageLoader {
       let loaded = loadLocal(uri: uri, image: image)
       if let loaded {
         cache.setObject(loaded, forKey: cacheKey, cost: byteCost(of: loaded))
+      } else {
+        logLoadFailure(uri: uri, cacheKey: cacheKey, reason: "not found or not decodable")
       }
       DispatchQueue.main.async {
         completion(loaded)
@@ -80,7 +85,7 @@ enum MarkerImageLoader {
 
   private static func loadLocal(uri: String, image: MarkerImage) -> UIImage? {
     if uri.hasPrefix("file://"), let url = URL(string: uri) {
-      if let data = try? Data(contentsOf: url), let uiImage = UIImage(data: data) {
+      if let data = try? Data(contentsOf: url), let uiImage = decode(data, image: image) {
         return resize(uiImage, image: image)
       }
     }
@@ -171,21 +176,52 @@ enum MarkerImageLoader {
     )
   }
 
+  /// Logged like `logRejected`: the public half drops the query string and credentials.
+  private static func logLoadFailure(uri: String, cacheKey: NSString, reason: String) {
+    failureLogLock.lock()
+    // Bounded like the image cache: URIs that differ per request would otherwise grow it forever.
+    if loggedFailureKeys.count >= maximumCachedImages {
+      loggedFailureKeys.removeAll()
+    }
+    let isFirst = loggedFailureKeys.insert(cacheKey).inserted
+    failureLogLock.unlock()
+    guard isFirst else {
+      return
+    }
+    logger.warning(
+      """
+      Failed to load marker image (\(reason, privacy: .public)): \
+      \(RemoteMarkerUriPolicy.loggableURI(uri), privacy: .public) \
+      [full: \(uri, privacy: .private)]
+      """
+    )
+  }
+
   private static func startRemoteTask(
     url: URL,
     cacheKey: NSString,
     image: MarkerImage,
     completion: @escaping (UIImage?) -> Void
   ) {
-    let task = session.dataTask(with: url) { data, _, _ in
+    let task = session.dataTask(with: url) { data, response, error in
       let uiImage: UIImage?
-      if let data, let decoded = UIImage(data: data) {
-        uiImage = resize(decoded, image: image)
-        if let uiImage {
-          cache.setObject(uiImage, forKey: cacheKey, cost: byteCost(of: uiImage))
-        }
+      let statusCode = (response as? HTTPURLResponse)?.statusCode
+      if let statusCode, !(200..<300).contains(statusCode) {
+        // An error page can still decode as an image; it must not be cached or shown.
+        uiImage = nil
+        logLoadFailure(uri: image.uri, cacheKey: cacheKey, reason: "HTTP \(statusCode)")
+      } else if let data, let decoded = decode(data, image: image) {
+        let resized = resize(decoded, image: image)
+        cache.setObject(resized, forKey: cacheKey, cost: byteCost(of: resized))
+        uiImage = resized
       } else {
         uiImage = nil
+        let status = statusCode.map { " (HTTP \($0))" } ?? ""
+        logLoadFailure(
+          uri: image.uri,
+          cacheKey: cacheKey,
+          reason: error == nil ? "not decodable\(status)" : "request failed"
+        )
       }
 
       DispatchQueue.main.async {
@@ -253,18 +289,39 @@ enum MarkerImageLoader {
     return max(1, pixelWidth * pixelHeight * 4)
   }
 
-  private static func resize(_ uiImage: UIImage, image: MarkerImage) -> UIImage {
-    guard let width = image.width, let height = image.height else {
-      return uiImage
-    }
+  /// Decodes at `MarkerImage.scale`, so `size` is already in points and `resize` has nothing to
+  /// redraw unless an explicit width and height ask for another size.
+  private static func decode(_ data: Data, image: MarkerImage) -> UIImage? {
+    UIImage(data: data, scale: MarkerImageDisplaySize.decodeScale(image.scale))
+  }
 
-    let targetSize = CGSize(width: CGFloat(width), height: CGFloat(height))
+  private static func resize(_ uiImage: UIImage, image: MarkerImage) -> UIImage {
+    let targetSize = MarkerImageDisplaySize.points(
+      size: uiImage.size,
+      imageScale: uiImage.scale,
+      width: image.width,
+      height: image.height,
+      scale: image.scale
+    )
 
     if uiImage.size == targetSize {
       return uiImage
     }
 
-    let renderer = UIGraphicsImageRenderer(size: targetSize)
+    // A `scale` alone only changes how many pixels make a point: retag the bitmap instead of
+    // redrawing it at a larger size.
+    let hasExplicitSize = (image.width ?? 0) > 0 && (image.height ?? 0) > 0
+    if !hasExplicitSize, let cgImage = uiImage.cgImage {
+      return UIImage(
+        cgImage: cgImage,
+        scale: MarkerImageDisplaySize.decodeScale(image.scale),
+        orientation: uiImage.imageOrientation
+      )
+    }
+
+    let format = UIGraphicsImageRendererFormat.preferred()
+    format.scale = MarkerImageDisplaySize.rasterScale(points: targetSize, screenScale: format.scale)
+    let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
     return renderer.image { _ in
       uiImage.draw(in: CGRect(origin: .zero, size: targetSize))
     }

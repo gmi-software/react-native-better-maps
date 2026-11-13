@@ -36,6 +36,10 @@ let package = Package(
       name: "NitroMapsRemoteImagePolicy",
       path: "RemoteImagePolicy"
     ),
+    .target(
+      name: "NitroMapsMarkerImageSize",
+      path: "MarkerImageSize"
+    ),
     .testTarget(
       name: "NitroMapsCameraTests",
       dependencies: ["NitroMapsCamera"],
@@ -71,6 +75,11 @@ let package = Package(
       name: "NitroMapsRemoteImagePolicyTests",
       dependencies: ["NitroMapsRemoteImagePolicy"],
       path: "Tests/RemoteImagePolicy"
+    ),
+    .testTarget(
+      name: "NitroMapsMarkerImageSizeTests",
+      dependencies: ["NitroMapsMarkerImageSize"],
+      path: "Tests/MarkerImageSize"
     ),
   ]
 )

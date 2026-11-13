@@ -9,6 +9,12 @@ fun MarkerDescriptor.toMarkerOptions(): MarkerOptions =
     .title(title)
     .snippet(subtitle)
     .draggable(draggable == true)
+    .apply {
+      // Without an icon the marker is the default pin until `MarkerIconFactory` sets its image.
+      if (image != null) {
+        icon(placeholderMarkerIcon)
+      }
+    }
 
 internal fun MarkerDescriptor.effectiveGoogleMapsAnchor(
   widthPx: Float,

@@ -6,7 +6,6 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
   /// MapKit animates `setVisibleMapRect` over a duration it does not publish. This is
   /// only the watchdog's guess at it, not a duration handed to MapKit.
   private static let fitAnimationDuration: TimeInterval = 0.3
-  private static let defaultAnimationDuration: TimeInterval = 0.25
 
   private let mapViewDelegate = HybridMapViewDelegate()
   private let cameraMoves = CameraMoveTracker()
@@ -246,16 +245,15 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     return Promise.resolved()
   }
 
-  func animateCamera(camera: Camera, duration: TimeInterval?) throws -> Promise<Void> {
-    let animationDuration = duration ?? Self.defaultAnimationDuration
+  func animateCamera(camera: Camera, duration: TimeInterval) throws -> Promise<Void> {
     let promise = Promise<Void>()
-    trackAnimation(settling: promise, duration: animationDuration) { completion in
-      updateMapCamera(camera, animated: true, duration: animationDuration, completion: completion)
+    trackAnimation(settling: promise, duration: duration) { completion in
+      updateMapCamera(camera, animated: true, duration: duration, completion: completion)
     }
     return promise
   }
 
-  func animateToRegion(region: Region, duration: TimeInterval?) throws -> Promise<Void> {
+  func animateToRegion(region: Region, duration: TimeInterval) throws -> Promise<Void> {
     // `setRegion` raises an NSException Swift cannot catch - see `applyRegion`.
     guard region.isValid else {
       return Promise.resolved()
@@ -267,17 +265,16 @@ final class AppleMapProviderAdapter: MapProviderAdapter {
     // honours the animation's duration at any distance, so the region goes in
     // as the camera `setRegion` would pick for it - which takes a map with a
     // size.
-    let animationDuration = duration ?? Self.defaultAnimationDuration
     let promise = Promise<Void>()
     whenLaidOut(rejecting: promise) { [weak self] in
       guard let self else {
         return
       }
-      self.trackAnimation(settling: promise, duration: animationDuration) { completion in
+      self.trackAnimation(settling: promise, duration: duration) { completion in
         self.moveMapCamera(
           to: self.view.camera(framing: region.toMKCoordinateRegion()),
           animated: true,
-          duration: animationDuration,
+          duration: duration,
           completion: completion
         )
       }

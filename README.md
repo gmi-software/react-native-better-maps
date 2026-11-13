@@ -311,8 +311,10 @@ axis shows more than the region asks for.
 
 Durations are in milliseconds, for `animateCamera` and `animateToRegion`
 alike, as in react-native-maps. Both default to `250`, and `0` moves the camera
-without animating. Up to 1.2.1 `animateCamera` took seconds, so multiply a
-duration passed to it by 1000 when upgrading.
+without animating, as does a negative duration or one that is not a finite
+number. Releases up to and including 1.2.1 take `animateCamera` durations in
+seconds; 2.0.0 is the first release that takes milliseconds, so multiply a
+duration passed to it by 1000 when upgrading from 1.2.1 or earlier.
 
 #### When the ref is usable
 
@@ -367,8 +369,10 @@ read `getVisibleRegion()` or `getCamera()` after the `await` when that matters.
 (On Apple Maps a gesture cannot cut `animateCamera` or `animateToRegion` short:
 the map ignores touches until the animation ends.)
 
-Pass `fitToCoordinates`' `animated` argument explicitly: left out, iOS animates
-the fit and Android jumps to it.
+`fitToCoordinates` animates unless `animated` is `false`, on every provider.
+
+> **Behavior change in 2.0.0:** on Android, `fitToCoordinates` without
+> `animated` used to jump to the fit. It now animates, as on iOS.
 
 > **Behavior change after 1.2.1:** these promises used to resolve as soon as the
 > animation started, so `await` returned with the camera still at its old position.

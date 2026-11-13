@@ -54,7 +54,8 @@ export interface MapViewRef {
    * {@linkcode MapViewRef.setCamera} does.
    *
    * @param duration Animation duration in milliseconds. Defaults to `250`;
-   * `0` moves the camera without animating.
+   * `0`, a negative value or one that is not finite moves the camera without
+   * animating.
    */
   animateCamera(camera: Camera, duration?: number): Promise<void>;
 
@@ -70,7 +71,8 @@ export interface MapViewRef {
    * not a finite number greater than 0.
    *
    * @param duration Animation duration in milliseconds. Defaults to `250`;
-   * `0` moves the camera without animating.
+   * `0`, a negative value or one that is not finite moves the camera without
+   * animating.
    */
   animateToRegion(region: Region, duration?: number): Promise<void>;
 
@@ -84,7 +86,8 @@ export interface MapViewRef {
    *
    * {@linkcode padding} is added on top of {@linkcode MapViewProps.mapPadding}.
    *
-   * @param animated Pass it explicitly: omitted, iOS animates and Android jumps.
+   * @param animated Defaults to `true`; `false` moves the camera without
+   * animating.
    */
   fitToCoordinates(
     coordinates: Coordinate[],

@@ -417,7 +417,7 @@ class GoogleMapProviderAdapter(
           view.height,
         ) ?: bounds
       val update = CameraUpdateFactory.newLatLngBounds(target, 0)
-      if (animated == true) {
+      if (animated ?: true) {
         map.animateCamera(update, cameraAnimations.callback(onEnd))
       } else {
         map.moveCamera(update)

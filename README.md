@@ -313,8 +313,8 @@ Durations are in milliseconds, for `animateCamera` and `animateToRegion`
 alike, as in react-native-maps. Both default to `250`, and `0` moves the camera
 without animating, as does a negative duration or one that is not a finite
 number. Releases up to and including 1.2.1 take `animateCamera` durations in
-seconds; every release after 1.2.1 takes milliseconds, so multiply a duration
-passed to it by 1000 when upgrading from 1.2.1 or earlier.
+seconds; 2.0.0 is the first release that takes milliseconds, so multiply a
+duration passed to it by 1000 when upgrading from 1.2.1 or earlier.
 
 #### When the ref is usable
 
@@ -371,7 +371,7 @@ the map ignores touches until the animation ends.)
 
 `fitToCoordinates` animates unless `animated` is `false`, on every provider.
 
-> **Behavior change after 1.2.1:** on Android, `fitToCoordinates` without
+> **Behavior change in 2.0.0:** on Android, `fitToCoordinates` without
 > `animated` used to jump to the fit. It now animates, as on iOS.
 
 > **Behavior change after 1.2.1:** these promises used to resolve as soon as the

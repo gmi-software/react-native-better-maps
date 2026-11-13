@@ -315,6 +315,14 @@ enum MarkerImageLoader {
       width: max(1, (pixelWidth * factor).rounded()),
       height: max(1, (pixelHeight * factor).rounded())
     )
-    return uiImage.preparingThumbnail(of: targetSize) ?? uiImage
+    if let thumbnail = uiImage.preparingThumbnail(of: targetSize) {
+      return thumbnail
+    }
+    // preparingThumbnail can fail; redraw at the bounded size so the full image is never kept.
+    let format = UIGraphicsImageRendererFormat.preferred()
+    format.scale = 1
+    return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+      uiImage.draw(in: CGRect(origin: .zero, size: targetSize))
+    }
   }
 }

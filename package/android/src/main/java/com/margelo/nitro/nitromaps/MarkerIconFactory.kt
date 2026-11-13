@@ -423,7 +423,7 @@ internal class MarkerIconFactory(
     uri: String,
     reason: String,
   ) {
-    Log.w(NITRO_MAPS_LOG_TAG, "Rejected remote marker image URI ($reason): $uri")
+    Log.w(NITRO_MAPS_LOG_TAG, "Rejected remote marker image URI ($reason): ${loggableUri(uri)}")
   }
 
   /** Once per image: a failed load is not cached, so every re-render retries it. */

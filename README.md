@@ -313,8 +313,8 @@ Durations are in milliseconds, for `animateCamera` and `animateToRegion`
 alike, as in react-native-maps. Both default to `250`, and `0` moves the camera
 without animating, as does a negative duration or one that is not a finite
 number. Releases up to and including 1.2.1 take `animateCamera` durations in
-seconds; the next release takes milliseconds, so multiply a duration passed to
-it by 1000 when upgrading.
+seconds; every release after 1.2.1 takes milliseconds, so multiply a duration
+passed to it by 1000 when upgrading from 1.2.1 or earlier.
 
 #### When the ref is usable
 

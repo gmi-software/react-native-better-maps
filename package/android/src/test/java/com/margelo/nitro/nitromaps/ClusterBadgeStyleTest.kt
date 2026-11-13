@@ -166,6 +166,14 @@ class ClusterBadgeStyleTest {
     assertEquals(40.0 to 30.0, ClusterBadgeStyle.fittedImageSizeDp(40.0, 30.0, 56f))
   }
 
+  @Test
+  fun dropsADeclaredImageSizeThatIsNotPositiveAndFinite() {
+    assertNull(ClusterBadgeStyle.fittedImageSizeDp(0.0, 100_000_000.0, 56f))
+    assertNull(ClusterBadgeStyle.fittedImageSizeDp(40.0, -1.0, 56f))
+    assertNull(ClusterBadgeStyle.fittedImageSizeDp(Double.NaN, 40.0, 56f))
+    assertNull(ClusterBadgeStyle.fittedImageSizeDp(40.0, Double.POSITIVE_INFINITY, 56f))
+  }
+
   private fun resolve(
     backgroundColor: String? = null,
     textColor: String? = null,

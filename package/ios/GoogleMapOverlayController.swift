@@ -83,6 +83,7 @@ final class GoogleMapOverlayController {
   }
 
   func setClusteringEnabled(_ enabled: Bool) {
+    clusterBadges.clusteringEnabled = enabled
     guard markerPipeline.setClusteringEnabled(enabled) else {
       return
     }

@@ -62,10 +62,11 @@ enum ClusterBadgeStyle {
   }
 
   /// A background image's declared size scaled down to fit a badge `diameter` across, so a
-  /// large declared size does not decode an image far bigger than the badge draws.
-  static func fittedImageSize(width: Double, height: Double, diameter: CGFloat) -> CGSize {
-    guard width > 0, height > 0 else {
-      return CGSize(width: width, height: height)
+  /// large declared size does not decode an image far bigger than the badge draws. `nil` for
+  /// a size that is not positive and finite, which no badge can draw.
+  static func fittedImageSize(width: Double, height: Double, diameter: CGFloat) -> CGSize? {
+    guard width > 0, height > 0, width.isFinite, height.isFinite else {
+      return nil
     }
     let scale = min(1, Double(diameter) / max(width, height))
     return CGSize(width: width * scale, height: height * scale)

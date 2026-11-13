@@ -32,6 +32,24 @@ internal class ClusterIconFactory(
   /** Tells a load that finished after the style changed again apart from the current one. */
   private var loadGeneration = 0
 
+  /** The style's image while it is not drawn yet, waiting for clustering or loading. */
+  private var styleImage: MarkerImage? = null
+
+  /**
+   * A map that does not cluster draws no badge, so its image waits until clustering is on
+   * instead of taking the image executor from the marker icons.
+   */
+  var clusteringEnabled = false
+    set(value) {
+      if (field == value) {
+        return
+      }
+      field = value
+      if (value) {
+        loadImageIfNeeded()
+      }
+    }
+
   /** What the largest badge draws an image at, which bounds one that declares no size. */
   private val maxImageSizePx = ceil(ClusterBadgeMetrics.diameterDp(Int.MAX_VALUE) * density).toInt()
 
@@ -64,33 +82,43 @@ internal class ClusterIconFactory(
     loadGeneration += 1
     backgroundImage = null
     pendingImageKey = null
-    if (image != null) {
-      val generation = loadGeneration
-      pendingImageKey = next.backgroundImageKey
-      markerIconFactory.loadBitmap(image, maxImageSizePx) { loaded ->
-        if (generation != loadGeneration) {
-          return@loadBitmap
-        }
-        pendingImageKey = null
-        if (loaded == null) {
-          return@loadBitmap
-        }
-        backgroundImage = loaded
-        onChange?.invoke()
-      }
-    }
+    styleImage = image
+    loadImageIfNeeded()
     onChange?.invoke()
+  }
+
+  private fun loadImageIfNeeded() {
+    val image = styleImage ?: return
+    if (!clusteringEnabled || pendingImageKey != null) {
+      return
+    }
+    val generation = loadGeneration
+    pendingImageKey = appearance.backgroundImageKey
+    markerIconFactory.loadBitmap(image, maxImageSizePx) { loaded ->
+      if (generation != loadGeneration) {
+        return@loadBitmap
+      }
+      pendingImageKey = null
+      styleImage = null
+      if (loaded == null) {
+        return@loadBitmap
+      }
+      backgroundImage = loaded
+      onChange?.invoke()
+    }
   }
 
   /**
    * [image] with its declared size bounded to the largest badge, which is all a badge draws.
-   * One that declares no size is bounded by [maxImageSizePx] as it decodes.
+   * One that declares no size is bounded by [maxImageSizePx] as it decodes; one that declares
+   * a size that is not positive and finite is dropped for the default badge.
    */
-  private fun badgeImage(image: MarkerImage): MarkerImage {
+  private fun badgeImage(image: MarkerImage): MarkerImage? {
     val width = image.width ?: return image
     val height = image.height ?: return image
     val (fittedWidth, fittedHeight) =
       ClusterBadgeStyle.fittedImageSizeDp(width, height, ClusterBadgeMetrics.diameterDp(Int.MAX_VALUE))
+        ?: return null
     return image.copy(width = fittedWidth, height = fittedHeight)
   }
 

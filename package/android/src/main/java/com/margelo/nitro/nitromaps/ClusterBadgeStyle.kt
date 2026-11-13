@@ -82,15 +82,16 @@ internal object ClusterBadgeStyle {
 
   /**
    * A background image's declared size scaled down to fit a badge [diameterDp] across, so a
-   * large declared size does not decode an image far bigger than the badge draws.
+   * large declared size does not decode an image far bigger than the badge draws. `null` for
+   * a size that is not positive and finite, which no badge can draw.
    */
   fun fittedImageSizeDp(
     widthDp: Double,
     heightDp: Double,
     diameterDp: Float,
-  ): Pair<Double, Double> {
-    if (widthDp <= 0 || heightDp <= 0) {
-      return widthDp to heightDp
+  ): Pair<Double, Double>? {
+    if (!(widthDp > 0 && heightDp > 0 && widthDp.isFinite() && heightDp.isFinite())) {
+      return null
     }
     val scale = min(1.0, diameterDp / max(widthDp, heightDp))
     return widthDp * scale to heightDp * scale

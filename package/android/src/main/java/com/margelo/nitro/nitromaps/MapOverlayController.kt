@@ -111,6 +111,7 @@ internal class MapOverlayController(
   }
 
   fun setClusteringEnabled(enabled: Boolean) {
+    iconFactory.clusteringEnabled = enabled
     if (renderState.setClusteringEnabled(enabled)) {
       reapplyMarkers()
     }

@@ -13,11 +13,23 @@ final class ClusterBadgeStyleState {
   private var pendingImageKey: String?
   /// Tells a load that finished after the style changed again apart from the current one.
   private var loadGeneration = 0
+  /// The style's image while it is not drawn yet, waiting for clustering or loading.
+  private var styleImage: MarkerImage?
   /// What the largest badge draws an image at, which bounds one that declares no size.
   private let maximumImagePixelSize = ClusterBadgeMetrics.diameter(for: .max) * UIScreen.main.scale
 
+  /// A map that does not cluster draws no badge, so its image waits until clustering is on
+  /// instead of taking the image loader from the marker icons.
+  var clusteringEnabled = false {
+    didSet {
+      if clusteringEnabled, !oldValue {
+        loadImageIfNeeded()
+      }
+    }
+  }
+
   func setStyle(_ style: ClusterStyleDescriptor?) {
-    let image = style?.image.map(Self.badgeImage)
+    let image = style?.image.flatMap(Self.badgeImage)
     let next = ClusterBadgeAppearance(
       // A fill that does not parse keeps the default gradient, as on Android.
       backgroundColor: style?.backgroundColor.flatMap { $0.toHexColorComponents() == nil ? nil : $0 },
@@ -47,35 +59,47 @@ final class ClusterBadgeStyleState {
       MarkerImageLoader.cachedImage(for: $0, maximumPixelSize: maximumImagePixelSize)
     }
     pendingImageKey = nil
-    if let image, backgroundImage == nil {
-      let generation = loadGeneration
-      pendingImageKey = next.backgroundImageKey
-      MarkerImageLoader.load(image, maximumPixelSize: maximumImagePixelSize) { [weak self] loaded in
-        guard let self, generation == self.loadGeneration else {
-          return
-        }
-        self.pendingImageKey = nil
-        guard let loaded else {
-          return
-        }
-        self.backgroundImage = loaded
-        self.onChange?()
-      }
-    }
+    styleImage = backgroundImage == nil ? image : nil
+    loadImageIfNeeded()
     onChange?()
   }
 
+  private func loadImageIfNeeded() {
+    guard clusteringEnabled, pendingImageKey == nil, let image = styleImage else {
+      return
+    }
+    let generation = loadGeneration
+    pendingImageKey = appearance.backgroundImageKey
+    MarkerImageLoader.load(image, maximumPixelSize: maximumImagePixelSize) { [weak self] loaded in
+      guard let self, generation == self.loadGeneration else {
+        return
+      }
+      self.pendingImageKey = nil
+      self.styleImage = nil
+      guard let loaded else {
+        return
+      }
+      self.backgroundImage = loaded
+      self.onChange?()
+    }
+  }
+
   /// `image` with its declared size bounded to the largest badge, which is all a badge draws.
-  /// One that declares no size is bounded by `maximumImagePixelSize` as it decodes.
-  private static func badgeImage(_ image: MarkerImage) -> MarkerImage {
+  /// One that declares no size is bounded by `maximumImagePixelSize` as it decodes; one that
+  /// declares a size that is not positive and finite is dropped for the default badge.
+  private static func badgeImage(_ image: MarkerImage) -> MarkerImage? {
     guard let width = image.width, let height = image.height else {
       return image
     }
-    let size = ClusterBadgeStyle.fittedImageSize(
-      width: width,
-      height: height,
-      diameter: ClusterBadgeMetrics.diameter(for: .max)
-    )
+    guard
+      let size = ClusterBadgeStyle.fittedImageSize(
+        width: width,
+        height: height,
+        diameter: ClusterBadgeMetrics.diameter(for: .max)
+      )
+    else {
+      return nil
+    }
     return MarkerImage(
       uri: image.uri,
       width: Double(size.width),

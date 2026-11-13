@@ -164,3 +164,11 @@ func boundsALargeDeclaredImageToTheBadge() {
   #expect(ClusterBadgeStyle.fittedImageSize(width: 448, height: 224, diameter: 56) == CGSize(width: 56, height: 28))
   #expect(ClusterBadgeStyle.fittedImageSize(width: 40, height: 30, diameter: 56) == CGSize(width: 40, height: 30))
 }
+
+@Test
+func dropsADeclaredImageSizeThatIsNotPositiveAndFinite() {
+  #expect(ClusterBadgeStyle.fittedImageSize(width: 0, height: 100_000_000, diameter: 56) == nil)
+  #expect(ClusterBadgeStyle.fittedImageSize(width: 40, height: -1, diameter: 56) == nil)
+  #expect(ClusterBadgeStyle.fittedImageSize(width: .nan, height: 40, diameter: 56) == nil)
+  #expect(ClusterBadgeStyle.fittedImageSize(width: 40, height: .infinity, diameter: 56) == nil)
+}

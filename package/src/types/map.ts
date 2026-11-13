@@ -11,7 +11,11 @@ import type {
   ApplePoiCategory,
   ApplePoiDetailPresentation,
 } from '../native/specs/MapView.nitro';
-import type { MarkerDescriptor, OverlayEnteringAnimation } from './overlays';
+import type {
+  ClusterStyle,
+  MarkerDescriptor,
+  OverlayEnteringAnimation,
+} from './overlays';
 import type { EdgePadding, Region, RegionChangeDetails } from './region';
 
 /**
@@ -188,6 +192,12 @@ interface ExistingDefaultProviderProps extends BaseMapViewProps<PoiPressEvent> {
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
+
+  /**
+   * How the cluster badge looks: its colors, border, or an image behind the count. Fields
+   * left out keep the default badge's look.
+   */
+  clusterStyle?: ClusterStyle;
 }
 
 interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
@@ -213,6 +223,12 @@ interface AppleMapViewProps extends BaseMapViewProps<ApplePoiPressEvent> {
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
+
+  /**
+   * How the cluster badge looks: its colors, border, or an image behind the count. Fields
+   * left out keep the default badge's look.
+   */
+  clusterStyle?: ClusterStyle;
 }
 
 interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
@@ -235,6 +251,12 @@ interface GoogleMapViewProps extends BaseMapViewProps<GooglePoiPressEvent> {
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimation;
+
+  /**
+   * How the cluster badge looks: its colors, border, or an image behind the count. Fields
+   * left out keep the default badge's look.
+   */
+  clusterStyle?: ClusterStyle;
 }
 
 interface OpenStreetMapViewProps extends BaseMapViewProps {
@@ -245,6 +267,7 @@ interface OpenStreetMapViewProps extends BaseMapViewProps {
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
+  clusterStyle?: never;
   onPoiPress?: never;
 }
 
@@ -256,6 +279,7 @@ interface MapboxMapViewProps extends BaseMapViewProps {
   customMapStyle?: never;
   clusteringEnabled?: never;
   clusterEnteringAnimation?: never;
+  clusterStyle?: never;
   onPoiPress?: never;
 }
 

@@ -3,6 +3,7 @@ package com.margelo.nitro.nitromaps
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * What a cluster badge looks like. iOS draws the same badge from `ClusterBadgeStyle.swift`;
@@ -64,17 +65,35 @@ internal object ClusterBadgeStyle {
   }
 
   /**
-   * The font size that fits a count measuring [labelWidthDp] at [LABEL_FONT_SIZE_DP] inside
-   * the border of a badge [diameterDp] across.
+   * The font size that fits a count measuring [labelWidthDp] at [LABEL_FONT_SIZE_DP] inside a
+   * border [insetDp] wide on a badge [diameterDp] across.
    */
   fun fittedLabelFontSizeDp(
     labelWidthDp: Float,
     diameterDp: Float,
+    insetDp: Float = BORDER_WIDTH_DP,
   ): Float {
-    val availableWidth = diameterDp - 2 * (BORDER_WIDTH_DP + LABEL_PADDING_DP)
+    val availableWidth = diameterDp - 2 * (insetDp + LABEL_PADDING_DP)
     if (labelWidthDp <= availableWidth) {
       return LABEL_FONT_SIZE_DP
     }
     return LABEL_FONT_SIZE_DP * max(LABEL_MINIMUM_SCALE_FACTOR, availableWidth / labelWidthDp)
+  }
+
+  /**
+   * A background image's declared size scaled down to fit a badge [diameterDp] across, so a
+   * large declared size does not decode an image far bigger than the badge draws. `null` for
+   * a size that is not positive and finite, which no badge can draw.
+   */
+  fun fittedImageSizeDp(
+    widthDp: Double,
+    heightDp: Double,
+    diameterDp: Float,
+  ): Pair<Double, Double>? {
+    if (!(widthDp > 0 && heightDp > 0 && widthDp.isFinite() && heightDp.isFinite())) {
+      return null
+    }
+    val scale = min(1.0, diameterDp / max(widthDp, heightDp))
+    return widthDp * scale to heightDp * scale
   }
 }

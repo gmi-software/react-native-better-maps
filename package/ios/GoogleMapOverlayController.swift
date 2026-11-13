@@ -20,7 +20,7 @@ final class GoogleMapOverlayController {
 
   private enum MarkerPayload {
     case marker(String)
-    case cluster(memberIds: [String], region: MKCoordinateRegion)
+    case cluster(count: Int, memberIds: [String], region: MKCoordinateRegion)
   }
 
   private struct MarkerAnimationBatch {
@@ -39,6 +39,7 @@ final class GoogleMapOverlayController {
   private var circleVersions: [String: ShapeRenderVersion] = [:]
   private let markerPipeline: MarkerRenderPipeline
   private let visualApplier = GoogleMarkerVisualApplier()
+  private let clusterBadges = ClusterBadgeStyleState()
 
   var onMarkerPress: ((String) -> Void)?
   var onMarkerDragEnd: ((String, Coordinate) -> Void)?
@@ -53,6 +54,22 @@ final class GoogleMapOverlayController {
   init(mapView: GMSMapView) {
     self.mapView = mapView
     markerPipeline = MarkerRenderPipeline(clusterCellPoints: Self.clusterCellPoints)
+    clusterBadges.onChange = { [weak self] in
+      self?.refreshClusterIcons()
+    }
+  }
+
+  func setClusterStyle(_ style: ClusterStyleDescriptor?) {
+    clusterBadges.setStyle(style)
+  }
+
+  /// Redraws the clusters on the map in place.
+  private func refreshClusterIcons() {
+    for marker in markers.values {
+      if case .cluster(let count, _, _) = marker.userData as? MarkerPayload {
+        marker.icon = clusterBadges.image(count: count)
+      }
+    }
   }
 
   private var usesViewportPipeline: Bool {
@@ -66,6 +83,7 @@ final class GoogleMapOverlayController {
   }
 
   func setClusteringEnabled(_ enabled: Bool) {
+    clusterBadges.clusteringEnabled = enabled
     guard markerPipeline.setClusteringEnabled(enabled) else {
       return
     }
@@ -130,7 +148,7 @@ final class GoogleMapOverlayController {
     case .marker(let id):
       onMarkerPress?(id)
       return marker.title == nil && marker.snippet == nil
-    case .cluster(let memberIds, let region):
+    case .cluster(_, let memberIds, let region):
       onClusterPress?(
         memberIds,
         Coordinate(latitude: marker.position.latitude, longitude: marker.position.longitude)
@@ -310,12 +328,12 @@ final class GoogleMapOverlayController {
       marker.snippet = nil
       marker.isDraggable = false
       marker.zIndex = 0
-      let icon = ClusterBadgeRenderer.image(count: count)
+      let icon = clusterBadges.image(count: count)
       if marker.icon !== icon {
         marker.icon = icon
       }
       marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
-      marker.userData = MarkerPayload.cluster(memberIds: memberIds, region: region)
+      marker.userData = MarkerPayload.cluster(count: count, memberIds: memberIds, region: region)
     }
   }
 

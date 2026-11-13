@@ -59,4 +59,41 @@ describe('cluster badge style', () => {
     expect(Object.keys(ios)).toContain('shadowRadius');
     expect(android).toEqual(ios);
   });
+
+  test('reads every clusterStyle field on iOS and Android', () => {
+    const spec = readSource('src/native/specs/overlays.ts');
+    const descriptor = spec.match(
+      /export interface ClusterStyleDescriptor \{([^}]*)\}/,
+    )?.[1];
+    const fields = [...(descriptor ?? '').matchAll(/^\s*(\w+)\?:/gm)].map(
+      ([, name]) => name!,
+    );
+    const readers = {
+      ios: readSource('ios/ClusterBadgeStyleState.swift'),
+      android: readSource(
+        'android/src/main/java/com/margelo/nitro/nitromaps/ClusterIconFactory.kt',
+      ),
+    };
+
+    expect(fields).toEqual([
+      'backgroundColor',
+      'textColor',
+      'borderColor',
+      'borderWidth',
+      'image',
+    ]);
+    for (const [platform, source] of Object.entries(readers)) {
+      for (const field of fields) {
+        expect({
+          platform,
+          field,
+          read: source.includes(`style?.${field}`),
+        }).toEqual({
+          platform,
+          field,
+          read: true,
+        });
+      }
+    }
+  });
 });

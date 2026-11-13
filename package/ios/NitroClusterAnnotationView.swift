@@ -31,14 +31,15 @@ final class NitroClusterAnnotationView: MKAnnotationView {
     addSubview(badge)
   }
 
-  func configure(count: Int) {
+  /// `image` is the badge `ClusterBadgeRenderer` drew for `count`.
+  func configure(count: Int, image: UIImage) {
     let diameter = ClusterBadgeMetrics.diameter(for: count)
     // The bounds stay the circle, which MapKit hit-tests and collides; the image
     // overhangs them on every side to fit the shadow.
     bounds = CGRect(x: 0, y: 0, width: diameter, height: diameter)
     let outset = ClusterBadgeStyle.shadowOutset
     badge.frame = bounds.insetBy(dx: -outset, dy: -outset)
-    badge.image = ClusterBadgeRenderer.image(count: count)
+    badge.image = image
 
     accessibilityLabel = String.localizedStringWithFormat(
       NSLocalizedString("%d markers in this cluster", comment: "Map marker cluster"),

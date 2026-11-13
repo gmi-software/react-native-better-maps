@@ -1,4 +1,26 @@
+import type { ClusterStyle } from 'react-native-better-maps';
+import poiStar from '../assets/poiStar.png';
 import type { MapScenario } from './types';
+
+export type ClusterStyleOption = {
+  label: string;
+  value: ClusterStyle | undefined;
+};
+
+/** The cluster badge looks the dock cycles through on clustered scenarios. */
+export const CLUSTER_STYLE_OPTIONS: ClusterStyleOption[] = [
+  { label: 'Default', value: undefined },
+  {
+    label: 'Branded',
+    value: {
+      backgroundColor: '#E30613',
+      textColor: '#FFFFFF',
+      borderColor: '#FFFFFF',
+      borderWidth: 2,
+    },
+  },
+  { label: 'Image', value: { image: poiStar, textColor: '#1C1C1E' } },
+];
 
 /** Approximate mainland Poland bounding box. */
 const POLAND_BOUNDS = {

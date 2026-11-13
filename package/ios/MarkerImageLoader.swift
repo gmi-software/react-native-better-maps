@@ -38,14 +38,21 @@ enum MarkerImageLoader {
   private static let logger = Logger(subsystem: "com.nitromaps", category: "NitroMaps")
 
   static func cachedImage(for image: MarkerImage) -> UIImage? {
-    cache.object(forKey: cacheKey(for: image))
+    cachedImage(for: image, maximumPixelSize: nil)
   }
 
+  static func cachedImage(for image: MarkerImage, maximumPixelSize: CGFloat?) -> UIImage? {
+    cache.object(forKey: cacheKey(for: image, maximumPixelSize: maximumPixelSize))
+  }
+
+  /// `maximumPixelSize` bounds the longest side of an image that declares no size, which is
+  /// otherwise decoded and cached at its full resolution.
   static func load(
     _ image: MarkerImage,
+    maximumPixelSize: CGFloat? = nil,
     completion: @escaping (UIImage?) -> Void
   ) {
-    let cacheKey = cacheKey(for: image)
+    let cacheKey = cacheKey(for: image, maximumPixelSize: maximumPixelSize)
     if let cached = cache.object(forKey: cacheKey) {
       completion(cached)
       return
@@ -53,12 +60,18 @@ enum MarkerImageLoader {
 
     let uri = image.uri
     if RemoteMarkerUriPolicy.isRemoteUri(uri) {
-      loadRemote(uri: uri, cacheKey: cacheKey, image: image, completion: completion)
+      loadRemote(
+        uri: uri,
+        cacheKey: cacheKey,
+        image: image,
+        maximumPixelSize: maximumPixelSize,
+        completion: completion
+      )
       return
     }
 
     decodeQueue.async {
-      let loaded = loadLocal(uri: uri, image: image)
+      let loaded = loadLocal(uri: uri, image: image, maximumPixelSize: maximumPixelSize)
       if let loaded {
         cache.setObject(loaded, forKey: cacheKey, cost: byteCost(of: loaded))
       }
@@ -68,35 +81,39 @@ enum MarkerImageLoader {
     }
   }
 
-  static func cacheKey(for image: MarkerImage) -> NSString {
+  static func cacheKey(for image: MarkerImage, maximumPixelSize: CGFloat? = nil) -> NSString {
     let width = image.width.map { String($0) } ?? ""
     let height = image.height.map { String($0) } ?? ""
     let scale = image.scale.map { String($0) } ?? ""
     // `origin` is part of the key so a bundled image cannot warm the cache for a user-supplied
     // one with the same URI, which would hand it a policy-free entry.
     let origin = image.origin.map { $0.stringValue } ?? ""
-    return "\(image.uri)|\(width)|\(height)|\(scale)|\(origin)" as NSString
+    let key = "\(image.uri)|\(width)|\(height)|\(scale)|\(origin)"
+    guard let maximumPixelSize else {
+      return key as NSString
+    }
+    return "\(key)|\(maximumPixelSize)" as NSString
   }
 
-  private static func loadLocal(uri: String, image: MarkerImage) -> UIImage? {
+  private static func loadLocal(uri: String, image: MarkerImage, maximumPixelSize: CGFloat?) -> UIImage? {
     if uri.hasPrefix("file://"), let url = URL(string: uri) {
       if let data = try? Data(contentsOf: url), let uiImage = UIImage(data: data) {
-        return resize(uiImage, image: image)
+        return resize(uiImage, image: image, maximumPixelSize: maximumPixelSize)
       }
     }
 
     if uri.hasPrefix("/"), let uiImage = UIImage(contentsOfFile: uri) {
-      return resize(uiImage, image: image)
+      return resize(uiImage, image: image, maximumPixelSize: maximumPixelSize)
     }
 
     let name = (uri as NSString).lastPathComponent
     let baseName = (name as NSString).deletingPathExtension
     if let uiImage = UIImage(named: baseName) ?? UIImage(named: name) {
-      return resize(uiImage, image: image)
+      return resize(uiImage, image: image, maximumPixelSize: maximumPixelSize)
     }
 
     if let uiImage = UIImage(named: uri) {
-      return resize(uiImage, image: image)
+      return resize(uiImage, image: image, maximumPixelSize: maximumPixelSize)
     }
 
     return nil
@@ -106,6 +123,7 @@ enum MarkerImageLoader {
     uri: String,
     cacheKey: NSString,
     image: MarkerImage,
+    maximumPixelSize: CGFloat?,
     completion: @escaping (UIImage?) -> Void
   ) {
     // No policy applies to an image the app bundled, so it must not wait behind the host lookup
@@ -115,7 +133,13 @@ enum MarkerImageLoader {
         completion(nil)
         return
       }
-      startRemoteTask(url: url, cacheKey: cacheKey, image: image, completion: completion)
+      startRemoteTask(
+        url: url,
+        cacheKey: cacheKey,
+        image: image,
+        maximumPixelSize: maximumPixelSize,
+        completion: completion
+      )
       return
     }
 
@@ -151,7 +175,13 @@ enum MarkerImageLoader {
       // the request. So unlike Android, which checks the address it connected to, an answer that
       // changes after the check above (DNS rebinding) is not re-checked. Reaching the network the
       // device itself is on still needs the user's Local Network permission.
-      startRemoteTask(url: url, cacheKey: cacheKey, image: image, completion: completion)
+      startRemoteTask(
+        url: url,
+        cacheKey: cacheKey,
+        image: image,
+        maximumPixelSize: maximumPixelSize,
+        completion: completion
+      )
     }
   }
 
@@ -175,12 +205,13 @@ enum MarkerImageLoader {
     url: URL,
     cacheKey: NSString,
     image: MarkerImage,
+    maximumPixelSize: CGFloat?,
     completion: @escaping (UIImage?) -> Void
   ) {
     let task = session.dataTask(with: url) { data, _, _ in
       let uiImage: UIImage?
       if let data, let decoded = UIImage(data: data) {
-        uiImage = resize(decoded, image: image)
+        uiImage = resize(decoded, image: image, maximumPixelSize: maximumPixelSize)
         if let uiImage {
           cache.setObject(uiImage, forKey: cacheKey, cost: byteCost(of: uiImage))
         }
@@ -253,9 +284,9 @@ enum MarkerImageLoader {
     return max(1, pixelWidth * pixelHeight * 4)
   }
 
-  private static func resize(_ uiImage: UIImage, image: MarkerImage) -> UIImage {
+  private static func resize(_ uiImage: UIImage, image: MarkerImage, maximumPixelSize: CGFloat?) -> UIImage {
     guard let width = image.width, let height = image.height else {
-      return uiImage
+      return maximumPixelSize.map { downsample(uiImage, toFit: $0) } ?? uiImage
     }
 
     let targetSize = CGSize(width: CGFloat(width), height: CGFloat(height))
@@ -266,6 +297,31 @@ enum MarkerImageLoader {
 
     let renderer = UIGraphicsImageRenderer(size: targetSize)
     return renderer.image { _ in
+      uiImage.draw(in: CGRect(origin: .zero, size: targetSize))
+    }
+  }
+
+  /// `uiImage` decoded at no more than `maximumPixelSize` on its longest side; a smaller one is
+  /// returned as is.
+  private static func downsample(_ uiImage: UIImage, toFit maximumPixelSize: CGFloat) -> UIImage {
+    let pixelWidth = uiImage.size.width * uiImage.scale
+    let pixelHeight = uiImage.size.height * uiImage.scale
+    let longestSide = max(pixelWidth, pixelHeight)
+    guard longestSide > maximumPixelSize else {
+      return uiImage
+    }
+    let factor = maximumPixelSize / longestSide
+    let targetSize = CGSize(
+      width: max(1, (pixelWidth * factor).rounded()),
+      height: max(1, (pixelHeight * factor).rounded())
+    )
+    if let thumbnail = uiImage.preparingThumbnail(of: targetSize) {
+      return thumbnail
+    }
+    // preparingThumbnail can fail; redraw at the bounded size so the full image is never kept.
+    let format = UIGraphicsImageRendererFormat.preferred()
+    format.scale = 1
+    return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
       uiImage.draw(in: CGRect(origin: .zero, size: targetSize))
     }
   }

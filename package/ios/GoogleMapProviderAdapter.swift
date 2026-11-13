@@ -197,6 +197,12 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     }
   }
 
+  var clusterStyle: ClusterStyleDescriptor? {
+    didSet {
+      overlayController.setClusterStyle(clusterStyle)
+    }
+  }
+
   var onRegionChange: ((Region, RegionChangeDetails) -> Void)?
   var onRegionChangeComplete: ((Region, RegionChangeDetails) -> Void)?
   var onMapReady: (() -> Void)? {
@@ -368,6 +374,7 @@ final class GoogleMapProviderAdapter: NSObject, MapProviderAdapter {
     mapPadding = nil
     markerEnteringAnimation = nil
     clusterEnteringAnimation = nil
+    clusterStyle = nil
   }
 
   /// Frames `region`, and reports whether anything was handed to the Google SDK: nothing

@@ -115,7 +115,11 @@ final class HybridMapViewDelegate: NSObject, MKMapViewDelegate, UIGestureRecogni
         )
 
       view.annotation = cluster
-      view.configure(count: cluster.count)
+      view.configure(
+        count: cluster.count,
+        image: parent?.clusterBadgeImage(count: cluster.count)
+          ?? ClusterBadgeRenderer.image(count: cluster.count)
+      )
       return view
     }
 

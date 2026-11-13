@@ -1,4 +1,8 @@
-import { advancedFeaturesScenario } from './advancedFeatures';
+import {
+  advancedFeaturesScenario,
+  CLUSTER_STYLE_OPTIONS,
+  type ClusterStyleOption,
+} from './advancedFeatures';
 import { allOverlaysScenario } from './allOverlays';
 import {
   APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
@@ -27,6 +31,8 @@ export {
   createApplePoiDetailsScenario,
   createCustomMarkerImagesScenario,
   createScenarioOverlayProps,
+  CLUSTER_STYLE_OPTIONS,
+  type ClusterStyleOption,
   CUSTOM_MARKER_IMAGES_SCENARIO_ID,
   nextApplePoiDetailPresentation,
 };

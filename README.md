@@ -813,12 +813,43 @@ Explicit configs use milliseconds. `duration` defaults to `180`, `delay` default
 
 On Google Maps providers, marker and cluster entering animations can reduce UI-thread frame rate when a large viewport refresh adds many markers at once. The provider caps animated markers per refresh and may show the remaining markers immediately to preserve map gesture performance. For very large marker sets, prefer clustering, shorter durations, or `markerEnteringAnimation={false}` / `clusterEnteringAnimation={false}` when smooth gestures are more important than entrance motion.
 
+## Cluster badges
+
+With `clusteringEnabled`, the library draws each cluster as a badge with the count on it: a blue gradient circle with a white border by default. `clusterStyle` restyles it on every provider that clusters:
+
+```tsx
+<MapView
+  style={{ flex: 1 }}
+  clusteringEnabled
+  clusterStyle={{
+    backgroundColor: '#E30613',
+    textColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+    borderWidth: 2,
+  }}
+/>
+```
+
+| Field             | Default       | Description                                                                  |
+| ----------------- | ------------- | ---------------------------------------------------------------------------- |
+| `backgroundColor` | Blue gradient | A flat fill for the circle                                                   |
+| `textColor`       | `#FFFFFF`     | Color of the count                                                           |
+| `borderColor`     | `#FFFFFF`     | Color of the ring along the circle's edge                                    |
+| `borderWidth`     | `2`           | Width of the ring in dp; `0` draws none                                      |
+| `image`           | —             | Drawn in place of the circle, its ring and its shadow, with the count on top |
+
+Colors are hex strings (`#RGB`, `#RGBA`, `#RRGGBB` or `#RRGGBBAA`), as everywhere else in the library; a color that does not parse keeps the default for that part. A field left out keeps the default look, so `{ textColor: '#000000' }` changes only the count.
+
+`image` takes the same sources as a marker image (`require('./badge.png')` or `{ uri }`, under the same remote host policy). It is scaled to fit the badge, which grows with the count from 34 to 56 dp across, and the count is drawn centered on it in `textColor`. Until the image has loaded, and if it fails to, clusters show the colored badge. Changing `clusterStyle` redraws the clusters already on the map in place.
+
+`clusterStyle` styles the library's own badge image. It is not available on the planned `openstreetmap` and `mapbox` providers, which have no clustering yet.
+
 ## Re-renders
 
 Nitro compares view props by reference identity, so a prop rebuilt from unchanged data would still be re-serialized across JSI and re-applied to the native map. `MapView` guards against that on your behalf:
 
 - Overlay arrays - whether they come from `<Marker />` children or the bulk `markers` / `polylines` / `polygons` / `circles` props - are compared field by field. Passing a freshly built array with identical content costs one comparison and nothing else.
-- `markerEnteringAnimation` and `clusterEnteringAnimation` are compared the same way, so an inline `{ preset: 'fade' }` object is fine.
+- `markerEnteringAnimation`, `clusterEnteringAnimation` and `clusterStyle` are compared the same way, so an inline `{ preset: 'fade' }` object is fine.
 - Event handlers are wrapped once per handler identity rather than once per render, and the internal `hybridRef` wrapper is created once per mount.
 
 A re-render of the component holding the `MapView` therefore reaches native with no dirty props at all when nothing actually changed. What is left is yours to control: an arrow function created inline in JSX (`onPress={() => …}`) is a new handler on every render, so wrap it in `useCallback` if the surrounding component re-renders often.
@@ -934,6 +965,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | Marker entering animation  | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Cluster entering animation | System + `fade`, `fade-scale`                               | System + `fade`; scale fallback            | System + `fade`; scale fallback            |
 | Clustering                 | Supported                                                   | Supported                                  | Supported                                  |
+| Cluster badge style        | Supported                                                   | Supported                                  | Supported                                  |
 | Custom styles              | Curated subset on iOS 16+                                   | Google Maps JSON styles                    | Google Maps JSON styles                    |
 | Google Map ID              | Unsupported                                                 | Supported                                  | Supported                                  |
 
@@ -974,6 +1006,7 @@ An optional overlay field set to `null` - the way JSON data usually says "no val
 | `MarkerImage`                | Resolved marker image descriptor                      |
 | `MarkerAnchor`               | Anchor point on marker image (0..1)                   |
 | `MarkerPoint`                | Point offset in dp                                    |
+| `ClusterStyle`               | Cluster badge colors, border and image                |
 | `OverlayEnteringAnimation`   | Marker / marker-cluster entering animation config     |
 | `PolylineProps`              | Props for `Polyline`                                  |
 | `PolygonProps`               | Props for `Polygon`                                   |

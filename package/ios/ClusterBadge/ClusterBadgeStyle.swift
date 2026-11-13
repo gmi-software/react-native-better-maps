@@ -48,12 +48,27 @@ enum ClusterBadgeStyle {
   }
 
   /// The font size that fits a count measuring `labelWidth` at `labelFontSize` inside
-  /// the border of a badge `diameter` across.
-  static func fittedLabelFontSize(labelWidth: CGFloat, diameter: CGFloat) -> CGFloat {
-    let availableWidth = diameter - 2 * (borderWidth + labelPadding)
+  /// a border `inset` wide on a badge `diameter` across.
+  static func fittedLabelFontSize(
+    labelWidth: CGFloat,
+    diameter: CGFloat,
+    inset: CGFloat = borderWidth
+  ) -> CGFloat {
+    let availableWidth = diameter - 2 * (inset + labelPadding)
     guard labelWidth > availableWidth else {
       return labelFontSize
     }
     return labelFontSize * max(labelMinimumScaleFactor, availableWidth / labelWidth)
+  }
+
+  /// A background image's declared size scaled down to fit a badge `diameter` across, so a
+  /// large declared size does not decode an image far bigger than the badge draws. `nil` for
+  /// a size that is not positive and finite, which no badge can draw.
+  static func fittedImageSize(width: Double, height: Double, diameter: CGFloat) -> CGSize? {
+    guard width > 0, height > 0, width.isFinite, height.isFinite else {
+      return nil
+    }
+    let scale = min(1, Double(diameter) / max(width, height))
+    return CGSize(width: width * scale, height: height * scale)
   }
 }

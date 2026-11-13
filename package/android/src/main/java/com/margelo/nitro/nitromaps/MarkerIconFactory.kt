@@ -14,6 +14,7 @@ import com.google.android.gms.maps.model.Marker
 import java.util.WeakHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.roundToInt
 
 /** Builds and caches marker icons from bundled assets or remote URLs. */
 internal class MarkerIconFactory(
@@ -159,7 +160,7 @@ internal class MarkerIconFactory(
 
   private fun defaultMarkerDisplaySizePx(): Pair<Float, Float> = (DEFAULT_MARKER_WIDTH_DP * density) to (DEFAULT_MARKER_HEIGHT_DP * density)
 
-  private fun cacheKey(image: MarkerImage): String {
+  fun cacheKey(image: MarkerImage): String {
     // `origin` is part of the key so a bundled image cannot warm the cache for a
     // user-supplied one with the same URI, which would hand it a policy-free entry.
     return "${image.uri}|${image.width ?: ""}|${image.height ?: ""}|${image.scale ?: ""}|${image.origin ?: ""}"
@@ -199,6 +200,33 @@ internal class MarkerIconFactory(
           loadLocalIcon(image, key)
         }
       deliverOnMainThread { onLoaded(descriptor) }
+    }
+  }
+
+  /**
+   * Loads [image] as a bitmap to draw into another icon, such as a cluster badge, under the
+   * same remote host policy as a marker image. Not cached here: the caller keeps it.
+   * [maxDimensionPx] bounds the longest side of an image that declares no size, which is
+   * otherwise decoded at up to [MAX_DECODE_DIMENSION].
+   * [onLoaded] runs on the main thread, with `null` when the image cannot be loaded.
+   */
+  fun loadBitmap(
+    image: MarkerImage,
+    maxDimensionPx: Int? = null,
+    onLoaded: (Bitmap?) -> Unit,
+  ) {
+    val isRemote = RemoteMarkerUriPolicy.isRemoteUri(image.uri)
+    if (isRemote) {
+      RemoteMarkerUriPolicy.rejectReason(image, resolveHostAddress = false)?.let { reason ->
+        logRejectedRemoteMarkerUri(image.uri, reason)
+        deliverOnMainThread { onLoaded(null) }
+        return
+      }
+    }
+
+    loadExecutor.execute {
+      val bitmap = if (isRemote) loadRemoteBitmap(image, maxDimensionPx) else loadLocalBitmap(image, maxDimensionPx)
+      deliverOnMainThread { onLoaded(bitmap) }
     }
   }
 
@@ -243,26 +271,35 @@ internal class MarkerIconFactory(
     image: MarkerImage,
     key: String,
   ): BitmapDescriptor? {
-    return try {
-      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri) ?: return null
-      val bitmap = decodeByteArray(bytes, image) ?: return null
-      cacheBitmap(key, resizeBitmap(bitmap, image))
+    val bitmap = loadRemoteBitmap(image) ?: return null
+    return cacheBitmap(key, bitmap)
+  }
+
+  private fun loadRemoteBitmap(
+    image: MarkerImage,
+    maxDimensionPx: Int? = null,
+  ): Bitmap? =
+    try {
+      val bytes = remoteImageFetcher.fetch(image, ::logRejectedRemoteMarkerUri)
+      bytes?.let { decodeByteArray(it, image, maxDimensionPx) }?.let { resizeBitmap(it, image, maxDimensionPx) }
     } catch (error: Exception) {
       Log.w(NITRO_MAPS_LOG_TAG, "Failed to load marker image: ${image.uri}", error)
       null
     }
-  }
 
-  private fun loadLocalBitmap(image: MarkerImage): Bitmap? {
+  private fun loadLocalBitmap(
+    image: MarkerImage,
+    maxDimensionPx: Int? = null,
+  ): Bitmap? {
     val uri = image.uri
 
     if (uri.startsWith("file://")) {
       val path = uri.removePrefix("file://")
-      return decodeFile(path, image)
+      return decodeFile(path, image, maxDimensionPx)
     }
 
     if (uri.startsWith("/")) {
-      return decodeFile(uri, image)
+      return decodeFile(uri, image, maxDimensionPx)
     }
 
     if (RemoteMarkerUriPolicy.isRemoteUri(uri)) {
@@ -272,12 +309,12 @@ internal class MarkerIconFactory(
     val resourceName = uri.substringAfterLast('/').substringBeforeLast('.')
     val resourceId = context.resources.getIdentifier(resourceName, "drawable", context.packageName)
     if (resourceId != 0) {
-      return decodeResource(resourceId, image)
+      return decodeResource(resourceId, image, maxDimensionPx)
     }
 
     return try {
       context.assets.open(uri).use { stream ->
-        decodeByteArray(stream.readBytes(), image)?.let { resizeBitmap(it, image) }
+        decodeByteArray(stream.readBytes(), image, maxDimensionPx)?.let { resizeBitmap(it, image, maxDimensionPx) }
       }
     } catch (_: Exception) {
       null
@@ -287,53 +324,73 @@ internal class MarkerIconFactory(
   private fun decodeFile(
     path: String,
     image: MarkerImage,
+    maxDimensionPx: Int?,
   ): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(path, bounds)
-    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
+    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image, maxDimensionPx) ?: return null
     val decoded = BitmapFactory.decodeFile(path, options) ?: return null
-    return resizeBitmap(decoded, image)
+    return resizeBitmap(decoded, image, maxDimensionPx)
   }
 
   private fun decodeResource(
     resourceId: Int,
     image: MarkerImage,
+    maxDimensionPx: Int?,
   ): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeResource(context.resources, resourceId, bounds)
-    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
+    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image, maxDimensionPx) ?: return null
     val decoded = BitmapFactory.decodeResource(context.resources, resourceId, options) ?: return null
-    return resizeBitmap(decoded, image)
+    return resizeBitmap(decoded, image, maxDimensionPx)
   }
 
   private fun decodeByteArray(
     bytes: ByteArray,
     image: MarkerImage,
+    maxDimensionPx: Int?,
   ): Bitmap? {
     if (bytes.isEmpty()) {
       return null
     }
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image) ?: return null
+    val options = buildDecodeOptions(bounds.outWidth, bounds.outHeight, image, maxDimensionPx) ?: return null
     return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
   }
 
-  private fun targetDecodeSizePx(image: MarkerImage): Pair<Int, Int>? {
-    val widthDp = image.width ?: return null
-    val heightDp = image.height ?: return null
-    return (widthDp * density).toInt().coerceAtLeast(1) to (heightDp * density).toInt().coerceAtLeast(1)
+  /**
+   * The size in px [image] declares, or for one that declares none, a source of [sourceWidth]
+   * by [sourceHeight] scaled down to fit [maxDimensionPx]; `null` keeps the source's size.
+   */
+  private fun targetDecodeSizePx(
+    image: MarkerImage,
+    sourceWidth: Int,
+    sourceHeight: Int,
+    maxDimensionPx: Int?,
+  ): Pair<Int, Int>? {
+    val widthDp = image.width
+    val heightDp = image.height
+    if (widthDp != null && heightDp != null) {
+      return (widthDp * density).toInt().coerceAtLeast(1) to (heightDp * density).toInt().coerceAtLeast(1)
+    }
+    if (maxDimensionPx == null || maxOf(sourceWidth, sourceHeight) <= maxDimensionPx) {
+      return null
+    }
+    val scale = maxDimensionPx.toDouble() / maxOf(sourceWidth, sourceHeight)
+    return (sourceWidth * scale).roundToInt().coerceAtLeast(1) to (sourceHeight * scale).roundToInt().coerceAtLeast(1)
   }
 
   private fun buildDecodeOptions(
     sourceWidth: Int,
     sourceHeight: Int,
     image: MarkerImage,
+    maxDimensionPx: Int?,
   ): BitmapFactory.Options? {
     if (sourceWidth <= 0 || sourceHeight <= 0) {
       return null
     }
-    val target = targetDecodeSizePx(image)
+    val target = targetDecodeSizePx(image, sourceWidth, sourceHeight, maxDimensionPx)
     val sampleSize =
       computeInSampleSize(
         sourceWidth = sourceWidth,
@@ -404,11 +461,10 @@ internal class MarkerIconFactory(
   private fun resizeBitmap(
     source: Bitmap,
     image: MarkerImage,
+    maxDimensionPx: Int?,
   ): Bitmap {
-    val width = image.width ?: return source
-    val height = image.height ?: return source
-    val targetWidth = (width * density).toInt().coerceAtLeast(1)
-    val targetHeight = (height * density).toInt().coerceAtLeast(1)
+    val (targetWidth, targetHeight) =
+      targetDecodeSizePx(image, source.width, source.height, maxDimensionPx) ?: return source
 
     if (source.width == targetWidth && source.height == targetHeight) {
       return source

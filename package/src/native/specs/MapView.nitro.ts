@@ -15,6 +15,7 @@ import type {
 } from '../../types/region';
 import type {
   CircleDescriptor,
+  ClusterStyleDescriptor,
   MarkerDescriptor,
   OverlayEnteringAnimationDescriptor,
   PolygonDescriptor,
@@ -185,6 +186,9 @@ export interface MapViewProps extends HybridViewProps {
 
   /** Entering animation for marker clusters. */
   clusterEnteringAnimation?: OverlayEnteringAnimationDescriptor;
+
+  /** How the cluster badge looks. */
+  clusterStyle?: ClusterStyleDescriptor;
 
   /** Called once when a region change begins, whoever started it. */
   onRegionChange?: (region: Region, details: RegionChangeDetails) => void;

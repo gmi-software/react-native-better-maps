@@ -10,6 +10,7 @@ import {
   circleDescriptorsEqual,
   circleListsEqual,
   descriptorListsEqual,
+  clusterStylesEqual,
   enteringAnimationsEqual,
   markerDescriptorsEqual,
   markerListsEqual,
@@ -479,5 +480,45 @@ describe('enteringAnimationsEqual', () => {
     expect(
       enteringAnimationsEqual(base, { ...base, reduceMotion: 'system' }),
     ).toBe(false);
+  });
+});
+
+describe('clusterStylesEqual', () => {
+  test('treats a set and an unset style as different', () => {
+    expect(clusterStylesEqual(undefined, undefined)).toBe(true);
+    expect(clusterStylesEqual({}, undefined)).toBe(false);
+  });
+
+  test('compares every field', () => {
+    const base = {
+      backgroundColor: '#E30613',
+      textColor: '#FFFFFF',
+      borderColor: '#FFFFFF',
+      borderWidth: 2,
+      image: { uri: 'badge.png', width: 40, height: 40, scale: 2 },
+    };
+
+    expect(
+      clusterStylesEqual(base, { ...base, image: { ...base.image } }),
+    ).toBe(true);
+    expect(
+      clusterStylesEqual(base, { ...base, backgroundColor: '#000000' }),
+    ).toBe(false);
+    expect(clusterStylesEqual(base, { ...base, textColor: '#000000' })).toBe(
+      false,
+    );
+    expect(clusterStylesEqual(base, { ...base, borderColor: '#000000' })).toBe(
+      false,
+    );
+    expect(clusterStylesEqual(base, { ...base, borderWidth: 0 })).toBe(false);
+    expect(
+      clusterStylesEqual(base, {
+        ...base,
+        image: { ...base.image, uri: 'other.png' },
+      }),
+    ).toBe(false);
+    expect(clusterStylesEqual(base, { ...base, image: undefined })).toBe(
+      false,
+    );
   });
 });

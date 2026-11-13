@@ -4,19 +4,22 @@ package com.margelo.nitro.nitromaps
  * Parses a hex color string into an Android color int.
  * Supports `#RGB`, `#RGBA`, `#RRGGBB`, and `#RRGGBBAA`.
  */
-fun String.toColorInt(fallback: Int = 0xFF000000.toInt()): Int {
+fun String.toColorInt(fallback: Int = 0xFF000000.toInt()): Int = toColorIntOrNull() ?: fallback
+
+/** The color int this hex string parses to, or `null` when it does not parse. */
+fun String.toColorIntOrNull(): Int? {
   val digits = trim().removePrefix("#")
 
   val expanded =
     when (digits.length) {
       3, 4 -> digits.map { "$it$it" }.joinToString("")
       6, 8 -> digits
-      else -> return fallback
+      else -> return null
     }
 
   val rgba = if (expanded.length == 6) "${expanded}FF" else expanded
   if (!rgba.all { it.digitToIntOrNull(16) != null }) {
-    return fallback
+    return null
   }
 
   val value = rgba.toLong(16)

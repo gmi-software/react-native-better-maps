@@ -53,6 +53,8 @@ import {
 import {
   APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
   APPLE_POI_DETAILS_SCENARIO_ID,
+  CLUSTER_STYLE_OPTIONS,
+  type ClusterStyleOption,
   MAP_SCENARIOS,
   type MapScenario,
   createApplePoiDetailsScenario,
@@ -317,6 +319,8 @@ type ScenarioDockProps = {
   customMarkerFlat: boolean;
   onCycleCustomMarkerRotation: () => void;
   onToggleCustomMarkerFlat: () => void;
+  clusterStyleLabel: string;
+  onCycleClusterStyle: () => void;
   onCycleApplePoiDetailMode: () => void;
 };
 
@@ -340,6 +344,8 @@ const ScenarioDock = memo(function ScenarioDock({
   customMarkerFlat,
   onCycleCustomMarkerRotation,
   onToggleCustomMarkerFlat,
+  clusterStyleLabel,
+  onCycleClusterStyle,
   onCycleApplePoiDetailMode,
 }: ScenarioDockProps) {
   const applePoiDetailPresentation =
@@ -483,6 +489,20 @@ const ScenarioDock = memo(function ScenarioDock({
             </View>
           ) : null}
 
+          {scenario.advanced?.clusteringEnabled === true ? (
+            <View style={styles.actionRow}>
+              <ScalePressable
+                onPress={onCycleClusterStyle}
+                style={[styles.actionButton, styles.actionButtonAccent]}
+              >
+                <Text style={styles.actionButtonIcon}>◍</Text>
+                <Text style={styles.actionButtonText}>
+                  Clusters · {clusterStyleLabel}
+                </Text>
+              </ScalePressable>
+            </View>
+          ) : null}
+
           {applePoiDetailPresentation != null ? (
             <View style={styles.actionRow}>
               <ScalePressable
@@ -596,6 +616,7 @@ type MapSceneProps = {
   mapType: MapType;
   mapPadding?: EdgePadding;
   animationOption: AnimationOption;
+  clusterStyleOption: ClusterStyleOption;
   onMapReady: () => void;
   onMountFitResult: (result: string) => void;
   onClusterPress: (markerIds: string[], coordinate: Coordinate) => void;
@@ -619,6 +640,7 @@ const MapScene = memo(function MapScene({
   mapType,
   mapPadding,
   animationOption,
+  clusterStyleOption,
   onMapReady,
   onMountFitResult,
   onClusterPress,
@@ -652,6 +674,7 @@ const MapScene = memo(function MapScene({
     clusterEnteringAnimation: scenario.advanced?.clusteringEnabled
       ? animationOption.value
       : undefined,
+    clusterStyle: clusterStyleOption.value,
     ...createScenarioOverlayProps(
       scenario,
       onMarkerPress,
@@ -760,6 +783,7 @@ export default function App() {
   const [dockExpanded, setDockExpanded] = useState(false);
   const [customMarkerRotation, setCustomMarkerRotation] = useState(45);
   const [customMarkerFlat, setCustomMarkerFlat] = useState(true);
+  const [clusterStyleIndex, setClusterStyleIndex] = useState(0);
   const [applePoiDetailPresentation, setApplePoiDetailPresentation] =
     useState<ApplePoiDetailPresentation>(
       APPLE_POI_DETAILS_DEFAULT_PRESENTATION,
@@ -786,6 +810,7 @@ export default function App() {
   ]);
   const provider = SUPPORTED_MAP_PROVIDERS[providerIndex] ?? 'google';
   const animationOption = ANIMATION_OPTIONS[animationOptionIndex];
+  const clusterStyleOption = CLUSTER_STYLE_OPTIONS[clusterStyleIndex];
   const showsScale = scenario.advanced?.showsScale === true;
   const showsCompass = scenario.advanced?.showsCompass === true;
   const mapPadding = useMemo(
@@ -836,6 +861,12 @@ export default function App() {
 
   const toggleCustomMarkerFlat = useCallback(() => {
     setCustomMarkerFlat((current) => !current);
+  }, []);
+
+  const cycleClusterStyle = useCallback(() => {
+    setClusterStyleIndex(
+      (current) => (current + 1) % CLUSTER_STYLE_OPTIONS.length,
+    );
   }, []);
 
   const cycleApplePoiDetailMode = useCallback(() => {
@@ -992,6 +1023,7 @@ export default function App() {
         mapType={MAP_TYPES[mapTypeIndex]}
         mapPadding={mapPadding}
         animationOption={animationOption}
+        clusterStyleOption={clusterStyleOption}
         onMapReady={handleMapReady}
         onMountFitResult={handleMountFitResult}
         onClusterPress={handleClusterPress}
@@ -1032,6 +1064,8 @@ export default function App() {
         customMarkerFlat={customMarkerFlat}
         onCycleCustomMarkerRotation={cycleCustomMarkerRotation}
         onToggleCustomMarkerFlat={toggleCustomMarkerFlat}
+        clusterStyleLabel={clusterStyleOption.label}
+        onCycleClusterStyle={cycleClusterStyle}
         onCycleApplePoiDetailMode={cycleApplePoiDetailMode}
       />
       <StatusBar style="light" />

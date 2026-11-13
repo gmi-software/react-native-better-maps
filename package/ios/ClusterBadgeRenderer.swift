@@ -66,7 +66,7 @@ enum ClusterBadgeRenderer {
       if let backgroundImage {
         backgroundImage.draw(in: aspectFit(backgroundImage.size, in: circle))
       } else {
-        drawCircle(in: circle, appearance: appearance, context: context)
+        drawCircle(in: circle, appearance: appearance, pixel: 1 / format.scale, context: context)
       }
 
       drawLabel(label, centeredIn: circle, appearance: appearance)
@@ -76,11 +76,12 @@ enum ClusterBadgeRenderer {
   private static func drawCircle(
     in circle: CGRect,
     appearance: ClusterBadgeAppearance,
+    pixel: CGFloat,
     context: CGContext
   ) {
     // The border is the rim of a disc that the fill does not cover. A stroke drawn over
-    // the fill would let the fill show through its anti-aliased outer edge. The disc is
-    // opaque, so it also casts the badge's whole shadow.
+    // the fill would let the fill show through its anti-aliased outer edge. The disc
+    // casts the badge's whole shadow.
     context.saveGState()
     context.setShadow(
       offset: CGSize(width: 0, height: ClusterBadgeStyle.shadowOffsetY),
@@ -94,6 +95,17 @@ enum ClusterBadgeRenderer {
     let fillCircle = circle.insetBy(dx: appearance.borderWidth, dy: appearance.borderWidth)
     guard !fillCircle.isEmpty else {
       return
+    }
+
+    // Clears the disc and shadow under the fill, so a translucent fill shows the map.
+    // The cleared circle is a pixel smaller than the fill, which covers its anti-aliased
+    // edge: an opaque fill looks as if drawn on the whole disc.
+    let clearedCircle = fillCircle.insetBy(dx: pixel, dy: pixel)
+    if !clearedCircle.isEmpty {
+      context.saveGState()
+      context.setBlendMode(.clear)
+      context.fillEllipse(in: clearedCircle)
+      context.restoreGState()
     }
 
     switch appearance.fill {

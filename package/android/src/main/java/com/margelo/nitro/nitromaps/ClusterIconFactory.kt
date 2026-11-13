@@ -5,6 +5,8 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
@@ -194,6 +196,14 @@ internal class ClusterIconFactory(
     val fillRadius = radius - appearance.borderWidthDp * density
     if (fillRadius <= 0f) {
       return
+    }
+    // Clears the disc and shadow under the fill, so a translucent fill shows the map. The cleared circle is a
+    // pixel smaller than the fill, which covers its anti-aliased edge: an opaque fill looks as if drawn on the
+    // whole disc.
+    val clearedRadius = fillRadius - 1f
+    if (clearedRadius > 0f) {
+      val clear = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
+      canvas.drawCircle(center, center, clearedRadius, clear)
     }
     val fill =
       Paint(Paint.ANTI_ALIAS_FLAG).apply {

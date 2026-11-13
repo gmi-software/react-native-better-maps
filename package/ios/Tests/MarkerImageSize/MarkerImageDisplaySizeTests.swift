@@ -86,3 +86,34 @@ func unusableScaleKeepsTheDecodedSize() {
   )
   #expect(size == CGSize(width: 50, height: 82))
 }
+
+@Test
+func smallImagesRasterizeAtTheScreenScale() {
+  #expect(
+    MarkerImageDisplaySize.rasterScale(points: CGSize(width: 37, height: 61), screenScale: 3) == 3)
+}
+
+@Test
+func largeImagesRasterizeWithinTheBitmapLimits() {
+  // 4000×3000 pt at 3× would be a 12000×9000 px bitmap.
+  let points = CGSize(width: 4000, height: 3000)
+  let scale = MarkerImageDisplaySize.rasterScale(points: points, screenScale: 3)
+  let pixelWidth = points.width * scale
+  let pixelHeight = points.height * scale
+  #expect(pixelWidth <= MarkerImageDisplaySize.maxRasterDimension + 0.001)
+  #expect(pixelHeight <= MarkerImageDisplaySize.maxRasterDimension + 0.001)
+  #expect(pixelWidth * pixelHeight <= MarkerImageDisplaySize.maxRasterPixels + 1)
+  #expect(abs(pixelWidth / pixelHeight - 4.0 / 3.0) < 0.0001)
+}
+
+@Test
+func longThinImagesAreBoundedBySide() {
+  let scale = MarkerImageDisplaySize.rasterScale(
+    points: CGSize(width: 10_000, height: 10), screenScale: 2)
+  #expect(abs(10_000 * scale - MarkerImageDisplaySize.maxRasterDimension) < 0.001)
+}
+
+@Test
+func emptySizesKeepTheScreenScale() {
+  #expect(MarkerImageDisplaySize.rasterScale(points: .zero, screenScale: 2) == 2)
+}

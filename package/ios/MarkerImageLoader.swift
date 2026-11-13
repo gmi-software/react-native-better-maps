@@ -308,7 +308,20 @@ enum MarkerImageLoader {
       return uiImage
     }
 
-    let renderer = UIGraphicsImageRenderer(size: targetSize)
+    // A `scale` alone only changes how many pixels make a point: retag the bitmap instead of
+    // redrawing it at a larger size.
+    let hasExplicitSize = (image.width ?? 0) > 0 && (image.height ?? 0) > 0
+    if !hasExplicitSize, let cgImage = uiImage.cgImage {
+      return UIImage(
+        cgImage: cgImage,
+        scale: MarkerImageDisplaySize.decodeScale(image.scale),
+        orientation: uiImage.imageOrientation
+      )
+    }
+
+    let format = UIGraphicsImageRendererFormat.preferred()
+    format.scale = MarkerImageDisplaySize.rasterScale(points: targetSize, screenScale: format.scale)
+    let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
     return renderer.image { _ in
       uiImage.draw(in: CGRect(origin: .zero, size: targetSize))
     }

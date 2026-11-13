@@ -34,4 +34,25 @@ enum MarkerImageDisplaySize {
     let pixelsPerPoint = imageScale / CGFloat(scale)
     return CGSize(width: size.width * pixelsPerPoint, height: size.height * pixelsPerPoint)
   }
+
+  /// Same limits as `MAX_DECODE_DIMENSION` / `MAX_DECODE_PIXELS` in `MarkerIconFactory.kt`.
+  static let maxRasterDimension: CGFloat = 2048
+  static let maxRasterPixels: CGFloat = 2048 * 2048
+
+  /// The scale to rasterize `points` at: `screenScale`, lowered until neither side of the bitmap
+  /// exceeds `maxRasterDimension` pixels and its area stays within `maxRasterPixels`, so a large
+  /// `width`/`height` cannot allocate an unbounded bitmap. The point size, and so the size on the
+  /// map, stays the same.
+  static func rasterScale(points: CGSize, screenScale: CGFloat) -> CGFloat {
+    let longestSide = max(points.width, points.height)
+    let area = points.width * points.height
+    guard longestSide > 0, area > 0 else {
+      return screenScale
+    }
+    return min(
+      screenScale,
+      maxRasterDimension / longestSide,
+      (maxRasterPixels / area).squareRoot()
+    )
+  }
 }
